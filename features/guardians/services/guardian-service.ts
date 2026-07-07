@@ -17,19 +17,31 @@ function lineStatus(g: { lineUserId: string | null; lineLinkCode: string | null 
   return "unlinked";
 }
 
-/** Students (paged/searchable) with their guardians + LINE status, for the manager. */
-export async function listStudentGuardians(params: { page: number; search: string }): Promise<Paginated<StudentGuardians>> {
+export interface GuardianClassroomOption {
+  id: string;
+  code: string;
+  gradeLevel: string;
+}
+
+/** Classrooms (active year) for the guardian/LINE page filter dropdowns. */
+export async function listGuardianClassrooms(): Promise<GuardianClassroomOption[]> {
+  return repo.listGuardianClassrooms();
+}
+
+/** Students (paged/searchable, optionally by classroom) with guardians + LINE status. */
+export async function listStudentGuardians(params: { page: number; search: string; classroomId?: string }): Promise<Paginated<StudentGuardians>> {
   const pageSize = DEFAULT_PAGE_SIZE;
   const skip = (params.page - 1) * pageSize;
   const [rows, total] = await Promise.all([
-    repo.findStudentsWithGuardians({ skip, take: pageSize, search: params.search }),
-    repo.countStudentsWithGuardians(params.search),
+    repo.findStudentsWithGuardians({ skip, take: pageSize, search: params.search, classroomId: params.classroomId }),
+    repo.countStudentsWithGuardians(params.search, params.classroomId),
   ]);
 
   const students: StudentGuardians[] = rows.map((s) => ({
     studentId: s.id,
     code: s.studentCode,
     name: personName(s),
+    classroom: s.enrollments[0]?.classroom.code ?? "—",
     guardians: s.guardians.map(
       (g): GuardianRow => ({
         id: g.id,

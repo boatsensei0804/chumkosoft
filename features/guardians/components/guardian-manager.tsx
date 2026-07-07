@@ -10,15 +10,19 @@ import Alert from "@mui/material/Alert";
 import Icon from "@/features/dashboard/components/icon";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PaginationBar from "@/components/ui/pagination-bar";
+import ClassroomFilter from "./classroom-filter";
 import GuardianFormDialog from "./guardian-form-dialog";
 import { useListParams } from "@/features/dashboard/hooks/use-list-params";
 import { deleteGuardianAction } from "@/features/guardians/actions";
 import type { GuardianRow, StudentGuardians } from "@/features/guardians/types";
+import type { GuardianClassroomOption } from "@/features/guardians/services/guardian-service";
 import type { Paginated } from "@/types/pagination";
 
 interface GuardianManagerProps {
   page: Paginated<StudentGuardians>;
   query: string;
+  classrooms: GuardianClassroomOption[];
+  classroomId: string;
 }
 
 type Editing = { studentId: string; studentName: string; guardian: GuardianRow | null };
@@ -35,9 +39,9 @@ function detailLine(g: GuardianRow): string {
     .join(" · ");
 }
 
-export default function GuardianManager({ page, query }: GuardianManagerProps): React.ReactNode {
+export default function GuardianManager({ page, query, classrooms, classroomId }: GuardianManagerProps): React.ReactNode {
   const router = useRouter();
-  const { navigate, isPending } = useListParams("/dashboard/guardians", { q: query, page: page.page });
+  const { navigate, isPending } = useListParams("/dashboard/guardians", { q: query, page: page.page, classroom: classroomId });
   const [search, setSearch] = useState(query);
   const [editing, setEditing] = useState<Editing | null>(null);
   const [deleting, setDeleting] = useState<GuardianRow | null>(null);
@@ -68,15 +72,18 @@ export default function GuardianManager({ page, query }: GuardianManagerProps): 
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2 rounded-[10px] px-3 py-2 sm:w-72" style={{ backgroundColor: "var(--surface-2)", border: "1px solid var(--line)" }}>
-        <Icon name="search" sx={{ fontSize: 18, color: "var(--faint)" }} />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="ค้นหาชื่อหรือรหัสนักเรียน…"
-          aria-label="ค้นหานักเรียน"
-          className="w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
-        />
+      <div className="flex flex-wrap items-center gap-3">
+        <ClassroomFilter classrooms={classrooms} value={classroomId} onChange={(id) => navigate({ classroom: id, page: 1 })} disabled={isPending} />
+        <div className="flex flex-1 items-center gap-2 rounded-[10px] px-3 py-2 sm:max-w-72" style={{ backgroundColor: "var(--surface-2)", border: "1px solid var(--line)" }}>
+          <Icon name="search" sx={{ fontSize: 18, color: "var(--faint)" }} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="ค้นหาชื่อหรือรหัสนักเรียน…"
+            aria-label="ค้นหานักเรียน"
+            className="w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
+          />
+        </div>
       </div>
 
       {page.rows.length === 0 ? (
@@ -88,9 +95,14 @@ export default function GuardianManager({ page, query }: GuardianManagerProps): 
           {page.rows.map((student) => (
             <li key={student.studentId} className="flex flex-col overflow-hidden rounded-[16px]" style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)" }}>
               <div className="flex items-center justify-between gap-2 px-4 py-3" style={{ borderBottom: "1px solid var(--line)" }}>
-                <div className="min-w-0">
-                  <p className="truncate text-[14px] font-bold text-ink-strong">{student.name}</p>
-                  <p className="tabular text-[12px] text-muted">รหัส {student.code}</p>
+                <div className="flex min-w-0 items-center gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-[14px] font-bold text-ink-strong">{student.name}</p>
+                    <p className="tabular text-[12px] text-muted">รหัส {student.code}</p>
+                  </div>
+                  <span className="shrink-0 rounded-full px-2 py-0.5 text-[11.5px] font-semibold" style={{ backgroundColor: "var(--surface-2)", color: "var(--muted)" }}>
+                    {student.classroom}
+                  </span>
                 </div>
                 <Button size="small" variant="text" startIcon={<Icon name="add" sx={{ fontSize: 16 }} />} onClick={() => setEditing({ studentId: student.studentId, studentName: student.name, guardian: null })}>
                   เพิ่มผู้ปกครอง

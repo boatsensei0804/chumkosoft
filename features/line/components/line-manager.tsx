@@ -9,9 +9,11 @@ import Alert from "@mui/material/Alert";
 import Icon from "@/features/dashboard/components/icon";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PaginationBar from "@/components/ui/pagination-bar";
+import ClassroomFilter from "@/features/guardians/components/classroom-filter";
 import { useListParams } from "@/features/dashboard/hooks/use-list-params";
 import { generateLinkCodeAction, unlinkGuardianAction } from "@/features/line/actions";
 import type { GuardianRow, StudentGuardians } from "@/features/guardians/types";
+import type { GuardianClassroomOption } from "@/features/guardians/services/guardian-service";
 import type { LineLinkStatus } from "@/features/line/types";
 import type { Paginated } from "@/types/pagination";
 
@@ -25,11 +27,13 @@ interface LineManagerProps {
   page: Paginated<StudentGuardians>;
   query: string;
   configured: boolean;
+  classrooms: GuardianClassroomOption[];
+  classroomId: string;
 }
 
-export default function LineManager({ page, query, configured }: LineManagerProps): React.ReactNode {
+export default function LineManager({ page, query, configured, classrooms, classroomId }: LineManagerProps): React.ReactNode {
   const router = useRouter();
-  const { navigate, isPending } = useListParams("/dashboard/line", { q: query, page: page.page });
+  const { navigate, isPending } = useListParams("/dashboard/line", { q: query, page: page.page, classroom: classroomId });
   const [search, setSearch] = useState(query);
   const [unlinking, setUnlinking] = useState<GuardianRow | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -84,15 +88,18 @@ export default function LineManager({ page, query, configured }: LineManagerProp
         </p>
       </div>
 
-      <div className="flex items-center gap-2 rounded-[10px] px-3 py-2 sm:w-72" style={{ backgroundColor: "var(--surface-2)", border: "1px solid var(--line)" }}>
-        <Icon name="search" sx={{ fontSize: 18, color: "var(--faint)" }} />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="ค้นหาชื่อหรือรหัสนักเรียน…"
-          aria-label="ค้นหานักเรียน"
-          className="w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
-        />
+      <div className="flex flex-wrap items-center gap-3">
+        <ClassroomFilter classrooms={classrooms} value={classroomId} onChange={(id) => navigate({ classroom: id, page: 1 })} disabled={isPending} />
+        <div className="flex flex-1 items-center gap-2 rounded-[10px] px-3 py-2 sm:max-w-72" style={{ backgroundColor: "var(--surface-2)", border: "1px solid var(--line)" }}>
+          <Icon name="search" sx={{ fontSize: 18, color: "var(--faint)" }} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="ค้นหาชื่อหรือรหัสนักเรียน…"
+            aria-label="ค้นหานักเรียน"
+            className="w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
+          />
+        </div>
       </div>
 
       {page.rows.length === 0 ? (
@@ -103,9 +110,14 @@ export default function LineManager({ page, query, configured }: LineManagerProp
         <ul className="grid grid-cols-1 gap-3 xl:grid-cols-2" style={{ opacity: isPending ? 0.6 : 1, transition: "opacity 120ms ease" }}>
           {page.rows.map((student) => (
             <li key={student.studentId} className="flex flex-col overflow-hidden rounded-[16px]" style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)" }}>
-              <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--line)" }}>
-                <p className="truncate text-[14px] font-bold text-ink-strong">{student.name}</p>
-                <p className="tabular text-[12px] text-muted">รหัส {student.code}</p>
+              <div className="flex items-center justify-between gap-2 px-4 py-3" style={{ borderBottom: "1px solid var(--line)" }}>
+                <div className="min-w-0">
+                  <p className="truncate text-[14px] font-bold text-ink-strong">{student.name}</p>
+                  <p className="tabular text-[12px] text-muted">รหัส {student.code}</p>
+                </div>
+                <span className="shrink-0 rounded-full px-2 py-0.5 text-[11.5px] font-semibold" style={{ backgroundColor: "var(--surface-2)", color: "var(--muted)" }}>
+                  {student.classroom}
+                </span>
               </div>
 
               {student.guardians.length === 0 ? (

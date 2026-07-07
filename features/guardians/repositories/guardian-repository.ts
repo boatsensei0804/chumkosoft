@@ -4,10 +4,16 @@ import type { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import type { GuardianInput } from "@/features/guardians/schemas/guardian-schema";
 
-function studentWhere(search: string): Prisma.StudentWhereInput {
+async function activeTermId(): Promise<string | undefined> {
+  const term = await prisma.term.findFirst({ where: { isActive: true, isDeleted: false }, select: { id: true } });
+  return term?.id;
+}
+
+function studentWhere(search: string, classroomId: string | undefined, termId: string | undefined): Prisma.StudentWhereInput {
   const q = search.trim();
   return {
     isDeleted: false,
+    ...(classroomId ? { enrollments: { some: { classroomId, isDeleted: false, ...(termId ? { termId } : {}) } } } : {}),
     ...(q
       ? {
           OR: [
@@ -20,10 +26,22 @@ function studentWhere(search: string): Prisma.StudentWhereInput {
   };
 }
 
+/** Classrooms of the active academic year for the guardian/LINE page filters. */
+export async function listGuardianClassrooms() {
+  const year = await prisma.academicYear.findFirst({ where: { isActive: true, isDeleted: false }, select: { id: true } });
+  if (!year) return [];
+  return prisma.classroom.findMany({
+    where: { academicYearId: year.id, isDeleted: false },
+    orderBy: { code: "asc" },
+    select: { id: true, code: true, gradeLevel: true },
+  });
+}
+
 /** Students (paged) with their guardians — includes students with none yet. */
-export async function findStudentsWithGuardians(params: { skip: number; take: number; search: string }) {
+export async function findStudentsWithGuardians(params: { skip: number; take: number; search: string; classroomId?: string }) {
+  const termId = await activeTermId();
   return prisma.student.findMany({
-    where: studentWhere(params.search),
+    where: studentWhere(params.search, params.classroomId, termId),
     orderBy: { studentCode: "asc" },
     skip: params.skip,
     take: params.take,
@@ -33,6 +51,12 @@ export async function findStudentsWithGuardians(params: { skip: number; take: nu
       prefix: true,
       firstName: true,
       lastName: true,
+      enrollments: {
+        where: { isDeleted: false, ...(termId ? { termId } : {}) },
+        orderBy: { enrolledAt: "desc" },
+        take: 1,
+        select: { classroom: { select: { code: true } } },
+      },
       guardians: {
         where: { isDeleted: false },
         orderBy: { createdAt: "asc" },
@@ -54,8 +78,9 @@ export async function findStudentsWithGuardians(params: { skip: number; take: nu
   });
 }
 
-export async function countStudentsWithGuardians(search: string): Promise<number> {
-  return prisma.student.count({ where: studentWhere(search) });
+export async function countStudentsWithGuardians(search: string, classroomId?: string): Promise<number> {
+  const termId = await activeTermId();
+  return prisma.student.count({ where: studentWhere(search, classroomId, termId) });
 }
 
 export async function studentExists(id: string): Promise<boolean> {

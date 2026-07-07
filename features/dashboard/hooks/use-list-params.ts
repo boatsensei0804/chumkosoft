@@ -7,6 +7,7 @@ export interface ListParamState {
   q: string;
   page: number;
   filter?: string;
+  classroom?: string;
 }
 
 export interface UseListParams {
@@ -35,11 +36,13 @@ export function useListParams(basePath: string, current: ListParamState): UseLis
       const cur = ref.current;
       const q = next.q ?? cur.q;
       const filter = next.filter ?? cur.filter;
+      const classroom = next.classroom ?? cur.classroom;
       const page = next.page ?? 1;
 
       const params = new URLSearchParams();
       if (q.trim()) params.set("q", q.trim());
       if (filter && filter !== "all") params.set("filter", filter);
+      if (classroom) params.set("classroom", classroom);
       if (page > 1) params.set("page", String(page));
 
       const qs = params.toString();

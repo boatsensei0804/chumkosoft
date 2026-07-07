@@ -19,5 +19,7 @@ export interface StudentGuardians {
   studentId: string;
   code: string;
   name: string;
+  /** Active-term classroom code, or "—" when not enrolled. */
+  classroom: string;
   guardians: GuardianRow[];
 }
