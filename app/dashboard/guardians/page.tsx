@@ -4,7 +4,6 @@ import GuardianManager from "@/features/guardians/components/guardian-manager";
 import { requireRoles } from "@/lib/dal";
 import { STAFF_ROLES } from "@/features/auth/roles";
 import { listStudentGuardians } from "@/features/guardians/services/guardian-service";
-import { isLineConfigured } from "@/lib/line";
 import { parsePage } from "@/types/pagination";
 
 export const metadata: Metadata = {
@@ -26,10 +25,10 @@ export default async function GuardiansPage({ searchParams }: GuardiansPageProps
   return (
     <>
       <PageHeader
-        title="ผู้ปกครองและ LINE"
-        subtitle="จัดการข้อมูลผู้ปกครองของนักเรียน และผูกบัญชี LINE เพื่อรับแจ้งเตือนเมื่อนักเรียนเข้าโรงเรียน"
+        title="ผู้ปกครอง"
+        subtitle="จัดการข้อมูลบิดา มารดา และผู้ปกครองของนักเรียน — สำหรับการผูก LINE และแจ้งเตือน ดูที่เมนู LINE / แจ้งเตือน"
       />
-      <GuardianManager page={result} query={query} configured={isLineConfigured()} />
+      <GuardianManager page={result} query={query} />
     </>
   );
 }

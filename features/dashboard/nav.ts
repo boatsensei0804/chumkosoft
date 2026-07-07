@@ -35,7 +35,8 @@ export const navGroups: NavGroup[] = [
     label: "สแกนและสื่อสาร",
     items: [
       { key: "faces", label: "ชุดข้อมูลใบหน้า", href: "/dashboard/faces", icon: "face", available: true },
-      { key: "guardians", label: "ผู้ปกครอง & LINE", href: "/dashboard/guardians", icon: "chat", available: true },
+      { key: "guardians", label: "ผู้ปกครอง", href: "/dashboard/guardians", icon: "how_to_reg", available: true },
+      { key: "line", label: "LINE / แจ้งเตือน", href: "/dashboard/line", icon: "chat", available: true },
     ],
   },
   {
