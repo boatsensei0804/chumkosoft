@@ -36,7 +36,19 @@ export async function findStudentsWithGuardians(params: { skip: number; take: nu
       guardians: {
         where: { isDeleted: false },
         orderBy: { createdAt: "asc" },
-        select: { id: true, fullName: true, relation: true, phone: true, lineUserId: true, lineLinkCode: true },
+        select: {
+          id: true,
+          fullName: true,
+          relation: true,
+          phone: true,
+          prefix: true,
+          nationalId: true,
+          occupation: true,
+          monthlyIncome: true,
+          bloodType: true,
+          lineUserId: true,
+          lineLinkCode: true,
+        },
       },
     },
   });
@@ -52,13 +64,35 @@ export async function studentExists(id: string): Promise<boolean> {
 
 export async function createGuardian(studentId: string, data: GuardianInput): Promise<{ id: string }> {
   return prisma.guardian.create({
-    data: { studentId, fullName: data.fullName, relation: data.relation, phone: data.phone },
+    data: {
+      studentId,
+      fullName: data.fullName,
+      relation: data.relation,
+      phone: data.phone,
+      prefix: data.prefix,
+      nationalId: data.nationalId,
+      occupation: data.occupation,
+      monthlyIncome: data.monthlyIncome,
+      bloodType: data.bloodType,
+    },
     select: { id: true },
   });
 }
 
 export async function updateGuardian(id: string, data: GuardianInput): Promise<void> {
-  await prisma.guardian.update({ where: { id }, data: { fullName: data.fullName, relation: data.relation, phone: data.phone } });
+  await prisma.guardian.update({
+    where: { id },
+    data: {
+      fullName: data.fullName,
+      relation: data.relation,
+      phone: data.phone,
+      prefix: data.prefix,
+      nationalId: data.nationalId,
+      occupation: data.occupation,
+      monthlyIncome: data.monthlyIncome,
+      bloodType: data.bloodType,
+    },
+  });
 }
 
 export async function softDeleteGuardian(id: string): Promise<void> {

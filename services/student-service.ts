@@ -1,6 +1,7 @@
 import type { EnrollmentStatus } from "@prisma/client";
 import {
   findStudentsForActiveTerm,
+  findStudentById,
   findStudentsPaginated,
   countStudentsFiltered,
   studentCodeExists,
@@ -13,7 +14,7 @@ import {
 } from "@/repositories/student-repository";
 import { formatThaiDate } from "@/utils/thai-date";
 import type { StudentInput, StudentCore } from "@/features/students/schemas/student-schema";
-import type { EnrolmentStatus, StudentSummary, ClassroomOption } from "@/features/dashboard/types";
+import type { EnrolmentStatus, StudentSummary, StudentDetail, ClassroomOption } from "@/features/dashboard/types";
 import type { ActionResult } from "@/types/form";
 import { paginate, DEFAULT_PAGE_SIZE, type Paginated } from "@/types/pagination";
 
@@ -48,6 +49,78 @@ function toSummary(s: Awaited<ReturnType<typeof findStudentsForActiveTerm>>[numb
     grade: enrollment?.classroom.gradeLevel ?? "—",
     enrolledAt: enrollment ? formatThaiDate(enrollment.enrolledAt) : "—",
     status: enrollment ? statusMap[enrollment.status] : "active",
+    nationalId: s.nationalId,
+    firstNameEn: s.firstNameEn,
+    lastNameEn: s.lastNameEn,
+    ethnicity: s.ethnicity,
+    nationality: s.nationality,
+    religion: s.religion,
+    bloodType: s.bloodType,
+    primaryLanguage: s.primaryLanguage,
+    email: s.email,
+    phone: s.phone,
+    birthHospital: s.birthHospital,
+    birthTambon: s.birthTambon,
+    birthAmphoe: s.birthAmphoe,
+    birthProvince: s.birthProvince,
+    previousSchool: s.previousSchool,
+    studyPlan: s.studyPlan,
+    weightKg: s.weightKg,
+    heightCm: s.heightCm,
+    chronicDisease: s.chronicDisease,
+    regHouseRegNo: s.regHouseRegNo,
+    regHouseNo: s.regHouseNo,
+    regMoo: s.regMoo,
+    regSoi: s.regSoi,
+    regRoad: s.regRoad,
+    regTambon: s.regTambon,
+    regAmphoe: s.regAmphoe,
+    regProvince: s.regProvince,
+    regPostalCode: s.regPostalCode,
+    curHouseRegNo: s.curHouseRegNo,
+    curHouseNo: s.curHouseNo,
+    curMoo: s.curMoo,
+    curSoi: s.curSoi,
+    curRoad: s.curRoad,
+    curTambon: s.curTambon,
+    curAmphoe: s.curAmphoe,
+    curProvince: s.curProvince,
+    curPostalCode: s.curPostalCode,
+    commuteMethod: s.commuteMethod,
+    commuteRoadType: s.commuteRoadType,
+    commuteDistanceM: s.commuteDistanceM,
+    commuteMinutes: s.commuteMinutes,
+    parentMaritalStatus: s.parentMaritalStatus,
+    siblingsOlderBrothers: s.siblingsOlderBrothers,
+    siblingsOlderSisters: s.siblingsOlderSisters,
+    siblingsYoungerBrothers: s.siblingsYoungerBrothers,
+    siblingsYoungerSisters: s.siblingsYoungerSisters,
+    birthOrder: s.birthOrder,
+    dependantsCount: s.dependantsCount,
+    disadvantages: s.disadvantages,
+    shortages: s.shortages,
+    disabilities: s.disabilities,
+  };
+}
+
+export async function getStudentDetail(id: string): Promise<StudentDetail | null> {
+  const s = await findStudentById(id);
+  if (!s) return null;
+  return {
+    ...toSummary(s),
+    faceConsent: s.faceConsent,
+    guardians: s.guardians.map((g) => ({
+      id: g.id,
+      fullName: g.fullName,
+      relation: g.relation,
+      prefix: g.prefix,
+      nationalId: g.nationalId,
+      occupation: g.occupation,
+      monthlyIncome: g.monthlyIncome,
+      bloodType: g.bloodType,
+      phone: g.phone,
+      linked: g.lineUserId !== null,
+    })),
   };
 }
 
@@ -79,14 +152,9 @@ export async function listClassroomOptions(): Promise<ClassroomOption[]> {
 }
 
 function splitCore(input: StudentInput): StudentCore {
-  return {
-    studentCode: input.studentCode,
-    prefix: input.prefix,
-    firstName: input.firstName,
-    lastName: input.lastName,
-    gender: input.gender,
-    birthDate: input.birthDate,
-  };
+  const { classroomId, ...core } = input;
+  void classroomId; // placement is handled separately via Enrollment
+  return core;
 }
 
 /**

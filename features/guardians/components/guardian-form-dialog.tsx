@@ -6,10 +6,12 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
 import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
 import { saveGuardianAction } from "@/features/guardians/actions";
 import { idleAction } from "@/types/form";
+import { GUARDIAN_RELATIONS, BLOOD_TYPES } from "@/features/students/constants";
 import type { GuardianRow } from "@/features/guardians/types";
 
 interface GuardianFormDialogProps {
@@ -51,27 +53,52 @@ function Body({ studentId, studentName, guardian, onClose, onSaved }: { studentI
           </Alert>
         )}
         <div className="flex flex-col gap-4">
-          <TextField
-            name="fullName"
-            label="ชื่อ-นามสกุลผู้ปกครอง"
-            defaultValue={guardian?.fullName ?? ""}
-            required
-            fullWidth
-            autoFocus
-            disabled={pending}
-            error={Boolean(state.fieldErrors?.fullName)}
-            helperText={state.fieldErrors?.fullName}
-          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[110px_1fr]">
+            <TextField name="prefix" label="คำนำหน้า" defaultValue={guardian?.prefix ?? ""} fullWidth disabled={pending} error={Boolean(state.fieldErrors?.prefix)} helperText={state.fieldErrors?.prefix} placeholder="นาย / นาง" />
+            <TextField
+              name="fullName"
+              label="ชื่อ-นามสกุลผู้ปกครอง"
+              defaultValue={guardian?.fullName ?? ""}
+              required
+              fullWidth
+              autoFocus
+              disabled={pending}
+              error={Boolean(state.fieldErrors?.fullName)}
+              helperText={state.fieldErrors?.fullName}
+            />
+          </div>
           <TextField
             name="relation"
             label="ความสัมพันธ์"
+            select
             defaultValue={guardian?.relation ?? ""}
             required
             fullWidth
             disabled={pending}
             error={Boolean(state.fieldErrors?.relation)}
-            helperText={state.fieldErrors?.relation ?? "เช่น บิดา / มารดา / ผู้ปกครอง"}
-          />
+            helperText={state.fieldErrors?.relation}
+          >
+            {GUARDIAN_RELATIONS.map((r) => (
+              <MenuItem key={r} value={r}>
+                {r}
+              </MenuItem>
+            ))}
+          </TextField>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <TextField name="nationalId" label="เลขบัตรประชาชน" defaultValue={guardian?.nationalId ?? ""} fullWidth disabled={pending} error={Boolean(state.fieldErrors?.nationalId)} helperText={state.fieldErrors?.nationalId} placeholder="13 หลัก" slotProps={{ htmlInput: { inputMode: "numeric", maxLength: 17 } }} />
+            <TextField name="bloodType" label="กรุ๊ปเลือด" select defaultValue={guardian?.bloodType ?? ""} fullWidth disabled={pending} error={Boolean(state.fieldErrors?.bloodType)} helperText={state.fieldErrors?.bloodType}>
+              <MenuItem value="">ไม่ระบุ</MenuItem>
+              {BLOOD_TYPES.map((b) => (
+                <MenuItem key={b} value={b}>
+                  {b}
+                </MenuItem>
+              ))}
+            </TextField>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <TextField name="occupation" label="อาชีพ" defaultValue={guardian?.occupation ?? ""} fullWidth disabled={pending} error={Boolean(state.fieldErrors?.occupation)} helperText={state.fieldErrors?.occupation} />
+            <TextField name="monthlyIncome" label="รายได้ต่อเดือน (บาท)" defaultValue={guardian?.monthlyIncome ?? ""} fullWidth disabled={pending} error={Boolean(state.fieldErrors?.monthlyIncome)} helperText={state.fieldErrors?.monthlyIncome} slotProps={{ htmlInput: { inputMode: "numeric" } }} />
+          </div>
           <TextField
             name="phone"
             label="เบอร์โทร"

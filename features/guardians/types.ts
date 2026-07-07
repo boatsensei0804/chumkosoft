@@ -5,6 +5,11 @@ export interface GuardianRow {
   fullName: string;
   relation: string;
   phone: string | null;
+  prefix: string | null;
+  nationalId: string | null;
+  occupation: string | null;
+  monthlyIncome: number | null;
+  bloodType: string | null;
   lineStatus: LineLinkStatus;
   /** Pending one-time LINE link code, shown so staff can pass it to the guardian. */
   linkCode: string | null;

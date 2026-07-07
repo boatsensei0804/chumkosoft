@@ -25,12 +25,19 @@ export async function saveGuardianAction(_prev: ActionResult, formData: FormData
 
     const id = toText(formData.get("id"));
     const studentId = toText(formData.get("studentId"));
-    const phone = toText(formData.get("phone"));
+    const nullIf = (v: FormDataEntryValue | null): string | null => (toText(v) === "" ? null : toText(v));
+    const incomeRaw = toText(formData.get("monthlyIncome")).replace(/,/g, "");
+    const nid = toText(formData.get("nationalId")).replace(/\D/g, "");
 
     const parsed = guardianSchema.safeParse({
       fullName: formData.get("fullName"),
       relation: formData.get("relation"),
-      phone: phone === "" ? null : phone,
+      phone: nullIf(formData.get("phone")),
+      prefix: nullIf(formData.get("prefix")),
+      nationalId: nid === "" ? null : nid,
+      occupation: nullIf(formData.get("occupation")),
+      monthlyIncome: incomeRaw === "" ? null : Number(incomeRaw),
+      bloodType: nullIf(formData.get("bloodType")),
     });
     if (!parsed.success) {
       return { ok: false, message: "กรุณาตรวจสอบข้อมูล", fieldErrors: fieldErrorsFromZod(parsed.error) };

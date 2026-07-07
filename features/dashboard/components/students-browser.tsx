@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -266,6 +267,11 @@ export default function StudentsBrowser({ page, query, filter, classrooms }: Stu
                   </TableCell>
                   <TableCell align="right">
                     <div className="flex items-center justify-end gap-0.5">
+                      <Tooltip title="ดูข้อมูล" arrow>
+                        <IconButton size="small" aria-label={`ดูข้อมูล ${s.firstName} ${s.lastName}`} component={Link} href={`/dashboard/students/${s.id}`}>
+                          <Icon name="visibility" sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="แก้ไข" arrow>
                         <IconButton size="small" aria-label={`แก้ไข ${s.firstName} ${s.lastName}`} onClick={() => openEdit(s)}>
                           <Icon name="edit" sx={{ fontSize: 18 }} />
