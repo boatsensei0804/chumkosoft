@@ -1,26 +1,165 @@
 @import "tailwindcss";
 
+/*
+  chumkosoft design tokens
+  Scene: a school registrar at her desk on a bright morning, fluorescent office
+  light, moving quickly through student and course records. Light theme, calm,
+  institutional. Honey-gold carries the brand identity; near-black carries the
+  primary actions (gold text is unreadable as a button fill). Restrained strategy.
+  All colors OKLCH.
+*/
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces — pure white cards over a cool blue-white app background */
+  --bg: oklch(1 0 0);
+  --surface: oklch(0.978 0.012 250);
+  --surface-2: oklch(0.966 0.015 250);
+  --surface-sunken: oklch(0.948 0.018 250);
+
+  /* Ink — cool near-black; strong contrast for hours of reading */
+  --ink: oklch(0.25 0.022 262);
+  --ink-strong: oklch(0.19 0.024 262);
+  --muted: oklch(0.48 0.03 258);
+  /* Tertiary text (captions, placeholders, meta). Darkened from 0.6 → 0.54 so it
+     clears WCAG AA (~4.8:1 on white) while staying a visibly lighter tier than muted. */
+  --faint: oklch(0.54 0.028 256);
+
+  /* Lines — cool hairlines */
+  --line: oklch(0.905 0.014 252);
+  --line-strong: oklch(0.84 0.02 252);
+
+  /* Brand — azure blue identity: logo, active nav, selection, key figures, chart */
+  --brand: oklch(0.55 0.15 252);
+  --brand-strong: oklch(0.45 0.15 254);
+  --brand-ink: oklch(0.42 0.14 254);
+  --brand-soft: oklch(0.95 0.032 250);
+  --brand-softer: oklch(0.972 0.02 250);
+
+  /* Primary action — blue gradient (see MUI theme); solid values are the fallback */
+  --primary: oklch(0.48 0.15 253);
+  --primary-hover: oklch(0.42 0.15 254);
+  --primary-grad-from: oklch(0.54 0.15 250);
+  --primary-grad-to: oklch(0.42 0.15 256);
+  --on-primary: oklch(0.99 0.006 250);
+
+  /* Blue — second brand tone (Thai academic gold-on-blue heraldry) */
+  --blue: oklch(0.52 0.13 250);
+  --blue-strong: oklch(0.42 0.12 252);
+  --blue-ink: oklch(0.42 0.13 252);
+  --blue-soft: oklch(0.96 0.026 250);
+
+  /* Accent maps to blue: links, info, second brand voice */
+  --accent: var(--blue);
+  --accent-soft: var(--blue-soft);
+
+  /* Letterhead band — deep institutional-blue gradient (the one bold surface) */
+  --band-from: oklch(0.29 0.066 260);
+  --band-to: oklch(0.44 0.12 250);
+  --band-ink: oklch(0.98 0.006 250);
+  --band-muted: oklch(0.84 0.032 250);
+  --band-line: oklch(0.98 0.006 250 / 0.14);
+
+  /* Semantic states */
+  --success: oklch(0.58 0.12 152);
+  --success-soft: oklch(0.955 0.03 152);
+  --warning: oklch(0.7 0.15 60);
+  --warning-soft: oklch(0.96 0.04 65);
+  --danger: oklch(0.56 0.19 25);
+  --danger-soft: oklch(0.96 0.035 25);
+  --info: var(--blue);
+  --info-soft: var(--blue-soft);
+
+  /* Focus */
+  --focus: oklch(0.52 0.15 252);
+
+  /* Radii + elevation */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 2px oklch(0.4 0.08 258 / 0.08), 0 1px 3px oklch(0.4 0.08 258 / 0.05);
+  --shadow-md: 0 6px 16px oklch(0.4 0.09 258 / 0.09), 0 2px 5px oklch(0.4 0.08 258 / 0.06);
+  --shadow-lg: 0 16px 40px oklch(0.4 0.1 258 / 0.12), 0 4px 10px oklch(0.4 0.08 258 / 0.06);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-ink: var(--ink);
+  --color-ink-strong: var(--ink-strong);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-softer: var(--brand-softer);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-blue: var(--blue);
+  --color-blue-strong: var(--blue-strong);
+  --color-blue-ink: var(--blue-ink);
+  --color-blue-soft: var(--blue-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --font-sans: var(--font-plex-thai), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: var(--radius);
+
+  /* Semantic z-index scale */
+  --z-dropdown: 1000;
+  --z-sticky: 1100;
+  --z-modal-backdrop: 1200;
+  --z-modal: 1300;
+  --z-toast: 1400;
+  --z-tooltip: 1500;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--line);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv01", "ss01";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Numeric alignment for tables and figures */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Focus-visible ring, consistent across the app */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

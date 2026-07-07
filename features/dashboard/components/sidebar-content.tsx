@@ -1,0 +1,67 @@
+import BrandMark from "./brand-mark";
+import SidebarNav from "./sidebar-nav";
+import Icon from "./icon";
+import { navGroups } from "../nav";
+import { logoutAction } from "@/features/auth/actions";
+import type { CurrentUser } from "@/lib/dal";
+import type { NavItem } from "../types";
+
+interface SidebarContentProps {
+  user: CurrentUser;
+  onNavigate?: () => void;
+}
+
+function visibleTo(role: CurrentUser["role"]): (item: NavItem) => boolean {
+  return (item) => !item.roles || item.roles.includes(role);
+}
+
+export default function SidebarContent({ user, onNavigate }: SidebarContentProps): React.ReactNode {
+  const groups = navGroups
+    .map((g) => ({ label: g.label, items: g.items.filter(visibleTo(user.role)) }))
+    .filter((g) => g.items.length > 0);
+
+  return (
+    <div className="flex h-full flex-col" style={{ backgroundColor: "var(--surface-2)" }}>
+      <div className="flex h-16 items-center px-5" style={{ borderBottom: "1px solid var(--line)" }}>
+        <BrandMark />
+      </div>
+
+      <nav aria-label="เมนูหลัก" className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 py-5">
+        {groups.map((group, i) => (
+          <div key={group.label ?? `group-${i}`}>
+            {group.label && (
+              <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-faint">{group.label}</p>
+            )}
+            <SidebarNav items={group.items} onNavigate={onNavigate} />
+          </div>
+        ))}
+      </nav>
+
+      <div className="px-3 pb-4">
+        <div className="flex items-center gap-3 rounded-[12px] p-2.5" style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)" }}>
+          <span
+            className="grid size-[38px] shrink-0 place-items-center rounded-full text-[14px] font-semibold"
+            style={{ backgroundColor: "var(--brand-soft)", color: "var(--brand-ink)" }}
+            aria-hidden="true"
+          >
+            {user.initials}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] font-semibold text-ink-strong">{user.displayName}</p>
+            <p className="truncate text-[12px] text-muted">{user.subtitle}</p>
+          </div>
+          <form action={logoutAction} className="shrink-0">
+            <button
+              type="submit"
+              title="ออกจากระบบ"
+              aria-label="ออกจากระบบ"
+              className="grid size-8 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-ink"
+            >
+              <Icon name="logout" sx={{ fontSize: 19 }} />
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}

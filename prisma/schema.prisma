@@ -1,0 +1,611 @@
+// chumkosoft — school management platform data model (PostgreSQL via Prisma)
+//
+// Cross-cutting rules encoded here:
+//   1. Term-scoped: academic entities carry academicYearId / termId.
+//   2. Soft delete everywhere: every model has isDeleted + deletedAt; never hard-delete.
+//   3. Timetable conflict prevention (teacher / room / classroom cannot double-book a
+//      period) is enforced in the service layer over non-deleted slots — see the note on
+//      TimetableSlot for why DB unique indexes are not used alongside soft delete.
+//   4. Drag-and-drop timetabling writes TimetableSlot rows.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+  KIOSK // face-scan check-in station account (no person record)
+}
+
+enum StaffType {
+  TEACHER
+  PERSONNEL
+  ADMIN
+}
+
+enum TermStatus {
+  UPCOMING
+  ACTIVE
+  CLOSED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  PENDING
+  LEAVE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  LEAVE
+  EXCUSED
+}
+
+enum EntryMethod {
+  CARD
+  QR
+  MANUAL
+  FACE
+}
+
+enum DayOfWeek {
+  MON
+  TUE
+  WED
+  THU
+  FRI
+  SAT
+  SUN
+}
+
+// ---------------------------------------------------------------------------
+// Identity & access
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  passwordHash String
+  role         Role
+  isActive     Boolean @default(true)
+
+  // A user account is optionally linked to exactly one person record.
+  studentId String?  @unique
+  student   Student? @relation(fields: [studentId], references: [id])
+  staffId   String?  @unique
+  staff     Staff?   @relation(fields: [staffId], references: [id])
+
+  // Parent accounts link to students they are guardians of.
+  guardianLinks Guardian[]
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Calendar: Academic Year → Term (the scoping dimension)
+// ---------------------------------------------------------------------------
+
+model AcademicYear {
+  id           String       @id @default(cuid())
+  buddhistYear Int          @unique // e.g. 2568
+  name         String // e.g. "ปีการศึกษา 2568"
+  startDate    DateTime
+  endDate      DateTime
+  isActive     Boolean      @default(false) // the currently active year
+  terms        Term[]
+  classrooms   Classroom[]
+  enrollments  Enrollment[]
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Term {
+  id             String       @id @default(cuid())
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  number         Int // 1, 2, 3 (ภาคเรียนที่)
+  name           String // "ภาคเรียนที่ 1/2568"
+  startDate      DateTime // วันเปิดภาคเรียน
+  endDate        DateTime // วันปิดภาคเรียน
+  status         TermStatus   @default(UPCOMING)
+  isActive       Boolean      @default(false) // the current working term
+
+  // Provenance when a term is created by copying a previous term's structure
+  // (the user chooses whether to copy on rollover).
+  sourceTermId String?
+  sourceTerm   Term?   @relation("TermRollover", fields: [sourceTermId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  derivedTerms Term[]  @relation("TermRollover")
+
+  offerings        CourseOffering[]
+  timetableSlots   TimetableSlot[]
+  enrollments      Enrollment[]
+  classAttendances ClassAttendance[]
+  schoolEntries    SchoolEntry[]
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([academicYearId, number])
+}
+
+// ---------------------------------------------------------------------------
+// Physical & structural: Period (bell schedule), Room, Classroom (a cohort)
+// ---------------------------------------------------------------------------
+
+model Period {
+  id               String            @id @default(cuid())
+  index            Int               @unique // คาบที่ 1..n
+  label            String
+  startTime        String // "08:30"
+  endTime          String // "09:20"
+  isBreak          Boolean           @default(false)
+  timetableSlots   TimetableSlot[]
+  classAttendances ClassAttendance[]
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Room {
+  id             String          @id @default(cuid())
+  code           String           @unique // "304"
+  name           String? // "ห้องปฏิบัติการ 2"
+  building       String? // "อาคาร 3"
+  capacity       Int?
+  timetableSlots TimetableSlot[]
+  offerings      CourseOffering[]
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Classroom {
+  id                String       @id @default(cuid())
+  academicYearId    String
+  academicYear      AcademicYear @relation(fields: [academicYearId], references: [id])
+  code              String // "ม.4/1"
+  gradeLevel        String // "มัธยมปลาย"
+  homeroomTeacherId String?
+  homeroomTeacher   Staff?       @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id])
+
+  enrollments    Enrollment[]
+  offerings      CourseOffering[]
+  timetableSlots TimetableSlot[]
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([academicYearId, code])
+}
+
+// ---------------------------------------------------------------------------
+// People: Student, Staff, Guardian
+// ---------------------------------------------------------------------------
+
+model Student {
+  id          String    @id @default(cuid())
+  studentCode String    @unique // "68-0421"
+  prefix      String? // "ด.ช." / "น.ส."
+  firstName   String
+  lastName    String
+  gender      String?
+  birthDate   DateTime?
+
+  // ── DMC personal record (from the school's student intake forms) ──
+  // All optional so existing rows stay valid; captured via the student form.
+  nationalId      String? // เลขประจำตัวประชาชน (13 หลัก)
+  firstNameEn     String? // ชื่อ (อังกฤษ)
+  lastNameEn      String? // นามสกุล (อังกฤษ)
+  ethnicity       String? // เชื้อชาติ
+  nationality     String? // สัญชาติ
+  religion        String? // ศาสนา
+  bloodType       String? // กรุ๊ปเลือด
+  primaryLanguage String? // ภาษาหลักที่ใช้สื่อสาร
+  email           String?
+  phone           String?
+  birthHospital   String? // โรงพยาบาลที่เกิด
+  birthTambon     String? // ตำบลที่เกิด
+  birthAmphoe     String? // อำเภอที่เกิด
+  birthProvince   String? // จังหวัดที่เกิด
+  previousSchool  String? // สถานศึกษาเดิม
+  studyPlan       String? // แผนการเรียน (วิทย์-คณิต / อุตสาหกรรมศิลป์-ภาษา)
+
+  // Health
+  weightKg       Float? // น้ำหนัก (กก.)
+  heightCm       Float? // ส่วนสูง (ซม.)
+  chronicDisease String? // โรคประจำตัว
+
+  // Registered address (ตามทะเบียนบ้าน)
+  regHouseRegNo String? // รหัสประจำบ้าน
+  regHouseNo    String? // บ้านเลขที่
+  regMoo        String? // หมู่ที่
+  regSoi        String? // ตรอก/ซอย
+  regRoad       String? // ถนน
+  regTambon     String? // ตำบล/แขวง
+  regAmphoe     String? // อำเภอ/เขต
+  regProvince   String? // จังหวัด
+  regPostalCode String? // รหัสไปรษณีย์
+
+  // Current address (ปัจจุบัน)
+  curHouseRegNo String?
+  curHouseNo    String?
+  curMoo        String?
+  curSoi        String?
+  curRoad       String?
+  curTambon     String?
+  curAmphoe     String?
+  curProvince   String?
+  curPostalCode String?
+
+  // Commute
+  commuteMethod    String? // เดินเท้า / พาหนะเสียค่าโดยสาร / พาหนะไม่เสียค่าโดยสาร / จักรยานยืมเรียน
+  commuteRoadType  String? // ถนนลูกรัง / ถนนลาดยาง / ทางน้ำ
+  commuteDistanceM Int? // ระยะทางจากโรงเรียน (เมตร)
+  commuteMinutes   Int? // ระยะเวลาเดินทาง (นาที)
+
+  // Family status
+  parentMaritalStatus     String? // สถานภาพบิดามารดา
+  siblingsOlderBrothers   Int? // จำนวนพี่ชาย
+  siblingsOlderSisters    Int? // จำนวนพี่สาว
+  siblingsYoungerBrothers Int? // จำนวนน้องชาย
+  siblingsYoungerSisters  Int? // จำนวนน้องสาว
+  birthOrder              Int? // เป็นบุตรคนที่
+  dependantsCount         Int? // จำนวนบุคคลที่ผู้ปกครองอุปการะ
+
+  // DMC classifications (multi-select)
+  disadvantages String[] // เด็กด้อยโอกาส
+  shortages     String[] // การขาดแคลน
+  disabilities  String[] // ความพิการ
+
+  // PDPA: guardian consent to store the student's biometric (face) data. Face
+  // enrolment is blocked in the service layer unless faceConsent is true.
+  faceConsent   Boolean   @default(false)
+  faceConsentAt DateTime?
+
+  enrollments      Enrollment[]
+  classAttendances ClassAttendance[]
+  schoolEntries    SchoolEntry[]
+  guardians        Guardian[]
+  faceTemplates    FaceTemplate[]
+  user             User?
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Staff {
+  id        String    @id @default(cuid())
+  staffCode String    @unique
+  prefix    String?
+  firstName String
+  lastName  String
+  type      StaffType @default(TEACHER)
+  position  String? // "หัวหน้ากลุ่มสาระคณิตศาสตร์"
+  email     String?
+  phone     String?
+
+  // Government education-personnel record (from the HR intake form). All optional
+  // so existing rows and non-teaching staff stay valid; age is derived from
+  // birthDate and never stored.
+  birthDate      DateTime? // วัน/เดือน/ปีเกิด
+  nationalId     String? // เลขบัตรประจำตัวประชาชน (13 หลัก)
+  positionNumber String? // เลขที่ตำแหน่ง
+  salary         Int? // เงินเดือนปัจจุบัน (บาท)
+  licenseNumber  String? // เลขที่ใบอนุญาตประกอบวิชาชีพ
+  licenseExpiry  DateTime? // วันหมดอายุใบประกอบวิชาชีพ
+
+  // Education background
+  degreeBachelor     String? // คุณวุฒิปริญญาตรี
+  fieldBachelor      String? // สาขา (ตรี)
+  universityBachelor String? // มหาวิทยาลัยที่สำเร็จการศึกษา (ตรี)
+  degreeMaster       String? // คุณวุฒิปริญญาโท
+  fieldMaster        String? // สาขา (โท)
+  universityMaster   String? // มหาวิทยาลัยที่สำเร็จการศึกษา (โท)
+
+  homerooms          Classroom[]       @relation("HomeroomTeacher")
+  offerings          CourseOffering[]
+  timetableSlots     TimetableSlot[]
+  recordedAttendance ClassAttendance[] @relation("AttendanceRecorder")
+  user               User?
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Guardian {
+  id        String  @id @default(cuid())
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id])
+  fullName  String
+  relation  String // "บิดา" / "มารดา" / "ผู้ปกครอง"
+  phone     String?
+
+  // Extended guardian record (from the student intake forms)
+  prefix        String? // คำนำหน้าชื่อ
+  nationalId    String? // เลขบัตรประจำตัวประชาชน
+  occupation    String? // อาชีพ
+  monthlyIncome Int? // รายได้ต่อเดือน (บาท)
+  bloodType     String? // กรุ๊ปเลือด
+
+  // LINE Messaging API push target, linked via a one-time link code the school
+  // issues. Not unique: one LINE account may guard several students.
+  lineUserId   String?
+  lineLinkCode String? @unique // pending one-time code; cleared once linked
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Enrollment: which class a student belongs to, per term
+// ---------------------------------------------------------------------------
+
+model Enrollment {
+  id             String           @id @default(cuid())
+  studentId      String
+  student        Student          @relation(fields: [studentId], references: [id])
+  classroomId    String
+  classroom      Classroom        @relation(fields: [classroomId], references: [id])
+  academicYearId String
+  academicYear   AcademicYear     @relation(fields: [academicYearId], references: [id])
+  termId         String
+  term           Term             @relation(fields: [termId], references: [id])
+  status         EnrollmentStatus @default(ACTIVE)
+  enrolledAt     DateTime         @default(now())
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([studentId, termId]) // one class placement per student per term
+  @@index([termId, classroomId])
+}
+
+// ---------------------------------------------------------------------------
+// Course catalog → CourseOffering (a course taught in a term to a class by a teacher)
+// ---------------------------------------------------------------------------
+
+model Course {
+  id          String           @id @default(cuid())
+  code        String           @unique // "ค30201"
+  name        String // "คณิตศาสตร์เพิ่มเติม"
+  credits     Float?
+  description String?
+  offerings   CourseOffering[]
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model CourseOffering {
+  id          String    @id @default(cuid())
+  termId      String
+  term        Term      @relation(fields: [termId], references: [id])
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id])
+  teacherId      String
+  teacher        Staff     @relation(fields: [teacherId], references: [id])
+  classroomId    String
+  classroom      Classroom @relation(fields: [classroomId], references: [id])
+  roomId         String
+  room           Room      @relation(fields: [roomId], references: [id])
+  periodsPerWeek Int       @default(1) // target lessons per week to schedule
+
+  timetableSlots   TimetableSlot[]
+  classAttendances ClassAttendance[]
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([termId, courseId, classroomId]) // a course is offered once to a class per term
+  @@index([termId, teacherId])
+}
+
+// ---------------------------------------------------------------------------
+// TimetableSlot: one cell of the teaching/class schedule (drag-and-drop target)
+//
+// Conflict prevention (a teacher, room, or classroom may not double-book the same
+// period) is enforced in the service layer by querying non-deleted slots on
+// (term, teacher|room|classroom, dayOfWeek, period). DB-level unique indexes are
+// intentionally NOT used here: they would collide with soft delete, since a
+// soft-deleted slot would still occupy the unique key and block re-scheduling.
+// The @@index entries below keep those conflict checks fast.
+// ---------------------------------------------------------------------------
+
+model TimetableSlot {
+  id               String         @id @default(cuid())
+  termId           String
+  term             Term           @relation(fields: [termId], references: [id])
+  courseOfferingId String
+  courseOffering   CourseOffering @relation(fields: [courseOfferingId], references: [id])
+
+  // Denormalized from the offering so conflict checks index efficiently.
+  teacherId   String
+  teacher     Staff     @relation(fields: [teacherId], references: [id])
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id])
+  roomId      String
+  room        Room      @relation(fields: [roomId], references: [id])
+  periodId    String
+  period      Period    @relation(fields: [periodId], references: [id])
+  dayOfWeek   DayOfWeek
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([termId, teacherId, dayOfWeek, periodId])
+  @@index([termId, roomId, dayOfWeek, periodId])
+  @@index([termId, classroomId, dayOfWeek, periodId])
+}
+
+// ---------------------------------------------------------------------------
+// Attendance (per class period) — distinct from SchoolEntry
+// ---------------------------------------------------------------------------
+
+model ClassAttendance {
+  id               String           @id @default(cuid())
+  termId           String
+  term             Term             @relation(fields: [termId], references: [id])
+  courseOfferingId String
+  courseOffering   CourseOffering   @relation(fields: [courseOfferingId], references: [id])
+  studentId        String
+  student          Student          @relation(fields: [studentId], references: [id])
+  periodId         String
+  period           Period           @relation(fields: [periodId], references: [id])
+  date             DateTime
+  status           AttendanceStatus @default(PRESENT)
+  note             String?
+  recordedById     String?
+  recordedBy       Staff?           @relation("AttendanceRecorder", fields: [recordedById], references: [id])
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([courseOfferingId, studentId, date]) // one roll-call record per student per meeting
+  @@index([termId, date])
+}
+
+// ---------------------------------------------------------------------------
+// Announcement: notices shown on the staff dashboard.
+// ---------------------------------------------------------------------------
+
+model Announcement {
+  id       String @id @default(cuid())
+  kind     String // "info" | "warning" | "success"
+  title    String
+  body     String
+  postedBy String
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([isDeleted, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// AuditLog: append-only trail of sensitive actions (biometric data, consent,
+// LINE linking). Not soft-deleted — audit records are never removed.
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String? // user who performed it; null for system/automated events
+  action     String // "face.checkin" | "face.enroll" | "face.delete" | "consent.grant" | ...
+  targetType String? // "student" | "guardian" | ...
+  targetId   String?
+  detail     String? // short human-readable summary
+  createdAt  DateTime @default(now())
+
+  @@index([action, createdAt])
+  @@index([targetType, targetId])
+}
+
+// ---------------------------------------------------------------------------
+// FaceTemplate: one enrolled face photo of a student, for scan check-in
+//
+// `embedding` is the 128-dimension descriptor produced by face-api.js in the
+// browser (same model at enrollment and at the kiosk, so distances compare).
+// The original photo lives in MinIO under `imageKey`. Biometric data of minors
+// requires guardian consent (PDPA) — collect consent before enrolling.
+// ---------------------------------------------------------------------------
+
+model FaceTemplate {
+  id        String  @id @default(cuid())
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+  embedding Float[] // 128-d face descriptor
+  imageKey  String // MinIO object key, e.g. "faces/{studentId}/{id}.jpg"
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([studentId])
+}
+
+// ---------------------------------------------------------------------------
+// School entry (daily gate check-in/out) — distinct from ClassAttendance
+// ---------------------------------------------------------------------------
+
+model SchoolEntry {
+  id         String      @id @default(cuid())
+  termId     String
+  term       Term        @relation(fields: [termId], references: [id])
+  studentId  String
+  student    Student     @relation(fields: [studentId], references: [id])
+  date       DateTime
+  checkInAt  DateTime?
+  checkOutAt DateTime?
+  method     EntryMethod @default(CARD)
+  isLate     Boolean     @default(false) // check-in after the school's late cutoff
+  note       String?
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([studentId, date]) // one gate record per student per day
+  @@index([termId, date])
+}
+
+// ---------------------------------------------------------------------------
+// ScanSetting: single-row config for the face-scan gate — when scanning opens
+// and after what time a check-in counts as late. Times are "HH:MM" (Bangkok).
+// ---------------------------------------------------------------------------
+
+model ScanSetting {
+  id            String   @id @default("singleton")
+  scanStartTime String   @default("06:30") // gate opens; no check-in before this
+  lateAfterTime String   @default("08:00") // check-in at/after this is "late"
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+}

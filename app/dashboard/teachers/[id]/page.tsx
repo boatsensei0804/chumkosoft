@@ -1,0 +1,153 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import Icon from "@/features/dashboard/components/icon";
+import SectionCard from "@/features/dashboard/components/section-card";
+import { getStaffDetail } from "@/services/staff-service";
+import type { StaffKind } from "@/features/teachers/types";
+
+export const metadata: Metadata = {
+  title: "ข้อมูลบุคลากร · chumkosoft",
+};
+
+export const dynamic = "force-dynamic";
+
+const KIND_LABEL: Record<StaffKind, string> = {
+  TEACHER: "ครูผู้สอน",
+  PERSONNEL: "บุคลากร",
+  ADMIN: "ผู้ดูแลระบบ",
+};
+
+function formatThaiDate(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  return new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "long", year: "numeric" }).format(d);
+}
+
+function ageFrom(iso: string | null): number | null {
+  if (!iso) return null;
+  const b = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(b.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - b.getFullYear();
+  const m = now.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age -= 1;
+  return age >= 0 && age < 130 ? age : null;
+}
+
+/** A single labelled read-only field. Shows an em dash when empty. */
+function Field({ label, value }: { label: string; value: string | number | null }): React.ReactNode {
+  const display = value === null || value === "" ? "—" : String(value);
+  const empty = value === null || value === "";
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[12px] font-medium text-faint">{label}</span>
+      <span className={`text-[14px] ${empty ? "text-faint" : "font-medium text-ink-strong"}`}>{display}</span>
+    </div>
+  );
+}
+
+interface TeacherDetailPageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default async function TeacherDetailPage({ params }: TeacherDetailPageProps): Promise<React.ReactNode> {
+  const { id } = await params;
+  const s = await getStaffDetail(id);
+  if (!s) notFound();
+
+  const fullName = [s.prefix, `${s.firstName} ${s.lastName}`].filter(Boolean).join(" ");
+  const age = ageFrom(s.birthDate);
+  const salaryText = s.salary !== null ? `${s.salary.toLocaleString("th-TH")} บาท` : null;
+
+  return (
+    <div className="flex flex-col gap-5">
+      <Link href="/dashboard/teachers" className="inline-flex w-fit items-center gap-1.5 text-[13px] font-semibold text-muted transition-colors hover:text-ink">
+        <Icon name="chevron_down" sx={{ fontSize: 18, transform: "rotate(90deg)" }} />
+        กลับไปรายชื่อครูและบุคลากร
+      </Link>
+
+      {/* Header */}
+      <section className="flex flex-col gap-4 rounded-[16px] p-5 sm:flex-row sm:items-center sm:justify-between" style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)" }}>
+        <div className="flex items-center gap-3.5">
+          <span className="grid size-14 place-items-center rounded-full text-[20px] font-semibold" style={{ backgroundColor: "var(--brand-soft)", color: "var(--brand-ink)" }} aria-hidden="true">
+            {s.firstName.charAt(0)}
+          </span>
+          <div>
+            <h1 className="text-[22px] font-bold text-ink-strong">{fullName}</h1>
+            <p className="text-[13px] text-muted">
+              รหัส {s.code}
+              {s.position ? ` · ${s.position}` : ""}
+            </p>
+          </div>
+        </div>
+        <span className="inline-flex w-fit items-center rounded-full px-3 py-1.5 text-[13px] font-semibold" style={{ backgroundColor: "var(--brand-soft)", color: "var(--brand-ink)" }}>
+          {KIND_LABEL[s.type]}
+        </span>
+      </section>
+
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <SectionCard title="ข้อมูลส่วนบุคคล" bodyClassName="p-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="วัน/เดือน/ปีเกิด" value={formatThaiDate(s.birthDate)} />
+            <Field label="อายุ" value={age !== null ? `${age} ปี` : null} />
+            <Field label="เลขบัตรประจำตัวประชาชน" value={s.nationalId} />
+            <Field label="เบอร์โทรศัพท์" value={s.phone} />
+            <Field label="อีเมล" value={s.email} />
+          </div>
+        </SectionCard>
+
+        <SectionCard title="ข้อมูลราชการและใบประกอบวิชาชีพ" bodyClassName="p-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="เลขที่ตำแหน่ง" value={s.positionNumber} />
+            <Field label="เงินเดือนปัจจุบัน" value={salaryText} />
+            <Field label="เลขที่ใบอนุญาตประกอบวิชาชีพ" value={s.licenseNumber} />
+            <Field label="วันหมดอายุใบประกอบวิชาชีพ" value={formatThaiDate(s.licenseExpiry)} />
+          </div>
+        </SectionCard>
+
+        <SectionCard title="วุฒิการศึกษา" bodyClassName="p-5">
+          <div className="flex flex-col gap-4">
+            <div>
+              <p className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-faint">ปริญญาตรี</p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <Field label="คุณวุฒิ" value={s.degreeBachelor} />
+                <Field label="สาขา" value={s.fieldBachelor} />
+                <Field label="มหาวิทยาลัย" value={s.universityBachelor} />
+              </div>
+            </div>
+            <div style={{ borderTop: "1px solid var(--line)" }} className="pt-4">
+              <p className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-faint">ปริญญาโท</p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <Field label="คุณวุฒิ" value={s.degreeMaster} />
+                <Field label="สาขา" value={s.fieldMaster} />
+                <Field label="มหาวิทยาลัย" value={s.universityMaster} />
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="วิชาที่สอน (ภาคเรียนปัจจุบัน)" caption={`${s.teaching.length.toLocaleString("th-TH")} วิชา`} bodyClassName="p-0">
+          {s.teaching.length > 0 ? (
+            <ul>
+              {s.teaching.map((t) => (
+                <li key={t.id} className="flex items-center justify-between gap-3 px-5 py-3" style={{ borderTop: "1px solid var(--line)" }}>
+                  <div className="min-w-0">
+                    <p className="truncate text-[14px] font-medium text-ink-strong">{t.courseName}</p>
+                    <p className="tabular text-[12.5px] text-muted">
+                      {t.courseCode} · ห้อง {t.classroomCode}
+                    </p>
+                  </div>
+                  <span className="tabular shrink-0 text-[13px] text-muted">{t.periodsPerWeek} คาบ/สัปดาห์</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="px-5 py-8 text-center text-[13.5px] text-muted">ยังไม่มีวิชาที่สอนในภาคเรียนปัจจุบัน</p>
+          )}
+        </SectionCard>
+      </div>
+    </div>
+  );
+}
