@@ -191,8 +191,9 @@ model Classroom {
   academicYear      AcademicYear @relation(fields: [academicYearId], references: [id])
   code              String // "ม.4/1"
   gradeLevel        String // "มัธยมปลาย"
-  homeroomTeacherId String?
-  homeroomTeacher   Staff?       @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id])
+
+  // Homeroom advisors (ครูที่ปรึกษา) — a classroom may have more than one.
+  advisors ClassroomAdvisor[]
 
   enrollments    Enrollment[]
   offerings      CourseOffering[]
@@ -204,6 +205,18 @@ model Classroom {
   updatedAt DateTime  @updatedAt
 
   @@unique([academicYearId, code])
+}
+
+/** Join: which teachers advise (ครูที่ปรึกษา) a classroom — many-to-many. */
+model ClassroomAdvisor {
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  staffId     String
+  staff       Staff     @relation(fields: [staffId], references: [id])
+  assignedAt  DateTime  @default(now())
+
+  @@id([classroomId, staffId])
+  @@index([staffId])
 }
 
 // ---------------------------------------------------------------------------
@@ -332,7 +345,7 @@ model Staff {
   fieldMaster        String? // สาขา (โท)
   universityMaster   String? // มหาวิทยาลัยที่สำเร็จการศึกษา (โท)
 
-  homerooms          Classroom[]       @relation("HomeroomTeacher")
+  advisories         ClassroomAdvisor[]
   offerings          CourseOffering[]
   timetableSlots     TimetableSlot[]
   recordedAttendance ClassAttendance[] @relation("AttendanceRecorder")

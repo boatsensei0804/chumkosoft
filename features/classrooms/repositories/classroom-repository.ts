@@ -23,8 +23,7 @@ export async function listClassrooms(yearId: string, termId: string | null) {
       id: true,
       code: true,
       gradeLevel: true,
-      homeroomTeacherId: true,
-      homeroomTeacher: { select: { prefix: true, firstName: true, lastName: true } },
+      advisors: { select: { staffId: true, staff: { select: { prefix: true, firstName: true, lastName: true } } } },
       _count: {
         select: {
           enrollments: { where: { isDeleted: false, ...termFilter } },
@@ -43,8 +42,10 @@ export async function getClassroom(id: string) {
       code: true,
       gradeLevel: true,
       academicYearId: true,
-      homeroomTeacherId: true,
-      homeroomTeacher: { select: { prefix: true, firstName: true, lastName: true, position: true } },
+      advisors: {
+        orderBy: { assignedAt: "asc" },
+        select: { staffId: true, staff: { select: { prefix: true, firstName: true, lastName: true, position: true } } },
+      },
     },
   });
 }
@@ -62,22 +63,34 @@ export async function staffExists(id: string): Promise<boolean> {
   return row !== null;
 }
 
+/** True only when every id is an existing, non-deleted staff member. */
+export async function allStaffExist(ids: string[]): Promise<boolean> {
+  if (ids.length === 0) return true;
+  const count = await prisma.staff.count({ where: { id: { in: ids }, isDeleted: false } });
+  return count === ids.length;
+}
+
 export async function createClassroom(yearId: string, data: ClassroomInput): Promise<{ id: string }> {
   return prisma.classroom.create({
     data: {
       academicYearId: yearId,
       code: data.code,
       gradeLevel: data.gradeLevel,
-      homeroomTeacherId: data.homeroomTeacherId,
+      advisors: { create: data.advisorIds.map((staffId) => ({ staffId })) },
     },
     select: { id: true },
   });
 }
 
 export async function updateClassroom(id: string, data: ClassroomInput): Promise<void> {
+  // Replace the advisor set wholesale — simplest correct approach for a small list.
   await prisma.classroom.update({
     where: { id },
-    data: { code: data.code, gradeLevel: data.gradeLevel, homeroomTeacherId: data.homeroomTeacherId },
+    data: {
+      code: data.code,
+      gradeLevel: data.gradeLevel,
+      advisors: { deleteMany: {}, create: data.advisorIds.map((staffId) => ({ staffId })) },
+    },
   });
 }
 

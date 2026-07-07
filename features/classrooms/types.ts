@@ -1,9 +1,13 @@
+export interface AdvisorRef {
+  id: string;
+  name: string;
+}
+
 export interface ClassroomRow {
   id: string;
   code: string;
   gradeLevel: string;
-  homeroomTeacherId: string | null;
-  homeroomTeacher: string | null;
+  advisors: AdvisorRef[];
   studentCount: number;
   offeringCount: number;
 }
@@ -42,13 +46,16 @@ export interface OfferingRow {
   periodsPerWeek: number;
 }
 
+export interface AdvisorDetail {
+  name: string;
+  position: string | null;
+}
+
 export interface ClassroomDetail {
   id: string;
   code: string;
   gradeLevel: string;
-  homeroomTeacherId: string | null;
-  homeroomTeacher: string | null;
-  homeroomTeacherPosition: string | null;
+  advisors: AdvisorDetail[];
   termLabel: string | null;
   roster: RosterEntry[];
   offerings: OfferingRow[];

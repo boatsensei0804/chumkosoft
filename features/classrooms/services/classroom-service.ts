@@ -35,8 +35,7 @@ export async function listClassrooms(): Promise<ClassroomRow[]> {
     id: c.id,
     code: c.code,
     gradeLevel: c.gradeLevel,
-    homeroomTeacherId: c.homeroomTeacherId,
-    homeroomTeacher: personName(c.homeroomTeacher),
+    advisors: c.advisors.map((a) => ({ id: a.staffId, name: personName(a.staff) ?? a.staffId })),
     studentCount: c._count.enrollments,
     offeringCount: c._count.offerings,
   }));
@@ -72,9 +71,7 @@ export async function getClassroomDetail(id: string): Promise<ClassroomDetail | 
     id: classroom.id,
     code: classroom.code,
     gradeLevel: classroom.gradeLevel,
-    homeroomTeacherId: classroom.homeroomTeacherId,
-    homeroomTeacher: personName(classroom.homeroomTeacher),
-    homeroomTeacherPosition: classroom.homeroomTeacher?.position ?? null,
+    advisors: classroom.advisors.map((a) => ({ name: personName(a.staff) ?? "—", position: a.staff.position ?? null })),
     termLabel,
     roster: roster.map((s) => ({
       id: s.id,
@@ -86,9 +83,9 @@ export async function getClassroomDetail(id: string): Promise<ClassroomDetail | 
   };
 }
 
-async function validateHomeroom(homeroomTeacherId: string | null): Promise<ActionResult | null> {
-  if (homeroomTeacherId && !(await repo.staffExists(homeroomTeacherId))) {
-    return { ok: false, fieldErrors: { homeroomTeacherId: "ไม่พบครูที่เลือก" } };
+async function validateAdvisors(advisorIds: string[]): Promise<ActionResult | null> {
+  if (!(await repo.allStaffExist(advisorIds))) {
+    return { ok: false, fieldErrors: { advisorIds: "ไม่พบครูที่เลือกบางคน" } };
   }
   return null;
 }
@@ -99,7 +96,7 @@ export async function createClassroomRecord(input: ClassroomInput): Promise<Acti
   if (await repo.classroomCodeExists(yearId, input.code)) {
     return { ok: false, fieldErrors: { code: "มีห้องเรียนชื่อนี้อยู่แล้วในปีการศึกษานี้" } };
   }
-  const invalid = await validateHomeroom(input.homeroomTeacherId);
+  const invalid = await validateAdvisors(input.advisorIds);
   if (invalid) return invalid;
 
   await repo.createClassroom(yearId, input);
@@ -112,7 +109,7 @@ export async function updateClassroomRecord(id: string, input: ClassroomInput): 
   if (await repo.classroomCodeExists(classroom.academicYearId, input.code, id)) {
     return { ok: false, fieldErrors: { code: "มีห้องเรียนชื่อนี้อยู่แล้วในปีการศึกษานี้" } };
   }
-  const invalid = await validateHomeroom(input.homeroomTeacherId);
+  const invalid = await validateAdvisors(input.advisorIds);
   if (invalid) return invalid;
 
   await repo.updateClassroom(id, input);

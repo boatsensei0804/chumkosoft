@@ -24,11 +24,14 @@ export async function saveClassroomAction(_prev: ActionResult, formData: FormDat
     await requireRoles(STAFF_ROLES);
 
     const id = toText(formData.get("id"));
-    const homeroom = toText(formData.get("homeroomTeacherId"));
+    const advisorIds = formData
+      .getAll("advisorIds")
+      .map((v) => (typeof v === "string" ? v.trim() : ""))
+      .filter((v) => v !== "");
     const parsed = classroomSchema.safeParse({
       code: formData.get("code"),
       gradeLevel: formData.get("gradeLevel"),
-      homeroomTeacherId: homeroom === "" ? null : homeroom,
+      advisorIds,
     });
 
     if (!parsed.success) {

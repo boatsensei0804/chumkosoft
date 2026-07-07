@@ -1,12 +1,14 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
+import Checkbox from "@mui/material/Checkbox";
+import ListItemText from "@mui/material/ListItemText";
 import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
 import { saveClassroomAction } from "@/features/classrooms/actions";
@@ -42,6 +44,7 @@ function Body({
 }): React.ReactNode {
   const [state, formAction, pending] = useActionState(saveClassroomAction, idleAction);
   const isEdit = classroom !== null;
+  const [advisorIds, setAdvisorIds] = useState<string[]>(classroom?.advisors.map((a) => a.id) ?? []);
 
   useEffect(() => {
     if (state.ok) onSaved();
@@ -84,22 +87,40 @@ function Body({
             placeholder="เช่น มัธยมปลาย"
           />
           <TextField
-            name="homeroomTeacherId"
-            label="ครูที่ปรึกษา"
+            label="ครูที่ปรึกษา (เลือกได้หลายคน)"
             select
-            defaultValue={classroom?.homeroomTeacherId ?? ""}
+            value={advisorIds}
+            onChange={(e) => {
+              const v = e.target.value;
+              setAdvisorIds(typeof v === "string" ? v.split(",") : (v as unknown as string[]));
+            }}
             fullWidth
             disabled={pending}
-            error={Boolean(state.fieldErrors?.homeroomTeacherId)}
-            helperText={state.fieldErrors?.homeroomTeacherId ?? "เลือกครูประจำชั้น (เว้นว่างได้)"}
+            error={Boolean(state.fieldErrors?.advisorIds)}
+            helperText={state.fieldErrors?.advisorIds ?? "เลือกครูประจำชั้น เลือกได้มากกว่า 1 คน (เว้นว่างได้)"}
+            slotProps={{
+              inputLabel: { shrink: true },
+              select: {
+                multiple: true,
+                displayEmpty: true,
+                renderValue: (selected) => {
+                  const ids = selected as string[];
+                  if (ids.length === 0) return <span style={{ color: "var(--faint)" }}>ยังไม่กำหนด</span>;
+                  return teachers.filter((t) => ids.includes(t.id)).map((t) => t.name).join(", ");
+                },
+              },
+            }}
           >
-            <MenuItem value="">ยังไม่กำหนด</MenuItem>
             {teachers.map((t) => (
               <MenuItem key={t.id} value={t.id}>
-                {t.name}
+                <Checkbox checked={advisorIds.includes(t.id)} size="small" sx={{ py: 0.25 }} />
+                <ListItemText primary={t.name} />
               </MenuItem>
             ))}
           </TextField>
+          {advisorIds.map((id) => (
+            <input key={id} type="hidden" name="advisorIds" value={id} />
+          ))}
         </div>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>

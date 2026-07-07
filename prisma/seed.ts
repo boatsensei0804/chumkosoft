@@ -186,7 +186,14 @@ async function main(): Promise<void> {
   const classroom = await prisma.classroom.upsert({
     where: { academicYearId_code: { academicYearId: year.id, code: "ม.4/1" } },
     update: {},
-    create: { academicYearId: year.id, code: "ม.4/1", gradeLevel: "มัธยมปลาย", homeroomTeacherId: staffByCode.get("T-001") },
+    create: {
+      academicYearId: year.id,
+      code: "ม.4/1",
+      gradeLevel: "มัธยมปลาย",
+      advisors: {
+        create: [{ staffId: staffByCode.get("T-001")! }, { staffId: staffByCode.get("T-002")! }],
+      },
+    },
   });
 
   const studentByCode = new Map<string, string>();

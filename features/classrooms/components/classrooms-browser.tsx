@@ -37,7 +37,10 @@ export default function ClassroomsBrowser({ classrooms, teachers }: ClassroomsBr
     const q = query.trim().toLowerCase();
     if (!q) return classrooms;
     return classrooms.filter(
-      (c) => c.code.toLowerCase().includes(q) || c.gradeLevel.toLowerCase().includes(q) || (c.homeroomTeacher ?? "").toLowerCase().includes(q),
+      (c) =>
+        c.code.toLowerCase().includes(q) ||
+        c.gradeLevel.toLowerCase().includes(q) ||
+        c.advisors.some((a) => a.name.toLowerCase().includes(q)),
     );
   }, [classrooms, query]);
 
@@ -115,8 +118,8 @@ export default function ClassroomsBrowser({ classrooms, teachers }: ClassroomsBr
                     </Link>
                   </TableCell>
                   <TableCell>
-                    {c.homeroomTeacher ? (
-                      <span className="text-[13.5px] text-ink">{c.homeroomTeacher}</span>
+                    {c.advisors.length > 0 ? (
+                      <span className="text-[13.5px] text-ink">{c.advisors.map((a) => a.name).join(", ")}</span>
                     ) : (
                       <span className="text-[13px] text-faint">ยังไม่กำหนด</span>
                     )}

@@ -50,17 +50,23 @@ export default async function ClassroomDetailPage({ params }: ClassroomDetailPag
           </div>
         </div>
 
-        <div className="flex items-center gap-3 rounded-[12px] px-4 py-3" style={{ backgroundColor: "var(--surface-2)", border: "1px solid var(--line)" }}>
-          <span className="grid size-9 place-items-center rounded-full" style={{ backgroundColor: "var(--brand-soft)", color: "var(--brand-ink)" }} aria-hidden="true">
+        <div className="flex items-start gap-3 rounded-[12px] px-4 py-3" style={{ backgroundColor: "var(--surface-2)", border: "1px solid var(--line)" }}>
+          <span className="grid size-9 shrink-0 place-items-center rounded-full" style={{ backgroundColor: "var(--brand-soft)", color: "var(--brand-ink)" }} aria-hidden="true">
             <Icon name="how_to_reg" sx={{ fontSize: 19 }} />
           </span>
           <div>
-            <p className="text-[11.5px] font-semibold uppercase tracking-wide text-faint">ครูที่ปรึกษา</p>
-            {detail.homeroomTeacher ? (
-              <>
-                <p className="text-[14px] font-semibold text-ink-strong">{detail.homeroomTeacher}</p>
-                {detail.homeroomTeacherPosition && <p className="text-[12px] text-muted">{detail.homeroomTeacherPosition}</p>}
-              </>
+            <p className="text-[11.5px] font-semibold uppercase tracking-wide text-faint">
+              ครูที่ปรึกษา{detail.advisors.length > 1 ? ` (${detail.advisors.length} คน)` : ""}
+            </p>
+            {detail.advisors.length > 0 ? (
+              <ul className="mt-0.5 flex flex-col gap-1">
+                {detail.advisors.map((a, i) => (
+                  <li key={`${a.name}-${i}`}>
+                    <span className="text-[14px] font-semibold text-ink-strong">{a.name}</span>
+                    {a.position && <span className="ml-1.5 text-[12px] text-muted">· {a.position}</span>}
+                  </li>
+                ))}
+              </ul>
             ) : (
               <p className="text-[13.5px] text-faint">ยังไม่กำหนด</p>
             )}
