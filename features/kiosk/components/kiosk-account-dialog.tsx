@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useState, useTransition } from "react";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -29,55 +29,84 @@ export default function KioskAccountDialog({ open, account, onClose, onSaved }: 
   );
 }
 
+/**
+ * Uses useTransition + a direct action call (like ResetPasswordDialog) rather than
+ * a <form action>/useActionState submit: on this page the form-POST variant could
+ * race the action's revalidation and leave the dialog stuck on "กำลังบันทึก…", so
+ * we invoke the Server Action as a plain RPC and drive the pending/error UI here.
+ */
 function Body({ account, onClose, onSaved }: { account: KioskAccountRow | null; onClose: () => void; onSaved: () => void }): React.ReactNode {
-  const [state, formAction, pending] = useActionState(saveKioskAccountAction, idleAction);
   const isEdit = account !== null;
+  const [email, setEmail] = useState(account?.email ?? "");
+  const [password, setPassword] = useState("");
+  const [isActive, setIsActive] = useState(account?.isActive ?? true);
+  const [message, setMessage] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
-    if (state.ok) onSaved();
-  }, [state.ok, onSaved]);
+  function submit(): void {
+    setMessage(null);
+    setFieldErrors({});
+    const fd = new FormData();
+    if (account) fd.set("id", account.id);
+    fd.set("email", email);
+    if (isEdit) {
+      if (isActive) fd.set("isActive", "on");
+    } else {
+      fd.set("password", password);
+    }
+    startTransition(async () => {
+      const result = await saveKioskAccountAction(idleAction, fd);
+      if (result.ok) {
+        onSaved();
+      } else {
+        setMessage(result.message ?? null);
+        setFieldErrors(result.fieldErrors ?? {});
+      }
+    });
+  }
 
   return (
-    <form action={formAction}>
+    <>
       <DialogTitle id="kiosk-account-title" sx={{ fontWeight: 700, color: "var(--ink-strong)" }}>
         {isEdit ? "แก้ไขบัญชีจุดสแกน" : "เพิ่มบัญชีจุดสแกน"}
       </DialogTitle>
       <DialogContent>
-        {account && <input type="hidden" name="id" value={account.id} />}
-        {state.message && !state.ok && (
+        {message && (
           <Alert severity="error" sx={{ mb: 2, borderRadius: "var(--radius-sm)" }}>
-            {state.message}
+            {message}
           </Alert>
         )}
         <div className="flex flex-col gap-4 pt-1">
           <TextField
-            name="email"
             label="อีเมล"
             type="email"
-            defaultValue={account?.email ?? ""}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
             fullWidth
             autoFocus
             disabled={pending}
-            error={Boolean(state.fieldErrors?.email)}
-            helperText={state.fieldErrors?.email}
+            error={Boolean(fieldErrors.email)}
+            helperText={fieldErrors.email}
             placeholder="เช่น kiosk-gate1@chumko.ac.th"
           />
           {isEdit ? (
             <FormControlLabel
-              control={<Switch name="isActive" defaultChecked={account.isActive} disabled={pending} />}
+              control={<Switch checked={isActive} onChange={(e) => setIsActive(e.target.checked)} disabled={pending} />}
               label="เปิดใช้งานบัญชีนี้"
             />
           ) : (
             <TextField
-              name="password"
               label="รหัสผ่าน"
               type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
               fullWidth
               disabled={pending}
-              error={Boolean(state.fieldErrors?.password)}
-              helperText={state.fieldErrors?.password ?? "อย่างน้อย 8 ตัวอักษร"}
+              error={Boolean(fieldErrors.password)}
+              helperText={fieldErrors.password ?? "อย่างน้อย 8 ตัวอักษร"}
               autoComplete="new-password"
             />
           )}
@@ -87,10 +116,10 @@ function Body({ account, onClose, onSaved }: { account: KioskAccountRow | null; 
         <Button onClick={onClose} disabled={pending} variant="text">
           ยกเลิก
         </Button>
-        <Button type="submit" disabled={pending} variant="contained">
+        <Button onClick={submit} disabled={pending} variant="contained">
           {pending ? "กำลังบันทึก…" : isEdit ? "บันทึก" : "เพิ่มบัญชี"}
         </Button>
       </DialogActions>
-    </form>
+    </>
   );
 }
