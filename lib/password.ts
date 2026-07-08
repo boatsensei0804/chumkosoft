@@ -1,18 +1,18 @@
 import "server-only";
 
-import bcrypt from "bcryptjs";
+import { hash, verify } from "@node-rs/bcrypt";
 
-// bcryptjs is pure-JS and blocks the event loop while hashing, so the cost factor
-// directly gates how long a login / account-create freezes the server. 10 is the
-// OWASP-recommended minimum and hashes ~2.5x faster than 12 — the difference
-// between a snappy save and a multi-second "กำลังบันทึก…" hang on constrained
-// (e.g. containerised) CPUs. Existing higher-cost hashes still verify fine.
-const SALT_ROUNDS = 10;
+// @node-rs/bcrypt is a native (Rust) bcrypt that runs off the main thread, so
+// hashing never blocks Node's event loop the way pure-JS bcryptjs did — that
+// blocking was what made account-create/reset hang the whole server (and abort
+// the next request's response) on constrained container CPUs. Cost 10 is the
+// OWASP-recommended minimum; it verifies existing bcryptjs ($2a/$2b) hashes fine.
+const COST = 10;
 
 export async function hashPassword(plain: string): Promise<string> {
-  return bcrypt.hash(plain, SALT_ROUNDS);
+  return hash(plain, COST);
 }
 
-export async function verifyPassword(plain: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(plain, hash);
+export async function verifyPassword(plain: string, hashed: string): Promise<boolean> {
+  return verify(plain, hashed);
 }

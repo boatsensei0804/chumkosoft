@@ -1,5 +1,5 @@
 import { PrismaClient, StaffType, TermStatus, EnrollmentStatus, Role } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import { hash } from "@node-rs/bcrypt";
 
 const prisma = new PrismaClient();
 
@@ -213,7 +213,7 @@ async function main(): Promise<void> {
 
   // User accounts (one per role) so every RBAC surface can be exercised. Each is
   // linked to its person record where one exists; the parent account stands alone.
-  const passwordHash = await bcrypt.hash(DEV_PASSWORD, 12);
+  const passwordHash = await hash(DEV_PASSWORD, 10);
   const accounts: { email: string; role: Role; staffCode?: string; studentCode?: string }[] = [
     { email: "admin@chumko.ac.th", role: Role.ADMIN, staffCode: "T-001" },
     { email: "teacher@chumko.ac.th", role: Role.TEACHER, staffCode: "T-002" },

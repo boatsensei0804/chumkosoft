@@ -26,6 +26,7 @@
     "@mui/icons-material": "^9.2.0",
     "@mui/material": "^9.2.0",
     "@mui/material-nextjs": "^9.1.1",
+    "@node-rs/bcrypt": "^1.10.7",
     "@prisma/client": "^6.19.3",
     "@vladmandic/face-api": "^1.7.15",
     "bcryptjs": "^3.0.3",
