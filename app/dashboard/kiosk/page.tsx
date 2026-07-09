@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ScanFace } from "lucide-react";
 import PageHeader from "@/features/dashboard/components/page-header";
-import Icon from "@/features/dashboard/components/icon";
+import { Button } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/sonner";
 import ScanSettingForm from "@/features/kiosk/components/scan-setting-form";
 import KioskManager from "@/features/kiosk/components/kiosk-manager";
 import { requireRoles } from "@/lib/dal";
@@ -23,14 +25,12 @@ export default async function KioskPage(): Promise<React.ReactNode> {
         title="จุดสแกนใบหน้า"
         subtitle="ตั้งค่าเวลาการสแกนเข้าโรงเรียน และจัดการบัญชีสำหรับหน้าจอสแกน"
         actions={
-          <Link
-            href="/scan"
-            className="inline-flex items-center gap-2 rounded-[10px] px-4 py-2.5 text-[14px] font-semibold"
-            style={{ border: "1px solid var(--line-strong)", color: "var(--ink)" }}
-          >
-            <Icon name="scan" sx={{ fontSize: 18 }} />
-            เปิดหน้าจอสแกน
-          </Link>
+          <Button asChild variant="outline">
+            <Link href="/scan">
+              <ScanFace className="size-[18px]" />
+              เปิดหน้าจอสแกน
+            </Link>
+          </Button>
         }
       />
 
@@ -38,6 +38,8 @@ export default async function KioskPage(): Promise<React.ReactNode> {
         <ScanSettingForm setting={setting} />
         <KioskManager accounts={accounts} />
       </div>
+
+      <Toaster position="bottom-center" richColors />
     </>
   );
 }

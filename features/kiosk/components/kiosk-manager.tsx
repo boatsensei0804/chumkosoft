@@ -2,18 +2,22 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import Button from "@mui/material/Button";
-import IconButton from "@mui/material/IconButton";
-import Tooltip from "@mui/material/Tooltip";
-import Snackbar from "@mui/material/Snackbar";
-import Alert from "@mui/material/Alert";
-import Icon from "@/features/dashboard/components/icon";
-import ConfirmDialog from "@/components/ui/confirm-dialog";
+import { toast } from "sonner";
+import { Plus, Pencil, Trash2, KeyRound, ScanFace, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import KioskAccountDialog from "./kiosk-account-dialog";
 import ResetPasswordDialog from "./reset-password-dialog";
 import { deleteKioskAccountAction } from "@/features/kiosk/actions";
@@ -26,7 +30,6 @@ export default function KioskManager({ accounts }: { accounts: KioskAccountRow[]
   const [resetting, setResetting] = useState<KioskAccountRow | null>(null);
   const [deleting, setDeleting] = useState<KioskAccountRow | null>(null);
   const [isDeletePending, startDelete] = useTransition();
-  const [toast, setToast] = useState<{ severity: "success" | "error"; message: string } | null>(null);
 
   function openCreate(): void {
     setEditing(null);
@@ -40,96 +43,90 @@ export default function KioskManager({ accounts }: { accounts: KioskAccountRow[]
 
   function handleSaved(): void {
     setDialogOpen(false);
-    setToast({ severity: "success", message: editing ? "บันทึกการแก้ไขเรียบร้อย" : "สร้างบัญชีเรียบร้อย" });
+    toast.success(editing ? "บันทึกการแก้ไขเรียบร้อย" : "สร้างบัญชีเรียบร้อย");
     router.refresh();
   }
 
   function confirmDelete(): void {
     if (!deleting) return;
+    const target = deleting;
     startDelete(async () => {
-      const result = await deleteKioskAccountAction(deleting.id);
-      setToast({ severity: result.ok ? "success" : "error", message: result.message ?? (result.ok ? "ลบแล้ว" : "ลบไม่สำเร็จ") });
+      const result = await deleteKioskAccountAction(target.id);
+      if (result.ok) toast.success(result.message ?? "ลบแล้ว");
+      else toast.error(result.message ?? "ลบไม่สำเร็จ");
       setDeleting(null);
       if (result.ok) router.refresh();
     });
   }
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-[16px]" style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)" }}>
-      <div className="flex items-center justify-between gap-3 p-4">
-        <div>
-          <h2 className="text-[15px] font-bold text-ink-strong">บัญชีจุดสแกน (KIOSK)</h2>
-          <p className="text-[12.5px] text-muted">บัญชีสำหรับเข้าใช้งานหน้าจอสแกนใบหน้าที่ประตูโรงเรียน</p>
+    <TooltipProvider delayDuration={200}>
+      <div className="overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
+        <div className="flex items-center justify-between gap-3 p-4">
+          <div>
+            <h2 className="text-[15px] font-bold text-ink-strong">บัญชีจุดสแกน (KIOSK)</h2>
+            <p className="text-[12.5px] text-muted">บัญชีสำหรับเข้าใช้งานหน้าจอสแกนใบหน้าที่ประตูโรงเรียน</p>
+          </div>
+          <Button onClick={openCreate} size="sm">
+            <Plus className="size-4" /> เพิ่มบัญชี
+          </Button>
         </div>
-        <Button variant="contained" onClick={openCreate} startIcon={<Icon name="add" sx={{ fontSize: 18 }} />}>
-          เพิ่มบัญชี
-        </Button>
-      </div>
 
-      {accounts.length > 0 ? (
-        <div className="overflow-x-auto" style={{ borderTop: "1px solid var(--line)" }}>
-          <Table sx={{ minWidth: 560 }}>
-            <TableHead>
-              <TableRow>
-                <TableCell>อีเมล</TableCell>
-                <TableCell>สถานะ</TableCell>
-                <TableCell>สร้างเมื่อ</TableCell>
-                <TableCell align="right">จัดการ</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {accounts.map((a) => (
-                <TableRow key={a.id} sx={{ "&:last-child td": { borderBottom: 0 }, "&:hover": { backgroundColor: "var(--surface-2)" }, transition: "background-color 120ms ease" }}>
-                  <TableCell>
-                    <span className="text-[14px] font-medium text-ink-strong">{a.email}</span>
-                  </TableCell>
-                  <TableCell>
-                    {a.isActive ? (
-                      <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ backgroundColor: "var(--success-soft)", color: "oklch(0.42 0.1 152)" }}>
-                        <Icon name="success" sx={{ fontSize: 13 }} /> ใช้งาน
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ backgroundColor: "var(--surface-sunken)", color: "var(--faint)" }}>
-                        ปิดใช้งาน
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <span className="tabular text-[13px] text-muted">{a.createdAt}</span>
-                  </TableCell>
-                  <TableCell align="right">
-                    <div className="flex items-center justify-end gap-0.5">
-                      <Tooltip title="ตั้งรหัสผ่านใหม่" arrow>
-                        <IconButton size="small" aria-label={`ตั้งรหัสผ่านใหม่ ${a.email}`} onClick={() => setResetting(a)}>
-                          <Icon name="lock" sx={{ fontSize: 18 }} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="แก้ไข" arrow>
-                        <IconButton size="small" aria-label={`แก้ไข ${a.email}`} onClick={() => openEdit(a)}>
-                          <Icon name="edit" sx={{ fontSize: 18 }} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="ลบ" arrow>
-                        <IconButton size="small" aria-label={`ลบ ${a.email}`} onClick={() => setDeleting(a)}>
-                          <Icon name="delete" sx={{ fontSize: 18 }} />
-                        </IconButton>
-                      </Tooltip>
-                    </div>
-                  </TableCell>
+        {accounts.length > 0 ? (
+          <div className="border-t border-line">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>อีเมล</TableHead>
+                  <TableHead>สถานะ</TableHead>
+                  <TableHead>สร้างเมื่อ</TableHead>
+                  <TableHead className="text-right">จัดการ</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center gap-3 px-6 py-14 text-center" style={{ borderTop: "1px solid var(--line)" }}>
-          <span className="grid size-12 place-items-center rounded-full" style={{ backgroundColor: "var(--surface-2)", color: "var(--faint)" }} aria-hidden="true">
-            <Icon name="face" sx={{ fontSize: 24 }} />
-          </span>
-          <p className="text-[15px] font-semibold text-ink-strong">ยังไม่มีบัญชีจุดสแกน</p>
-          <p className="text-[13.5px] text-muted">เพิ่มบัญชีเพื่อใช้ล็อกอินที่หน้าจอสแกนใบหน้า</p>
-        </div>
-      )}
+              </TableHeader>
+              <TableBody>
+                {accounts.map((a) => (
+                  <TableRow key={a.id}>
+                    <TableCell className="font-medium text-ink-strong">{a.email}</TableCell>
+                    <TableCell>
+                      {a.isActive ? (
+                        <Badge variant="outline" className="gap-1 border-success/30 bg-success-soft text-[oklch(0.42_0.1_152)]">
+                          <CheckCircle2 className="size-3" /> ใช้งาน
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-muted-foreground">
+                          ปิดใช้งาน
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="tabular-nums text-muted">{a.createdAt}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-0.5">
+                        <IconAction label="ตั้งรหัสผ่านใหม่" onClick={() => setResetting(a)}>
+                          <KeyRound className="size-[18px]" />
+                        </IconAction>
+                        <IconAction label="แก้ไข" onClick={() => openEdit(a)}>
+                          <Pencil className="size-[18px]" />
+                        </IconAction>
+                        <IconAction label="ลบ" onClick={() => setDeleting(a)}>
+                          <Trash2 className="size-[18px]" />
+                        </IconAction>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-3 border-t border-line px-6 py-14 text-center">
+            <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint">
+              <ScanFace className="size-6" />
+            </span>
+            <p className="text-[15px] font-semibold text-ink-strong">ยังไม่มีบัญชีจุดสแกน</p>
+            <p className="text-[13.5px] text-muted">เพิ่มบัญชีเพื่อใช้ล็อกอินที่หน้าจอสแกนใบหน้า</p>
+          </div>
+        )}
+      </div>
 
       <KioskAccountDialog open={dialogOpen} account={editing} onClose={() => setDialogOpen(false)} onSaved={handleSaved} />
 
@@ -141,29 +138,41 @@ export default function KioskManager({ accounts }: { accounts: KioskAccountRow[]
           onClose={() => setResetting(null)}
           onDone={(r) => {
             setResetting(null);
-            setToast({ severity: r.ok ? "success" : "error", message: r.message ?? "" });
+            if (r.ok) toast.success(r.message ?? "ตั้งรหัสผ่านใหม่แล้ว");
+            else toast.error(r.message ?? "ไม่สำเร็จ");
           }}
         />
       )}
 
-      <ConfirmDialog
-        open={deleting !== null}
-        title="ลบบัญชีจุดสแกน"
-        message={deleting ? `ต้องการลบบัญชี “${deleting.email}” ใช่หรือไม่? บัญชีนี้จะเข้าใช้งานหน้าสแกนไม่ได้อีก` : ""}
-        confirmLabel="ลบบัญชี"
-        destructive
-        pending={isDeletePending}
-        onConfirm={confirmDelete}
-        onClose={() => setDeleting(null)}
-      />
+      <AlertDialog open={deleting !== null} onOpenChange={(next) => !next && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>ลบบัญชีจุดสแกน</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleting ? `ต้องการลบบัญชี “${deleting.email}” ใช่หรือไม่? บัญชีนี้จะเข้าใช้งานหน้าสแกนไม่ได้อีก` : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletePending}>ยกเลิก</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); confirmDelete(); }} disabled={isDeletePending} className="bg-destructive text-white hover:bg-destructive/90">
+              {isDeletePending ? "กำลังลบ…" : "ลบบัญชี"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </TooltipProvider>
+  );
+}
 
-      <Snackbar open={toast !== null} autoHideDuration={4000} onClose={() => setToast(null)} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
-        {toast ? (
-          <Alert severity={toast.severity} variant="filled" onClose={() => setToast(null)} sx={{ borderRadius: "var(--radius-sm)" }}>
-            {toast.message}
-          </Alert>
-        ) : undefined}
-      </Snackbar>
-    </div>
+function IconAction({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }): React.ReactNode {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label={label} onClick={onClick} className="size-8 text-muted hover:text-ink">
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }

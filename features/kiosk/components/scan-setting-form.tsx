@@ -1,22 +1,39 @@
 "use client";
 
-import { useActionState } from "react";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
-import Alert from "@mui/material/Alert";
-import Icon from "@/features/dashboard/components/icon";
+import { useState, useTransition } from "react";
+import { Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { saveScanSettingAction } from "@/features/kiosk/actions";
 import { idleAction } from "@/types/form";
 import type { ScanSettingView } from "@/features/kiosk/types";
 
 export default function ScanSettingForm({ setting }: { setting: ScanSettingView }): React.ReactNode {
-  const [state, formAction, pending] = useActionState(saveScanSettingAction, idleAction);
+  const [scanStartTime, setScanStartTime] = useState(setting.scanStartTime);
+  const [lateAfterTime, setLateAfterTime] = useState(setting.lateAfterTime);
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [pending, startTransition] = useTransition();
+
+  function submit(): void {
+    setResult(null);
+    setFieldErrors({});
+    const fd = new FormData();
+    fd.set("scanStartTime", scanStartTime);
+    fd.set("lateAfterTime", lateAfterTime);
+    startTransition(async () => {
+      const res = await saveScanSettingAction(idleAction, fd);
+      setFieldErrors(res.fieldErrors ?? {});
+      if (res.message) setResult({ ok: res.ok, message: res.message });
+    });
+  }
 
   return (
-    <section className="rounded-[16px] p-5" style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)" }}>
+    <section className="rounded-2xl border border-line bg-card p-5 shadow-sm">
       <div className="mb-4 flex items-center gap-2.5">
-        <span className="grid size-9 place-items-center rounded-[10px]" style={{ backgroundColor: "var(--brand-soft)", color: "var(--brand-ink)" }}>
-          <Icon name="time" sx={{ fontSize: 19 }} />
+        <span className="grid size-9 place-items-center rounded-[10px] bg-brand-soft text-brand-ink">
+          <Clock className="size-[19px]" />
         </span>
         <div>
           <h2 className="text-[15px] font-bold text-ink-strong">เวลาการสแกนเข้าโรงเรียน</h2>
@@ -24,39 +41,34 @@ export default function ScanSettingForm({ setting }: { setting: ScanSettingView 
         </div>
       </div>
 
-      {state.message && (
-        <Alert severity={state.ok ? "success" : "error"} sx={{ mb: 2, borderRadius: "var(--radius-sm)" }}>
-          {state.message}
-        </Alert>
+      {result && (
+        <p
+          className={
+            result.ok
+              ? "mb-3 rounded-md border border-success/30 bg-success-soft px-3 py-2 text-sm"
+              : "mb-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          }
+          style={result.ok ? { color: "oklch(0.42 0.1 152)" } : undefined}
+        >
+          {result.message}
+        </p>
       )}
 
-      <form action={formAction} className="flex flex-wrap items-end gap-4">
-        <TextField
-          name="scanStartTime"
-          label="เวลาเปิดสแกน"
-          type="time"
-          defaultValue={setting.scanStartTime}
-          disabled={pending}
-          error={Boolean(state.fieldErrors?.scanStartTime)}
-          helperText={state.fieldErrors?.scanStartTime}
-          slotProps={{ inputLabel: { shrink: true } }}
-          sx={{ width: 160 }}
-        />
-        <TextField
-          name="lateAfterTime"
-          label="หลังเวลานี้ = สาย"
-          type="time"
-          defaultValue={setting.lateAfterTime}
-          disabled={pending}
-          error={Boolean(state.fieldErrors?.lateAfterTime)}
-          helperText={state.fieldErrors?.lateAfterTime}
-          slotProps={{ inputLabel: { shrink: true } }}
-          sx={{ width: 160 }}
-        />
-        <Button type="submit" variant="contained" disabled={pending}>
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="scanStartTime">เวลาเปิดสแกน</Label>
+          <Input id="scanStartTime" type="time" value={scanStartTime} onChange={(e) => setScanStartTime(e.target.value)} disabled={pending} className="w-40" aria-invalid={Boolean(fieldErrors.scanStartTime)} />
+          {fieldErrors.scanStartTime && <p className="text-xs text-destructive">{fieldErrors.scanStartTime}</p>}
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="lateAfterTime">หลังเวลานี้ = สาย</Label>
+          <Input id="lateAfterTime" type="time" value={lateAfterTime} onChange={(e) => setLateAfterTime(e.target.value)} disabled={pending} className="w-40" aria-invalid={Boolean(fieldErrors.lateAfterTime)} />
+          {fieldErrors.lateAfterTime && <p className="text-xs text-destructive">{fieldErrors.lateAfterTime}</p>}
+        </div>
+        <Button onClick={submit} disabled={pending}>
           {pending ? "กำลังบันทึก…" : "บันทึกเวลา"}
         </Button>
-      </form>
+      </div>
     </section>
   );
 }

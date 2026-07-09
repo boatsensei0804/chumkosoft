@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 /*
   chumkosoft design tokens
@@ -109,6 +110,28 @@
   --color-warning-soft: var(--warning-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+
+  /* shadcn/ui semantic colours — mapped onto the chumkosoft OKLCH palette so
+     shadcn components inherit the blue-white theme. (Names that already exist
+     above — muted, accent — are left as-is; shadcn components avoid their bg
+     variants.) */
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+  --color-card: var(--bg);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--bg);
+  --color-popover-foreground: var(--ink);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--on-primary);
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--ink-strong);
+  --color-muted-foreground: var(--muted);
+  --color-accent-foreground: var(--ink-strong);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--on-primary);
+  --color-border: var(--line);
+  --color-input: var(--line);
+  --color-ring: var(--focus);
 
   --font-sans: var(--font-plex-thai), ui-sans-serif, system-ui, sans-serif;
 

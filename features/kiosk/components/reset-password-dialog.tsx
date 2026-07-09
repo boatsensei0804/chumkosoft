@@ -1,13 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
-import Alert from "@mui/material/Alert";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { resetKioskPasswordAction } from "@/features/kiosk/actions";
 
 interface ResetPasswordDialogProps {
@@ -37,38 +34,35 @@ export default function ResetPasswordDialog({ open, accountId, accountEmail, onC
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { borderRadius: "var(--radius-lg)" } } }} aria-labelledby="reset-pw-title">
-      <DialogTitle id="reset-pw-title" sx={{ fontWeight: 700, color: "var(--ink-strong)" }}>
-        ตั้งรหัสผ่านใหม่
-      </DialogTitle>
-      <DialogContent>
-        <p className="mb-3 text-[12.5px] text-muted">บัญชี: {accountEmail}</p>
-        {error && (
-          <Alert severity="error" sx={{ mb: 2, borderRadius: "var(--radius-sm)" }}>
-            {error}
-          </Alert>
-        )}
-        <TextField
-          label="รหัสผ่านใหม่"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          fullWidth
-          autoFocus
-          disabled={pending}
-          helperText="อย่างน้อย 8 ตัวอักษร"
-          autoComplete="new-password"
-        />
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>ตั้งรหัสผ่านใหม่</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">บัญชี: {accountEmail}</p>
+        {error && <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
+        <div className="flex flex-col gap-2 py-1">
+          <Label htmlFor="reset-pw">รหัสผ่านใหม่</Label>
+          <Input
+            id="reset-pw"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={pending}
+            autoFocus
+            autoComplete="new-password"
+          />
+          <p className="text-xs text-muted-foreground">อย่างน้อย 8 ตัวอักษร</p>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={pending} type="button">
+            ยกเลิก
+          </Button>
+          <Button onClick={submit} disabled={pending || password.length < 8} type="button">
+            {pending ? "กำลังบันทึก…" : "ตั้งรหัสผ่าน"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-        <Button onClick={onClose} disabled={pending} variant="text">
-          ยกเลิก
-        </Button>
-        <Button onClick={submit} disabled={pending || password.length < 8} variant="contained">
-          {pending ? "กำลังบันทึก…" : "ตั้งรหัสผ่าน"}
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 }

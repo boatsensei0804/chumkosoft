@@ -1,15 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
-import Alert from "@mui/material/Alert";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Switch from "@mui/material/Switch";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { saveKioskAccountAction } from "@/features/kiosk/actions";
 import { idleAction } from "@/types/form";
 import type { KioskAccountRow } from "@/features/kiosk/types";
@@ -23,17 +19,18 @@ interface KioskAccountDialogProps {
 
 export default function KioskAccountDialog({ open, account, onClose, onSaved }: KioskAccountDialogProps): React.ReactNode {
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { borderRadius: "var(--radius-lg)" } } }} aria-labelledby="kiosk-account-title">
-      {open && <Body key={account?.id ?? "new"} account={account} onClose={onClose} onSaved={onSaved} />}
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        {open && <Body key={account?.id ?? "new"} account={account} onClose={onClose} onSaved={onSaved} />}
+      </DialogContent>
     </Dialog>
   );
 }
 
 /**
- * Uses useTransition + a direct action call (like ResetPasswordDialog) rather than
- * a <form action>/useActionState submit: on this page the form-POST variant could
- * race the action's revalidation and leave the dialog stuck on "กำลังบันทึก…", so
- * we invoke the Server Action as a plain RPC and drive the pending/error UI here.
+ * Invokes the Server Action directly via useTransition (not a <form action>/
+ * useActionState submit) — on this page the form-POST variant could race the
+ * action's revalidation and leave the dialog stuck on "กำลังบันทึก…".
  */
 function Body({ account, onClose, onSaved }: { account: KioskAccountRow | null; onClose: () => void; onSaved: () => void }): React.ReactNode {
   const isEdit = account !== null;
@@ -68,58 +65,60 @@ function Body({ account, onClose, onSaved }: { account: KioskAccountRow | null; 
 
   return (
     <>
-      <DialogTitle id="kiosk-account-title" sx={{ fontWeight: 700, color: "var(--ink-strong)" }}>
-        {isEdit ? "แก้ไขบัญชีจุดสแกน" : "เพิ่มบัญชีจุดสแกน"}
-      </DialogTitle>
-      <DialogContent>
-        {message && (
-          <Alert severity="error" sx={{ mb: 2, borderRadius: "var(--radius-sm)" }}>
-            {message}
-          </Alert>
-        )}
-        <div className="flex flex-col gap-4 pt-1">
-          <TextField
-            label="อีเมล"
+      <DialogHeader>
+        <DialogTitle>{isEdit ? "แก้ไขบัญชีจุดสแกน" : "เพิ่มบัญชีจุดสแกน"}</DialogTitle>
+      </DialogHeader>
+
+      {message && <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{message}</p>}
+
+      <div className="flex flex-col gap-4 py-1">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="kiosk-email">อีเมล</Label>
+          <Input
+            id="kiosk-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            required
-            fullWidth
-            autoFocus
             disabled={pending}
-            error={Boolean(fieldErrors.email)}
-            helperText={fieldErrors.email}
+            autoFocus
             placeholder="เช่น kiosk-gate1@chumko.ac.th"
+            aria-invalid={Boolean(fieldErrors.email)}
           />
-          {isEdit ? (
-            <FormControlLabel
-              control={<Switch checked={isActive} onChange={(e) => setIsActive(e.target.checked)} disabled={pending} />}
-              label="เปิดใช้งานบัญชีนี้"
-            />
-          ) : (
-            <TextField
-              label="รหัสผ่าน"
+          {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
+        </div>
+
+        {isEdit ? (
+          <div className="flex items-center justify-between rounded-md border border-line px-3 py-2.5">
+            <Label htmlFor="kiosk-active" className="cursor-pointer">
+              เปิดใช้งานบัญชีนี้
+            </Label>
+            <Switch id="kiosk-active" checked={isActive} onCheckedChange={setIsActive} disabled={pending} />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="kiosk-password">รหัสผ่าน</Label>
+            <Input
+              id="kiosk-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
-              fullWidth
               disabled={pending}
-              error={Boolean(fieldErrors.password)}
-              helperText={fieldErrors.password ?? "อย่างน้อย 8 ตัวอักษร"}
               autoComplete="new-password"
+              aria-invalid={Boolean(fieldErrors.password)}
             />
-          )}
-        </div>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-        <Button onClick={onClose} disabled={pending} variant="text">
+            <p className="text-xs text-muted-foreground">{fieldErrors.password ?? "อย่างน้อย 8 ตัวอักษร"}</p>
+          </div>
+        )}
+      </div>
+
+      <DialogFooter>
+        <Button variant="ghost" onClick={onClose} disabled={pending} type="button">
           ยกเลิก
         </Button>
-        <Button onClick={submit} disabled={pending} variant="contained">
+        <Button onClick={submit} disabled={pending} type="button">
           {pending ? "กำลังบันทึก…" : isEdit ? "บันทึก" : "เพิ่มบัญชี"}
         </Button>
-      </DialogActions>
+      </DialogFooter>
     </>
   );
 }
