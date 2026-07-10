@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { Users, GraduationCap, Briefcase } from "lucide-react";
 import PageHeader from "@/features/dashboard/components/page-header";
+import StatStrip from "@/components/ui/stat-strip";
 import TeachersBrowser from "@/features/teachers/components/teachers-browser";
-import { listStaffPaginated } from "@/services/staff-service";
+import { listStaffPaginated, getStaffStats } from "@/services/staff-service";
 import type { StaffFilter } from "@/repositories/staff-repository";
 import { parsePage } from "@/types/pagination";
 
@@ -21,13 +23,23 @@ export default async function TeachersPage({ searchParams }: TeachersPageProps):
   const params = await searchParams;
   const query = params.q ?? "";
   const filter: StaffFilter = FILTERS.includes(params.filter as StaffFilter) ? (params.filter as StaffFilter) : "all";
-  const result = await listStaffPaginated({ page: parsePage(params.page), search: query, filter });
+  const [result, stats] = await Promise.all([
+    listStaffPaginated({ page: parsePage(params.page), search: query, filter }),
+    getStaffStats(),
+  ]);
 
   return (
     <>
       <PageHeader
         title="ครูและบุคลากร"
-        subtitle={`บุคลากรทางการศึกษาทั้งหมด ${result.total.toLocaleString("th-TH")} คน · ปีการศึกษา 2568`}
+        subtitle={`บุคลากรทางการศึกษาทั้งหมด ${stats.total.toLocaleString("th-TH")} คน · ปีการศึกษา 2568`}
+      />
+      <StatStrip
+        items={[
+          { label: "บุคลากรทั้งหมด", value: stats.total, hint: "คน", icon: Users, tone: "brand" },
+          { label: "ครูผู้สอน", value: stats.teachers, hint: "คน", icon: GraduationCap, tone: "success" },
+          { label: "บุคลากร", value: stats.personnel, hint: "คน", icon: Briefcase, tone: "default" },
+        ]}
       />
       <TeachersBrowser page={result} query={query} filter={filter} />
     </>

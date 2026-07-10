@@ -85,6 +85,16 @@ export async function listStaffPaginated(params: { page: number; search: string;
   return paginate(rows.map(toSummary), total, params.page, pageSize);
 }
 
+/** Type breakdown for the page's stat strip. */
+export async function getStaffStats(): Promise<{ total: number; teachers: number; personnel: number }> {
+  const [total, teachers, personnel] = await Promise.all([
+    countStaff("", "all"),
+    countStaff("", "TEACHER"),
+    countStaff("", "STAFF"),
+  ]);
+  return { total, teachers, personnel };
+}
+
 export async function createStaffRecord(input: StaffInput): Promise<ActionResult> {
   if (await staffCodeExists(input.staffCode)) {
     return { ok: false, fieldErrors: { staffCode: "รหัสบุคลากรนี้ถูกใช้แล้ว" } };

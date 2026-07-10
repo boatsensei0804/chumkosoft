@@ -28,6 +28,21 @@ export async function listGuardianClassrooms(): Promise<GuardianClassroomOption[
   return repo.listGuardianClassrooms();
 }
 
+/** Summary counts for the guardian / LINE page stat strips (respects the classroom filter). */
+export async function getGuardianStats(params: { search: string; classroomId?: string }): Promise<{
+  students: number;
+  withGuardian: number;
+  linked: number;
+  pending: number;
+}> {
+  const [students, withGuardian, line] = await Promise.all([
+    repo.countStudentsWithGuardians(params.search, params.classroomId),
+    repo.countStudentsHavingGuardian(params.search, params.classroomId),
+    repo.countGuardiansByLine(params.search, params.classroomId),
+  ]);
+  return { students, withGuardian, linked: line.linked, pending: line.pending };
+}
+
 /** Students (paged/searchable, optionally by classroom) with guardians + LINE status. */
 export async function listStudentGuardians(params: { page: number; search: string; classroomId?: string }): Promise<Paginated<StudentGuardians>> {
   const pageSize = DEFAULT_PAGE_SIZE;

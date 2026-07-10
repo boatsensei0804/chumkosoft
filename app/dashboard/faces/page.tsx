@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { ScanFace, CircleCheck, CircleDashed } from "lucide-react";
 import PageHeader from "@/features/dashboard/components/page-header";
+import StatStrip from "@/components/ui/stat-strip";
 import FacesViewTabs from "@/features/faces/components/faces-view-tabs";
 import FacesBrowser from "@/features/faces/components/faces-browser";
 import FacesRoomOverview from "@/features/faces/components/faces-room-overview";
@@ -31,6 +33,14 @@ export default async function FacesPage({ searchParams }: FacesPageProps): Promi
   return (
     <>
       <PageHeader title="ชุดข้อมูลใบหน้า" subtitle={subtitle} />
+
+      <StatStrip
+        items={[
+          { label: "นักเรียนทั้งหมด", value: stats.totalStudents, hint: "คน", icon: ScanFace, tone: "brand" },
+          { label: "มีข้อมูลใบหน้าแล้ว", value: stats.enrolledStudents, hint: "คน", icon: CircleCheck, tone: "success" },
+          { label: "ยังไม่ลงทะเบียน", value: Math.max(0, stats.totalStudents - stats.enrolledStudents), hint: "คน", icon: CircleDashed, tone: "warning" },
+        ]}
+      />
 
       <div className="flex flex-col gap-4">
         <FacesViewTabs view={view} />

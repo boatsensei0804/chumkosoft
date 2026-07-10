@@ -146,6 +146,17 @@ export async function listStudentsPaginated(params: {
   return paginate(rows.map(toSummary), total, params.page, pageSize);
 }
 
+/** Status counts for the page's stat strip. */
+export async function getStudentStats(): Promise<{ total: number; active: number; pending: number; leave: number }> {
+  const [total, active, pending, leave] = await Promise.all([
+    countStudentsFiltered("", undefined),
+    countStudentsFiltered("", statusToPrisma.active),
+    countStudentsFiltered("", statusToPrisma.pending),
+    countStudentsFiltered("", statusToPrisma.leave),
+  ]);
+  return { total, active, pending, leave };
+}
+
 /** Classroom options (active academic year) for the placement dropdown. */
 export async function listClassroomOptions(): Promise<ClassroomOption[]> {
   return findClassroomsForActiveYear();

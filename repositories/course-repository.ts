@@ -38,6 +38,13 @@ export async function countCourses(search: string): Promise<number> {
   return prisma.course.count({ where: courseWhere(search) });
 }
 
+/** Courses with at least one active-term offering — "เปิดสอนแล้ว" for the stat strip. */
+export async function countCoursesWithActiveOfferings(): Promise<number> {
+  return prisma.course.count({
+    where: { isDeleted: false, offerings: { some: { isDeleted: false, term: { isActive: true, isDeleted: false } } } },
+  });
+}
+
 /** Whether a course code is already taken (optionally ignoring one row for edits). */
 export async function courseCodeExists(code: string, excludeId?: string): Promise<boolean> {
   const existing = await prisma.course.findFirst({

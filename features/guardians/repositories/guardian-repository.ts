@@ -83,6 +83,23 @@ export async function countStudentsWithGuardians(search: string, classroomId?: s
   return prisma.student.count({ where: studentWhere(search, classroomId, termId) });
 }
 
+/** Students (in scope) that have at least one guardian on record. */
+export async function countStudentsHavingGuardian(search: string, classroomId?: string): Promise<number> {
+  const termId = await activeTermId();
+  return prisma.student.count({ where: { ...studentWhere(search, classroomId, termId), guardians: { some: { isDeleted: false } } } });
+}
+
+/** Guardian LINE-link counts (in scope): fully linked vs. pending a one-time code. */
+export async function countGuardiansByLine(search: string, classroomId?: string): Promise<{ linked: number; pending: number }> {
+  const termId = await activeTermId();
+  const student = studentWhere(search, classroomId, termId);
+  const [linked, pending] = await Promise.all([
+    prisma.guardian.count({ where: { isDeleted: false, lineUserId: { not: null }, student } }),
+    prisma.guardian.count({ where: { isDeleted: false, lineUserId: null, lineLinkCode: { not: null }, student } }),
+  ]);
+  return { linked, pending };
+}
+
 export async function studentExists(id: string): Promise<boolean> {
   return (await prisma.student.findFirst({ where: { id, isDeleted: false }, select: { id: true } })) !== null;
 }

@@ -1,6 +1,7 @@
 import {
   findCourses,
   countCourses,
+  countCoursesWithActiveOfferings,
   courseCodeExists,
   createCourse,
   updateCourse,
@@ -31,6 +32,12 @@ export async function listCoursesPaginated(params: { page: number; search: strin
     countCourses(params.search),
   ]);
   return paginate(rows.map(toSummary), total, params.page, pageSize);
+}
+
+/** Totals for the page's stat strip. */
+export async function getCourseStats(): Promise<{ total: number; open: number }> {
+  const [total, open] = await Promise.all([countCourses(""), countCoursesWithActiveOfferings()]);
+  return { total, open };
 }
 
 export async function createCourseRecord(input: CourseInput): Promise<ActionResult> {
