@@ -1,9 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Button from "@mui/material/Button";
-import CircularProgress from "@mui/material/CircularProgress";
-import Icon from "@/features/dashboard/components/icon";
+import { Loader2, ScanFace, Clock, X, CheckCircle2, Info, TriangleAlert, type LucideIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { loadFaceApi, detectFaceForScan } from "@/features/faces/lib/face-client";
 import { identifyFaceAction, confirmCheckInAction } from "@/features/faces/scan-actions";
 import type { ScanResult, ScanStatus } from "@/features/faces/services/scan-service";
@@ -38,12 +37,12 @@ function bangkokNowHM(): string {
   return nowHMFmt.format(new Date());
 }
 
-const RESULT_META: Record<ScanStatus, { title: string; bg: string; fg: string; icon: string }> = {
-  matched: { title: "เช็คชื่อสำเร็จ", bg: "var(--success-soft)", fg: "oklch(0.42 0.1 152)", icon: "success" },
-  already: { title: "เช็คชื่อไปแล้ววันนี้", bg: "var(--brand-soft)", fg: "var(--brand-ink)", icon: "info" },
-  no_match: { title: "ไม่รู้จักใบหน้านี้", bg: "var(--warning-soft)", fg: "oklch(0.5 0.12 55)", icon: "warning" },
-  not_ready: { title: "ยังไม่พร้อมใช้งาน", bg: "var(--surface-sunken)", fg: "var(--muted)", icon: "info" },
-  closed: { title: "ยังไม่ถึงเวลาเปิดสแกน", bg: "var(--surface-sunken)", fg: "var(--muted)", icon: "time" },
+const RESULT_META: Record<ScanStatus, { title: string; bg: string; fg: string; icon: LucideIcon }> = {
+  matched: { title: "เช็คชื่อสำเร็จ", bg: "var(--success-soft)", fg: "oklch(0.42 0.1 152)", icon: CheckCircle2 },
+  already: { title: "เช็คชื่อไปแล้ววันนี้", bg: "var(--brand-soft)", fg: "var(--brand-ink)", icon: Info },
+  no_match: { title: "ไม่รู้จักใบหน้านี้", bg: "var(--warning-soft)", fg: "oklch(0.5 0.12 55)", icon: TriangleAlert },
+  not_ready: { title: "ยังไม่พร้อมใช้งาน", bg: "var(--surface-sunken)", fg: "var(--muted)", icon: Info },
+  closed: { title: "ยังไม่ถึงเวลาเปิดสแกน", bg: "var(--surface-sunken)", fg: "var(--muted)", icon: Clock },
 };
 
 interface ScanStationProps {
@@ -152,31 +151,24 @@ export default function ScanStation({ scanStartTime, lateAfterTime }: ScanStatio
 
   return (
     <div className="flex flex-col gap-3">
-      <div
-        className="relative aspect-[4/3] w-full overflow-hidden rounded-[16px]"
-        style={{ backgroundColor: "oklch(0.2 0.02 260)", border: "1px solid var(--line)" }}
-      >
+      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-line bg-[oklch(0.2_0.02_260)]">
         <video ref={videoRef} playsInline muted className="h-full w-full -scale-x-100 object-cover" aria-label="ภาพจากกล้องสแกนใบหน้า" />
 
         {phase !== "scanning" && (
-          <div className="absolute inset-0 grid place-items-center" style={{ backgroundColor: "color-mix(in oklch, oklch(0.2 0.02 260) 70%, transparent)" }}>
+          <div className="absolute inset-0 grid place-items-center bg-[color-mix(in_oklch,oklch(0.2_0.02_260)_70%,transparent)]">
             {phase === "starting" ? (
-              <div className="flex flex-col items-center gap-3 text-center">
-                <CircularProgress sx={{ color: "var(--on-primary)" }} />
-                <p className="text-[14px] font-medium" style={{ color: "var(--on-primary)" }}>กำลังเปิดกล้องและโหลดโมเดล…</p>
+              <div className="flex flex-col items-center gap-3 text-center text-[var(--on-primary)]">
+                <Loader2 className="size-9 animate-spin" />
+                <p className="text-[14px] font-medium">กำลังเปิดกล้องและโหลดโมเดล…</p>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-3 px-6 text-center">
-                <span className="grid size-14 place-items-center rounded-full" style={{ backgroundColor: "color-mix(in oklch, var(--on-primary) 15%, transparent)", color: "var(--on-primary)" }}>
-                  <Icon name="face" sx={{ fontSize: 30 }} />
+              <div className="flex flex-col items-center gap-3 px-6 text-center text-[var(--on-primary)]">
+                <span className="grid size-14 place-items-center rounded-full bg-[color-mix(in_oklch,var(--on-primary)_15%,transparent)]">
+                  <ScanFace className="size-8" />
                 </span>
-                {phase === "error" ? (
-                  <p className="max-w-sm text-[13.5px]" style={{ color: "var(--on-primary)" }}>{errorMsg}</p>
-                ) : (
-                  <p className="text-[14px] font-medium" style={{ color: "var(--on-primary)" }}>กดปุ่มด้านล่างเพื่อเริ่มสแกน</p>
-                )}
-                <Button variant="contained" onClick={() => void start()} startIcon={<Icon name="face" sx={{ fontSize: 18 }} />}>
-                  {phase === "error" ? "ลองอีกครั้ง" : "เริ่มสแกน"}
+                {phase === "error" ? <p className="max-w-sm text-[13.5px]">{errorMsg}</p> : <p className="text-[14px] font-medium">กดปุ่มด้านล่างเพื่อเริ่มสแกน</p>}
+                <Button onClick={() => void start()}>
+                  <ScanFace className="size-[18px]" /> {phase === "error" ? "ลองอีกครั้ง" : "เริ่มสแกน"}
                 </Button>
               </div>
             )}
@@ -185,14 +177,14 @@ export default function ScanStation({ scanStartTime, lateAfterTime }: ScanStatio
 
         {phase === "scanning" && (
           <div className="pointer-events-none absolute inset-0">
-            <div className="absolute left-1/2 top-1/2 size-52 -translate-x-1/2 -translate-y-1/2 rounded-[24px]" style={{ border: "2px dashed color-mix(in oklch, var(--on-primary) 55%, transparent)" }} />
+            <div className="absolute left-1/2 top-1/2 size-52 -translate-x-1/2 -translate-y-1/2 rounded-[24px] border-2 border-dashed border-[color-mix(in_oklch,var(--on-primary)_55%,transparent)]" />
             {beforeWindow ? (
-              <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ backgroundColor: "color-mix(in oklch, var(--on-primary) 15%, transparent)", color: "var(--on-primary)" }}>
-                <Icon name="time" sx={{ fontSize: 14 }} />
+              <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_oklch,var(--on-primary)_15%,transparent)] px-2.5 py-1 text-[12px] font-semibold text-[var(--on-primary)]">
+                <Clock className="size-3.5" />
                 ยังไม่ถึงเวลาเปิดสแกน · เริ่ม {scanStartTime} น.
               </span>
             ) : (
-              <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ backgroundColor: "color-mix(in oklch, var(--danger) 90%, transparent)", color: "var(--on-primary)" }}>
+              <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_oklch,var(--danger)_90%,transparent)] px-2.5 py-1 text-[12px] font-semibold text-[var(--on-primary)]">
                 <span className="size-1.5 animate-pulse rounded-full bg-white" aria-hidden="true" />
                 กำลังสแกน
               </span>
@@ -202,38 +194,44 @@ export default function ScanStation({ scanStartTime, lateAfterTime }: ScanStatio
 
         {result && result.status !== "no_match" && (
           <div className="absolute inset-x-0 bottom-0 p-3" role="status" aria-live="assertive">
-            <div className="flex items-center gap-3 rounded-[14px] px-4 py-3" style={{ backgroundColor: RESULT_META[result.status].bg, border: `1px solid ${RESULT_META[result.status].fg}` }}>
-              <Icon name={RESULT_META[result.status].icon} sx={{ fontSize: 26, color: RESULT_META[result.status].fg }} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-[15px] font-bold" style={{ color: RESULT_META[result.status].fg }}>{RESULT_META[result.status].title}</p>
-                  {result.late && (result.status === "matched" || result.status === "already") && (
-                    <span className="rounded-full px-2 py-0.5 text-[11.5px] font-semibold" style={{ backgroundColor: "var(--warning-soft)", color: "oklch(0.5 0.12 55)" }}>
-                      มาสาย
-                    </span>
-                  )}
+            {(() => {
+              const meta = RESULT_META[result.status];
+              const Icon = meta.icon;
+              return (
+                <div className="flex items-center gap-3 rounded-[14px] px-4 py-3" style={{ backgroundColor: meta.bg, border: `1px solid ${meta.fg}` }}>
+                  <Icon className="size-7 shrink-0" style={{ color: meta.fg }} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-[15px] font-bold" style={{ color: meta.fg }}>
+                        {meta.title}
+                      </p>
+                      {result.late && (result.status === "matched" || result.status === "already") && (
+                        <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[11.5px] font-semibold text-[oklch(0.5_0.12_55)]">มาสาย</span>
+                      )}
+                    </div>
+                    {result.studentName && (
+                      <p className="truncate text-[13.5px] text-ink-strong">
+                        {result.studentName}
+                        {result.classroom ? ` · ${result.classroom}` : ""}
+                        {result.time ? ` · ${result.time} น.` : ""}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                {result.studentName && (
-                  <p className="truncate text-[13.5px] text-ink-strong">
-                    {result.studentName}
-                    {result.classroom ? ` · ${result.classroom}` : ""}
-                    {result.time ? ` · ${result.time} น.` : ""}
-                  </p>
-                )}
-              </div>
-            </div>
+              );
+            })()}
           </div>
         )}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-[12.5px] text-muted">
         <span className="inline-flex items-center gap-1.5">
-          <Icon name="time" sx={{ fontSize: 15, color: "var(--faint)" }} />
+          <Clock className="size-[15px] text-faint" />
           เปิดสแกน {scanStartTime} น. · หลัง {lateAfterTime} น. นับเป็นสาย
         </span>
         {phase === "scanning" && (
-          <Button variant="outlined" size="small" onClick={stop} startIcon={<Icon name="close" sx={{ fontSize: 16 }} />}>
-            หยุดสแกน
+          <Button variant="outline" size="sm" onClick={stop}>
+            <X className="size-4" /> หยุดสแกน
           </Button>
         )}
       </div>

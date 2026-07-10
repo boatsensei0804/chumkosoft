@@ -2,10 +2,9 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Button from "@mui/material/Button";
-import Alert from "@mui/material/Alert";
-import LinearProgress from "@mui/material/LinearProgress";
-import Icon from "@/features/dashboard/components/icon";
+import { Plus, ScanFace } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { uploadFaceAction } from "@/features/faces/actions";
 import { loadFaceApi, detectDescriptor, fileToImage, resizeToJpeg } from "@/features/faces/lib/face-client";
 import FaceCameraDialog from "./face-camera-dialog";
@@ -20,6 +19,12 @@ interface FaceUploaderProps {
   studentId: string;
   studentName: string;
 }
+
+const STATUS_STYLE: Record<FileStatus["state"], string> = {
+  processing: "border-brand-soft bg-brand-softer text-ink",
+  done: "border-[oklch(0.82_0.1_152)] bg-success-soft text-[oklch(0.36_0.09_152)]",
+  failed: "border-destructive/30 bg-destructive/10 text-destructive",
+};
 
 /**
  * Enrolls face photos: for each picked file, detect exactly one face in the
@@ -113,54 +118,33 @@ export default function FaceUploader({ studentId, studentName }: FaceUploaderPro
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="contained"
-          disabled={busy}
-          onClick={() => inputRef.current?.click()}
-          startIcon={<Icon name="add" sx={{ fontSize: 18 }} />}
-        >
-          {busy ? "กำลังประมวลผล…" : "อัปโหลดรูป"}
+        <Button disabled={busy} onClick={() => inputRef.current?.click()}>
+          <Plus className="size-[18px]" /> {busy ? "กำลังประมวลผล…" : "อัปโหลดรูป"}
         </Button>
-        <Button
-          variant="outlined"
-          disabled={busy}
-          onClick={() => setCameraOpen(true)}
-          startIcon={<Icon name="face" sx={{ fontSize: 18 }} />}
-        >
-          ถ่ายด้วยกล้อง
+        <Button variant="outline" disabled={busy} onClick={() => setCameraOpen(true)}>
+          <ScanFace className="size-[18px]" /> ถ่ายด้วยกล้อง
         </Button>
       </div>
-      <p className="text-[12.5px] text-muted">
-        แนะนำ 3–5 รูปต่อคน หน้าตรง แสงสว่าง เห็นใบหน้าชัดเจน ระบบจะตรวจหาใบหน้าก่อนบันทึก
-      </p>
+      <p className="text-[12.5px] text-muted">แนะนำ 3–5 รูปต่อคน หน้าตรง แสงสว่าง เห็นใบหน้าชัดเจน ระบบจะตรวจหาใบหน้าก่อนบันทึก</p>
 
-      <FaceCameraDialog
-        open={cameraOpen}
-        studentId={studentId}
-        studentName={studentName}
-        onClose={() => setCameraOpen(false)}
-        onUploaded={() => router.refresh()}
-      />
+      <FaceCameraDialog open={cameraOpen} studentId={studentId} studentName={studentName} onClose={() => setCameraOpen(false)} onUploaded={() => router.refresh()} />
 
       {modelLoading && (
         <div className="flex flex-col gap-1.5">
           <p className="text-[12.5px] text-muted">กำลังโหลดโมเดลตรวจจับใบหน้า (ครั้งแรกเท่านั้น)…</p>
-          <LinearProgress />
+          <div className="h-1 w-full overflow-hidden rounded-full bg-surface-sunken">
+            <div className="h-full w-1/3 animate-pulse rounded-full bg-brand" />
+          </div>
         </div>
       )}
 
       {statuses.length > 0 && (
         <ul className="flex flex-col gap-1.5" aria-live="polite">
           {statuses.map((s, i) => (
-            <li key={`${s.name}-${i}`}>
-              <Alert
-                severity={s.state === "done" ? "success" : s.state === "failed" ? "error" : "info"}
-                sx={{ borderRadius: "var(--radius-sm)", py: 0.25 }}
-              >
-                <span className="font-semibold">{s.name}</span>
-                {" — "}
-                {s.state === "processing" ? "กำลังตรวจหาใบหน้า…" : s.detail}
-              </Alert>
+            <li key={`${s.name}-${i}`} className={cn("rounded-md border px-3 py-1.5 text-[13px]", STATUS_STYLE[s.state])}>
+              <span className="font-semibold">{s.name}</span>
+              {" — "}
+              {s.state === "processing" ? "กำลังตรวจหาใบหน้า…" : s.detail}
             </li>
           ))}
         </ul>

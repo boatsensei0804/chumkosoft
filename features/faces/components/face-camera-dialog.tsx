@@ -1,14 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import Button from "@mui/material/Button";
-import Alert from "@mui/material/Alert";
-import CircularProgress from "@mui/material/CircularProgress";
-import Icon from "@/features/dashboard/components/icon";
+import { Loader2, ScanFace, TriangleAlert } from "lucide-react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { uploadFaceAction } from "@/features/faces/actions";
 import { loadFaceApi, detectDescriptor, captureVideoJpeg } from "@/features/faces/lib/face-client";
 
@@ -22,6 +18,12 @@ interface FaceCameraDialogProps {
   onClose: () => void;
   onUploaded: () => void;
 }
+
+const FEEDBACK_STYLE: Record<Feedback["severity"], string> = {
+  success: "border-[oklch(0.82_0.1_152)] bg-success-soft text-[oklch(0.36_0.09_152)]",
+  error: "border-destructive/30 bg-destructive/10 text-destructive",
+  info: "border-brand-soft bg-brand-softer text-ink",
+};
 
 /**
  * Captures face photos straight from the webcam: on each shot we detect a single
@@ -118,63 +120,59 @@ export default function FaceCameraDialog({ open, studentId, studentName, onClose
   }
 
   return (
-    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm" slotProps={{ paper: { sx: { borderRadius: "var(--radius-lg)" } } }} aria-labelledby="camera-title">
-      <DialogTitle id="camera-title" sx={{ fontWeight: 700, color: "var(--ink-strong)" }}>
-        ถ่ายรูปใบหน้า · {studentName}
-      </DialogTitle>
-      <DialogContent>
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[12px]" style={{ backgroundColor: "oklch(0.2 0.02 260)", border: "1px solid var(--line)" }}>
-          <video ref={videoRef} playsInline muted className="h-full w-full -scale-x-100 object-cover" aria-label={`กล้องสำหรับถ่ายใบหน้าของ ${studentName}`} />
+    <Dialog open={open} onOpenChange={(next) => !next && handleClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>ถ่ายรูปใบหน้า · {studentName}</DialogTitle>
+        </DialogHeader>
 
-          {phase !== "error" && (
-            <div className="pointer-events-none absolute left-1/2 top-1/2 size-44 -translate-x-1/2 -translate-y-1/2 rounded-[24px]" style={{ border: "2px dashed color-mix(in oklch, var(--on-primary) 55%, transparent)" }} />
-          )}
+        <div className="py-2">
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[12px] border border-line bg-[oklch(0.2_0.02_260)]">
+            <video ref={videoRef} playsInline muted className="h-full w-full -scale-x-100 object-cover" aria-label={`กล้องสำหรับถ่ายใบหน้าของ ${studentName}`} />
 
-          {(phase === "starting" || phase === "capturing") && (
-            <div className="absolute inset-0 grid place-items-center" style={{ backgroundColor: "color-mix(in oklch, oklch(0.2 0.02 260) 55%, transparent)" }}>
-              <div className="flex flex-col items-center gap-2 text-center">
-                <CircularProgress size={28} sx={{ color: "var(--on-primary)" }} />
-                <p className="text-[13px] font-medium" style={{ color: "var(--on-primary)" }}>
-                  {phase === "starting" ? "กำลังเปิดกล้อง…" : "กำลังตรวจหาใบหน้า…"}
-                </p>
+            {phase !== "error" && (
+              <div className="pointer-events-none absolute left-1/2 top-1/2 size-44 -translate-x-1/2 -translate-y-1/2 rounded-[24px] border-2 border-dashed border-[color-mix(in_oklch,var(--on-primary)_55%,transparent)]" />
+            )}
+
+            {(phase === "starting" || phase === "capturing") && (
+              <div className="absolute inset-0 grid place-items-center bg-[color-mix(in_oklch,oklch(0.2_0.02_260)_55%,transparent)]">
+                <div className="flex flex-col items-center gap-2 text-center text-[var(--on-primary)]">
+                  <Loader2 className="size-7 animate-spin" />
+                  <p className="text-[13px] font-medium">{phase === "starting" ? "กำลังเปิดกล้อง…" : "กำลังตรวจหาใบหน้า…"}</p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {phase === "error" && (
-            <div className="absolute inset-0 grid place-items-center px-6 text-center">
-              <div className="flex flex-col items-center gap-3">
-                <Icon name="warning" sx={{ fontSize: 30, color: "var(--on-primary)" }} />
-                <p className="max-w-sm text-[13px]" style={{ color: "var(--on-primary)" }}>{errorMsg}</p>
-                <Button variant="contained" size="small" onClick={retry}>
-                  ลองอีกครั้ง
-                </Button>
+            {phase === "error" && (
+              <div className="absolute inset-0 grid place-items-center px-6 text-center">
+                <div className="flex flex-col items-center gap-3 text-[var(--on-primary)]">
+                  <TriangleAlert className="size-8" />
+                  <p className="max-w-sm text-[13px]">{errorMsg}</p>
+                  <Button size="sm" onClick={retry}>
+                    ลองอีกครั้ง
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {count > 0 && (
-            <span className="absolute right-3 top-3 rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ backgroundColor: "var(--brand)", color: "var(--on-primary)" }}>
-              เพิ่มแล้ว {count} รูป
-            </span>
-          )}
+            {count > 0 && (
+              <span className="absolute right-3 top-3 rounded-full bg-brand px-2.5 py-1 text-[12px] font-semibold text-[var(--on-primary)]">เพิ่มแล้ว {count} รูป</span>
+            )}
+          </div>
+
+          {feedback && <p className={cn("mt-3 rounded-md border px-3 py-2 text-[13px]", FEEDBACK_STYLE[feedback.severity])}>{feedback.message}</p>}
+          <p className="mt-2 text-[12.5px] text-muted">จัดใบหน้าให้อยู่ในกรอบ หน้าตรง แสงสว่าง แล้วกด “ถ่ายภาพ” · ถ่ายได้หลายรูปต่อคน</p>
         </div>
 
-        {feedback && (
-          <Alert severity={feedback.severity} sx={{ mt: 2, borderRadius: "var(--radius-sm)" }}>
-            {feedback.message}
-          </Alert>
-        )}
-        <p className="mt-2 text-[12.5px] text-muted">จัดใบหน้าให้อยู่ในกรอบ หน้าตรง แสงสว่าง แล้วกด “ถ่ายภาพ” · ถ่ายได้หลายรูปต่อคน</p>
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={handleClose}>
+            เสร็จสิ้น
+          </Button>
+          <Button onClick={() => void capture()} disabled={phase !== "ready"}>
+            <ScanFace className="size-[18px] " /> {phase === "capturing" ? "กำลังบันทึก…" : "ถ่ายภาพ"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-        <Button onClick={handleClose} variant="text">
-          เสร็จสิ้น
-        </Button>
-        <Button onClick={() => void capture()} variant="contained" disabled={phase !== "ready"} startIcon={<Icon name="face" sx={{ fontSize: 18 }} />}>
-          {phase === "capturing" ? "กำลังบันทึก…" : "ถ่ายภาพ"}
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 }
