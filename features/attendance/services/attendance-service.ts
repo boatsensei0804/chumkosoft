@@ -30,21 +30,29 @@ function formatName(s: { prefix: string | null; firstName: string; lastName: str
   return [s.prefix, `${s.firstName} ${s.lastName}`].filter(Boolean).join(" ");
 }
 
-/** Course offerings in the active term, labelled "ชั้น · วิชา". */
-export async function listAttendanceOfferings(): Promise<AttendanceOffering[]> {
+/**
+ * Course offerings in the active term, labelled "ชั้น · วิชา".
+ * `teacherStaffId` scopes to one teacher's classes (null/undefined = admin, sees all).
+ */
+export async function listAttendanceOfferings(teacherStaffId?: string | null): Promise<AttendanceOffering[]> {
   const term = await repo.getActiveTerm();
   if (!term) return [];
-  const offerings = await repo.findOfferingsForTerm(term.id);
+  const offerings = await repo.findOfferingsForTerm(term.id, teacherStaffId);
   return offerings.map((o) => ({ id: o.id, label: `${o.classroom.code} · ${o.course.name}` }));
 }
 
-/** Builds the roster (with any saved statuses) for one offering on one date. */
-export async function getRoster(offeringId: string, dateISO: string): Promise<AttendanceRoster | null> {
+/**
+ * Builds the roster (with any saved statuses) for one offering on one date.
+ * When `teacherStaffId` is given, a non-owned offering returns null so a teacher
+ * can't open another teacher's roster by editing the URL.
+ */
+export async function getRoster(offeringId: string, dateISO: string, teacherStaffId?: string | null): Promise<AttendanceRoster | null> {
   const parsed = parseCalendarDate(dateISO);
   if (!parsed) return null;
 
   const [term, offering] = await Promise.all([repo.getActiveTerm(), repo.getOfferingRef(offeringId)]);
   if (!term || !offering || offering.termId !== term.id) return null;
+  if (teacherStaffId && offering.teacherId !== teacherStaffId) return null;
 
   const meeting = await repo.findMeetingPeriod(offeringId, parsed.day);
   const fallback = meeting ? null : await repo.findAnyPeriod(offeringId);
@@ -79,14 +87,20 @@ export async function getRoster(offeringId: string, dateISO: string): Promise<At
   };
 }
 
-/** Persists a roster's statuses; resolves the meeting period and recorder. */
-export async function saveRoster(userId: string, input: SaveAttendanceInput): Promise<ActionResult> {
+/**
+ * Persists a roster's statuses; resolves the meeting period and recorder.
+ * `teacherStaffId` (non-admin) blocks saving a roster that isn't the teacher's own.
+ */
+export async function saveRoster(userId: string, input: SaveAttendanceInput, teacherStaffId?: string | null): Promise<ActionResult> {
   const parsed = parseCalendarDate(input.date);
   if (!parsed) return { ok: false, message: "วันที่ไม่ถูกต้อง" };
 
   const [term, offering] = await Promise.all([repo.getActiveTerm(), repo.getOfferingRef(input.offeringId)]);
   if (!term || !offering || offering.termId !== term.id) {
     return { ok: false, message: "ไม่พบรายวิชาในภาคเรียนที่ใช้งาน" };
+  }
+  if (teacherStaffId && offering.teacherId !== teacherStaffId) {
+    return { ok: false, message: "บันทึกไม่ได้ เพราะรายวิชานี้ไม่ใช่วิชาที่คุณสอน" };
   }
 
   const meeting = await repo.findMeetingPeriod(input.offeringId, parsed.day);

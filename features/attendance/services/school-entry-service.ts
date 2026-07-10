@@ -28,12 +28,16 @@ function formatName(s: { prefix: string | null; firstName: string; lastName: str
   return [s.prefix, `${s.firstName} ${s.lastName}`].filter(Boolean).join(" ");
 }
 
-export async function listEntryClassrooms(): Promise<ClassroomOption[]> {
-  return repo.findClassroomsForActiveYear();
+/** Classroom filter options. `advisorStaffId` limits to a teacher's homeroom(s); null = admin (all). */
+export async function listEntryClassrooms(advisorStaffId?: string | null): Promise<ClassroomOption[]> {
+  return repo.findClassroomsForActiveYear(advisorStaffId);
 }
 
-/** Daily gate roster for a date (optionally one classroom). */
-export async function getSchoolEntryRoster(dateISO: string, classroomId: string): Promise<SchoolEntryRoster | null> {
+/**
+ * Daily gate roster for a date (optionally one classroom).
+ * `advisorStaffId` restricts to a teacher's advisory classrooms (null = admin, all).
+ */
+export async function getSchoolEntryRoster(dateISO: string, classroomId: string, advisorStaffId?: string | null): Promise<SchoolEntryRoster | null> {
   const date = parseCalendarDate(dateISO);
   if (!date) return null;
 
@@ -41,7 +45,7 @@ export async function getSchoolEntryRoster(dateISO: string, classroomId: string)
   if (!term) return { date: dateISO, classroomId, students: [] };
 
   const [students, entries] = await Promise.all([
-    repo.findEnrolledStudents(term.id, classroomId || undefined),
+    repo.findEnrolledStudents(term.id, classroomId || undefined, advisorStaffId),
     repo.findEntries(term.id, date),
   ]);
 

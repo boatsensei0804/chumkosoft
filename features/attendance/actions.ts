@@ -29,7 +29,8 @@ export async function saveAttendanceAction(
       return { ok: false, message: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" };
     }
 
-    const result = await saveRoster(user.id, parsed.data);
+    const teacherScope = user.role === "ADMIN" ? null : user.staffId;
+    const result = await saveRoster(user.id, parsed.data, teacherScope);
     if (result.ok) {
       revalidatePath("/dashboard/attendance");
     }

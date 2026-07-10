@@ -27,6 +27,8 @@ export interface CurrentUser {
   id: string;
   email: string;
   role: Role;
+  /** Linked staff record id, when the account belongs to a teacher/personnel; null otherwise. Used to scope teacher-owned data (attendance rosters). */
+  staffId: string | null;
   displayName: string;
   /** Given name for informal greetings ("คุณ{firstName}"); null for accounts with no person record. */
   firstName: string | null;
@@ -52,6 +54,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser> => {
       id: true,
       email: true,
       role: true,
+      staffId: true,
       staff: { select: { prefix: true, firstName: true, lastName: true, position: true } },
       student: { select: { prefix: true, firstName: true, lastName: true } },
     },
@@ -70,7 +73,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser> => {
   const subtitle = user.staff?.position ? `${roleLabel} · ${user.staff.position}` : roleLabel;
   const initials = person ? initialsFrom(person.firstName, person.lastName) : user.email.slice(0, 2).toUpperCase();
 
-  return { id: user.id, email: user.email, role: user.role, displayName, firstName: person?.firstName ?? null, subtitle, initials };
+  return { id: user.id, email: user.email, role: user.role, staffId: user.staffId, displayName, firstName: person?.firstName ?? null, subtitle, initials };
 });
 
 /**

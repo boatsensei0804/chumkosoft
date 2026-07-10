@@ -6,23 +6,37 @@ export async function getActiveTerm(): Promise<{ id: string } | null> {
   return prisma.term.findFirst({ where: { isActive: true, isDeleted: false }, select: { id: true } });
 }
 
-/** Classrooms in the active academic year, for the entry filter. */
-export async function findClassroomsForActiveYear() {
+/**
+ * Classrooms in the active academic year, for the entry filter.
+ * When `advisorStaffId` is given, only classrooms that teacher advises are
+ * returned (teacher sees only their homeroom(s); admin passes null → all).
+ */
+export async function findClassroomsForActiveYear(advisorStaffId?: string | null) {
   return prisma.classroom.findMany({
-    where: { isDeleted: false, academicYear: { isActive: true, isDeleted: false } },
+    where: {
+      isDeleted: false,
+      academicYear: { isActive: true, isDeleted: false },
+      ...(advisorStaffId ? { advisors: { some: { staffId: advisorStaffId } } } : {}),
+    },
     orderBy: { code: "asc" },
     select: { id: true, code: true, gradeLevel: true },
   });
 }
 
-/** Students enrolled in the active term (optionally one classroom), by code. */
-export async function findEnrolledStudents(termId: string, classroomId?: string) {
+/**
+ * Students enrolled in the active term (optionally one classroom), by code.
+ * When `advisorStaffId` is given, results are restricted to classrooms that
+ * teacher advises — so a teacher only ever sees their homeroom students, and a
+ * classroomId that isn't theirs yields an empty roster (URL-tamper guard).
+ */
+export async function findEnrolledStudents(termId: string, classroomId?: string, advisorStaffId?: string | null) {
   const enrollments = await prisma.enrollment.findMany({
     where: {
       termId,
       isDeleted: false,
       student: { isDeleted: false },
       ...(classroomId ? { classroomId } : {}),
+      ...(advisorStaffId ? { classroom: { advisors: { some: { staffId: advisorStaffId } } } } : {}),
     },
     orderBy: { student: { studentCode: "asc" } },
     select: {

@@ -12,9 +12,9 @@ export async function getActiveTerm(): Promise<{ id: string } | null> {
 }
 
 /** Course offerings in the active term, for the roll-call class picker. */
-export async function findOfferingsForTerm(termId: string) {
+export async function findOfferingsForTerm(termId: string, teacherId?: string | null) {
   return prisma.courseOffering.findMany({
-    where: { termId, isDeleted: false },
+    where: { termId, isDeleted: false, ...(teacherId ? { teacherId } : {}) },
     orderBy: [{ classroom: { code: "asc" } }, { course: { code: "asc" } }],
     select: {
       id: true,
@@ -46,7 +46,7 @@ export async function findAnyPeriod(offeringId: string) {
 export async function getOfferingRef(offeringId: string) {
   return prisma.courseOffering.findFirst({
     where: { id: offeringId, isDeleted: false },
-    select: { id: true, termId: true, classroomId: true },
+    select: { id: true, termId: true, classroomId: true, teacherId: true },
   });
 }
 
