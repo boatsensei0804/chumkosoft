@@ -1,6 +1,6 @@
+import { LogOut } from "lucide-react";
 import BrandMark from "./brand-mark";
 import SidebarNav from "./sidebar-nav";
-import Icon from "./icon";
 import { navGroups } from "../nav";
 import { logoutAction } from "@/features/auth/actions";
 import type { CurrentUser } from "@/lib/dal";
@@ -57,7 +57,7 @@ export default function SidebarContent({ user, onNavigate }: SidebarContentProps
               aria-label="ออกจากระบบ"
               className="grid size-8 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-ink"
             >
-              <Icon name="logout" sx={{ fontSize: 19 }} />
+              <LogOut className="size-[18px]" />
             </button>
           </form>
         </div>

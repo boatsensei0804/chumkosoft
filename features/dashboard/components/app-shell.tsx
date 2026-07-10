@@ -1,12 +1,10 @@
 "use client";
 
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import Drawer from "@mui/material/Drawer";
-import IconButton from "@mui/material/IconButton";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import SidebarContent from "./sidebar-content";
 import TopBar from "./top-bar";
 import CommandPalette from "./command-palette";
-import Icon from "./icon";
 import { navGroups } from "../nav";
 import type { CurrentUser } from "@/lib/dal";
 
@@ -38,13 +36,7 @@ export default function AppShell({ children, user, today }: AppShellProps): Reac
   }, []);
 
   return (
-    <div
-      className="relative min-h-dvh"
-      style={{
-        background:
-          "linear-gradient(180deg, var(--surface) 0%, oklch(0.945 0.024 254) 100%)",
-      }}
-    >
+    <div className="relative min-h-dvh bg-[linear-gradient(180deg,var(--surface)_0%,oklch(0.945_0.024_254)_100%)]">
       {/* Ambient guilloché texture — fixed, behind all content */}
       <div
         aria-hidden="true"
@@ -58,39 +50,23 @@ export default function AppShell({ children, user, today }: AppShellProps): Reac
       />
 
       {/* Desktop sidebar */}
-      <aside
-        className="fixed inset-y-0 left-0 hidden w-[264px] lg:block"
-        style={{ zIndex: "var(--z-sticky)", borderRight: "1px solid var(--line)" }}
-      >
+      <aside className="fixed inset-y-0 left-0 z-[var(--z-sticky)] hidden w-[264px] border-r border-line lg:block">
         <SidebarContent user={user} />
       </aside>
 
       {/* Mobile drawer */}
-      <Drawer
-        open={navOpen}
-        onClose={() => setNavOpen(false)}
-        ModalProps={{ keepMounted: true }}
-        slotProps={{
-          paper: { sx: { width: 280, border: "none", backgroundColor: "var(--surface-2)" } },
-        }}
-      >
-        <div className="relative h-full">
-          <IconButton
-            onClick={() => setNavOpen(false)}
-            aria-label="ปิดเมนู"
-            size="small"
-            className="!absolute right-3 top-3.5"
-            sx={{ zIndex: 1 }}
-          >
-            <Icon name="close" sx={{ fontSize: 20 }} />
-          </IconButton>
+      <Sheet open={navOpen} onOpenChange={setNavOpen}>
+        <SheetContent side="left" className="w-[280px] border-none bg-surface-2 p-0">
+          <SheetHeader className="sr-only">
+            <SheetTitle>เมนูหลัก</SheetTitle>
+          </SheetHeader>
           <SidebarContent user={user} onNavigate={() => setNavOpen(false)} />
-        </div>
-      </Drawer>
+        </SheetContent>
+      </Sheet>
 
       {/* Content column */}
       <div className="relative z-10 lg:pl-[264px]">
-        <TopBar onOpenNav={() => setNavOpen(true)} today={today} onOpenPalette={() => setPaletteOpen(true)} />
+        <TopBar user={user} onOpenNav={() => setNavOpen(true)} today={today} onOpenPalette={() => setPaletteOpen(true)} />
         <main className="mx-auto max-w-[1400px] px-4 py-6 lg:px-8 lg:py-8">{children}</main>
       </div>
 

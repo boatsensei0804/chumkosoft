@@ -1,4 +1,5 @@
 import type { Role } from "@prisma/client";
+import type { LucideIcon } from "lucide-react";
 
 export type EnrolmentStatus = "active" | "pending" | "leave";
 
@@ -135,7 +136,7 @@ export interface NavItem {
   key: string;
   label: string;
   href: string;
-  icon: string;
+  icon: LucideIcon;
   badge?: number;
   available: boolean;
   /** Roles allowed to see this item. Undefined = visible to every staff role. */

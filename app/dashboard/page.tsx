@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import Button from "@mui/material/Button";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import WelcomeBand from "@/features/dashboard/components/welcome-band";
 import SummaryFigures from "@/features/dashboard/components/summary-figures";
 import EnrolmentTrend from "@/features/dashboard/components/enrolment-trend";
@@ -7,7 +9,6 @@ import TodaySchedule from "@/features/dashboard/components/today-schedule";
 import Announcements from "@/features/dashboard/components/announcements";
 import SectionCard from "@/features/dashboard/components/section-card";
 import StudentsTable from "@/features/dashboard/components/students-table";
-import Icon from "@/features/dashboard/components/icon";
 import {
   getSummaryFigures,
   getTodaySchedule,
@@ -55,12 +56,10 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
               title="นักเรียนที่ลงทะเบียนล่าสุด"
               caption="6 รายการล่าสุด"
               action={
-                <Button
-                  variant="text"
-                  endIcon={<Icon name="arrow_forward" sx={{ fontSize: 17 }} />}
-                  sx={{ color: "var(--brand-ink)", fontSize: 13 }}
-                >
-                  ดูทั้งหมด
+                <Button asChild variant="ghost" size="sm" className="text-brand-ink">
+                  <Link href="/dashboard/students">
+                    ดูทั้งหมด <ArrowRight className="size-4" />
+                  </Link>
                 </Button>
               }
               bodyClassName="p-0"

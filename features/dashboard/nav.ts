@@ -1,3 +1,18 @@
+import {
+  LayoutDashboard,
+  GraduationCap,
+  Users,
+  School,
+  BookOpen,
+  MapPin,
+  CalendarDays,
+  ClipboardCheck,
+  ScanFace,
+  UserCheck,
+  MessageSquare,
+  ScanLine,
+  Settings,
+} from "lucide-react";
 import type { NavItem } from "./types";
 
 /**
@@ -12,38 +27,38 @@ export interface NavGroup {
 
 export const navGroups: NavGroup[] = [
   {
-    items: [{ key: "overview", label: "ภาพรวม", href: "/dashboard", icon: "dashboard", available: true }],
+    items: [{ key: "overview", label: "ภาพรวม", href: "/dashboard", icon: LayoutDashboard, available: true }],
   },
   {
     label: "ทะเบียนข้อมูล",
     items: [
-      { key: "students", label: "นักเรียน", href: "/dashboard/students", icon: "school", available: true },
-      { key: "teachers", label: "ครูและบุคลากร", href: "/dashboard/teachers", icon: "groups", available: true },
-      { key: "classrooms", label: "ห้องเรียน", href: "/dashboard/classrooms", icon: "class", available: true },
-      { key: "courses", label: "รายวิชา", href: "/dashboard/courses", icon: "menu_book", available: true },
-      { key: "rooms", label: "ห้องและสถานที่", href: "/dashboard/rooms", icon: "place", available: true },
+      { key: "students", label: "นักเรียน", href: "/dashboard/students", icon: GraduationCap, available: true },
+      { key: "teachers", label: "ครูและบุคลากร", href: "/dashboard/teachers", icon: Users, available: true },
+      { key: "classrooms", label: "ห้องเรียน", href: "/dashboard/classrooms", icon: School, available: true },
+      { key: "courses", label: "รายวิชา", href: "/dashboard/courses", icon: BookOpen, available: true },
+      { key: "rooms", label: "ห้องและสถานที่", href: "/dashboard/rooms", icon: MapPin, available: true },
     ],
   },
   {
     label: "ตารางและเช็คชื่อ",
     items: [
-      { key: "timetable", label: "จัดตารางสอน", href: "/dashboard/timetable", icon: "calendar", available: true },
-      { key: "attendance", label: "เช็คชื่อ", href: "/dashboard/attendance", icon: "checklist", available: true },
+      { key: "timetable", label: "จัดตารางสอน", href: "/dashboard/timetable", icon: CalendarDays, available: true },
+      { key: "attendance", label: "เช็คชื่อ", href: "/dashboard/attendance", icon: ClipboardCheck, available: true },
     ],
   },
   {
     label: "สแกนและสื่อสาร",
     items: [
-      { key: "faces", label: "ชุดข้อมูลใบหน้า", href: "/dashboard/faces", icon: "face", available: true },
-      { key: "guardians", label: "ผู้ปกครอง", href: "/dashboard/guardians", icon: "how_to_reg", available: true },
-      { key: "line", label: "LINE / แจ้งเตือน", href: "/dashboard/line", icon: "chat", available: true },
+      { key: "faces", label: "ชุดข้อมูลใบหน้า", href: "/dashboard/faces", icon: ScanFace, available: true },
+      { key: "guardians", label: "ผู้ปกครอง", href: "/dashboard/guardians", icon: UserCheck, available: true },
+      { key: "line", label: "LINE / แจ้งเตือน", href: "/dashboard/line", icon: MessageSquare, available: true },
     ],
   },
   {
     label: "ระบบ",
     items: [
-      { key: "kiosk", label: "จุดสแกนใบหน้า", href: "/dashboard/kiosk", icon: "scan", available: true, roles: ["ADMIN"] },
-      { key: "settings", label: "ตั้งค่าระบบ", href: "/dashboard/settings", icon: "settings", available: true, roles: ["ADMIN"] },
+      { key: "kiosk", label: "จุดสแกนใบหน้า", href: "/dashboard/kiosk", icon: ScanLine, available: true, roles: ["ADMIN"] },
+      { key: "settings", label: "ตั้งค่าระบบ", href: "/dashboard/settings", icon: Settings, available: true, roles: ["ADMIN"] },
     ],
   },
 ];
