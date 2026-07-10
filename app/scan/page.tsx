@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Icon from "@/features/dashboard/components/icon";
+import { ScanFace, Info } from "lucide-react";
 import PortalHeader from "@/features/portal/components/portal-header";
 import ScanStation from "@/features/faces/components/scan-station";
 import KioskClock from "@/features/faces/components/kiosk-clock";
@@ -29,19 +29,16 @@ export default async function ScanPage(): Promise<React.ReactNode> {
         <div className="flex flex-col items-center gap-3">
           <KioskClock />
           <h1 className="text-[22px] font-bold tracking-tight text-ink-strong sm:text-[26px]">จุดสแกนใบหน้าเช็คชื่อเข้าโรงเรียน</h1>
-          <p className="tabular text-[13px] text-muted">
-            <Icon name="face" sx={{ fontSize: 15, verticalAlign: "-2px", marginRight: "4px" }} />
+          <p className="tabular inline-flex items-center gap-1 text-[13px] text-muted">
+            <ScanFace className="size-[15px]" />
             มีข้อมูลใบหน้าแล้ว {stats.enrolledStudents.toLocaleString("th-TH")} / {stats.totalStudents.toLocaleString("th-TH")} คน
           </p>
         </div>
 
         <ScanStation scanStartTime={setting.scanStartTime} lateAfterTime={setting.lateAfterTime} />
 
-        <div
-          className="flex items-start gap-2.5 rounded-[12px] px-4 py-3"
-          style={{ backgroundColor: "var(--brand-softer)", border: "1px solid var(--brand-soft)" }}
-        >
-          <Icon name="info" sx={{ fontSize: 18, color: "var(--brand-ink)", marginTop: "1px" }} />
+        <div className="flex items-start gap-2.5 rounded-[12px] border border-brand-soft bg-brand-softer px-4 py-3">
+          <Info className="mt-px size-[18px] shrink-0 text-brand-ink" />
           <p className="text-[13px] leading-relaxed text-ink">
             ระบบจะจดจำเฉพาะนักเรียนที่ได้รับความยินยอมจากผู้ปกครองและมีรูปใบหน้าในระบบแล้ว เมื่อจดจำได้จะบันทึกเวลาเข้าโรงเรียนอัตโนมัติ
             และแจ้งเตือนผู้ปกครองผ่าน LINE (หากผูกบัญชีไว้)

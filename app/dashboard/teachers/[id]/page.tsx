@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import Icon from "@/features/dashboard/components/icon";
+import { ChevronLeft } from "lucide-react";
 import SectionCard from "@/features/dashboard/components/section-card";
 import { getStaffDetail } from "@/services/staff-service";
 import type { StaffKind } from "@/features/teachers/types";
@@ -64,7 +64,7 @@ export default async function TeacherDetailPage({ params }: TeacherDetailPagePro
   return (
     <div className="flex flex-col gap-5">
       <Link href="/dashboard/teachers" className="inline-flex w-fit items-center gap-1.5 text-[13px] font-semibold text-muted transition-colors hover:text-ink">
-        <Icon name="chevron_down" sx={{ fontSize: 18, transform: "rotate(90deg)" }} />
+        <ChevronLeft className="size-[18px]" />
         กลับไปรายชื่อครูและบุคลากร
       </Link>
 

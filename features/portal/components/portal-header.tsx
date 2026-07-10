@@ -1,5 +1,5 @@
+import { LogOut } from "lucide-react";
 import BrandMark from "@/features/dashboard/components/brand-mark";
-import Icon from "@/features/dashboard/components/icon";
 import { logoutAction } from "@/features/auth/actions";
 import type { CurrentUser } from "@/lib/dal";
 
@@ -35,7 +35,7 @@ export default function PortalHeader({ user }: { user: CurrentUser }): React.Rea
             aria-label="ออกจากระบบ"
             className="grid size-9 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-ink"
           >
-            <Icon name="logout" sx={{ fontSize: 19 }} />
+            <LogOut className="size-[18px]" />
           </button>
         </form>
       </div>

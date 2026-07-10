@@ -5,9 +5,11 @@
   chumkosoft design tokens
   Scene: a school registrar at her desk on a bright morning, fluorescent office
   light, moving quickly through student and course records. Light theme, calm,
-  institutional. Honey-gold carries the brand identity; near-black carries the
-  primary actions (gold text is unreadable as a button fill). Restrained strategy.
-  All colors OKLCH.
+  institutional. Azure blue carries the brand identity (logo, active nav, key
+  figures); a deeper blue gradient carries the primary actions. The one bold
+  surface is the deep institutional-blue letterhead band. Restrained strategy.
+  All colors OKLCH. UI components are shadcn/ui (mapped to these tokens via the
+  @theme block below); Tailwind handles layout.
 */
 
 :root {

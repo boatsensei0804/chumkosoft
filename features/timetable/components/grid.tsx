@@ -1,7 +1,7 @@
 "use client";
 
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import Icon from "@/features/dashboard/components/icon";
+import { X, Clock } from "lucide-react";
 import SlotBlock from "./slot-block";
 import type { ConflictResult, DayInfo, Offering, PeriodRow, PlacedSlot } from "../types";
 
@@ -69,8 +69,8 @@ function Cell({ day, period, slot, offering, dragging, conflict, onRemove }: Cel
       ) : (
         showInvalid &&
         isOver && (
-          <span className="grid h-full w-full place-items-center" style={{ color: "var(--danger)" }} aria-hidden="true">
-            <Icon name="close" sx={{ fontSize: 20 }} />
+          <span className="grid h-full w-full place-items-center text-danger" aria-hidden="true">
+            <X className="size-5" />
           </span>
         )
       )}
@@ -122,7 +122,7 @@ export default function Grid({
                 className="col-span-6 flex items-center justify-center gap-2 py-1.5 text-[12px] font-medium"
                 style={{ backgroundColor: "var(--surface-sunken)", color: "var(--muted)" }}
               >
-                <Icon name="time" sx={{ fontSize: 15, color: "var(--faint)" }} />
+                <Clock className="size-[15px] text-faint" />
                 {p.label} · {p.start}–{p.end}
               </div>
             ) : (

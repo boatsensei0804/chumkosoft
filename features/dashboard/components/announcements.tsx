@@ -1,11 +1,11 @@
-import Icon from "./icon";
+import { Info, TriangleAlert, CheckCircle2, type LucideIcon } from "lucide-react";
 import SectionCard from "./section-card";
 import type { Announcement, AnnouncementKind } from "../types";
 
-const kindStyle: Record<AnnouncementKind, { icon: string; bg: string; fg: string }> = {
-  info: { icon: "info", bg: "var(--info-soft)", fg: "var(--blue-ink)" },
-  warning: { icon: "warning", bg: "var(--warning-soft)", fg: "oklch(0.5 0.13 55)" },
-  success: { icon: "success", bg: "var(--success-soft)", fg: "oklch(0.42 0.1 152)" },
+const kindStyle: Record<AnnouncementKind, { icon: LucideIcon; bg: string; fg: string }> = {
+  info: { icon: Info, bg: "var(--info-soft)", fg: "var(--blue-ink)" },
+  warning: { icon: TriangleAlert, bg: "var(--warning-soft)", fg: "oklch(0.5 0.13 55)" },
+  success: { icon: CheckCircle2, bg: "var(--success-soft)", fg: "oklch(0.42 0.1 152)" },
 };
 
 export default function Announcements({ items }: { items: Announcement[] }): React.ReactNode {
@@ -17,6 +17,7 @@ export default function Announcements({ items }: { items: Announcement[] }): Rea
         <ul className="flex flex-col">
           {items.map((a) => {
           const s = kindStyle[a.kind];
+          const KindIcon = s.icon;
           return (
             <li key={a.id} className="flex gap-3 rounded-[12px] p-3 transition-colors hover:bg-surface-2">
               <span
@@ -24,7 +25,7 @@ export default function Announcements({ items }: { items: Announcement[] }): Rea
                 style={{ backgroundColor: s.bg, color: s.fg }}
                 aria-hidden="true"
               >
-                <Icon name={s.icon} sx={{ fontSize: 19 }} />
+                <KindIcon className="size-[19px]" />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-[14px] font-semibold text-ink-strong">{a.title}</p>

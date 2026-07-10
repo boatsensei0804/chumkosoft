@@ -1,4 +1,4 @@
-import Icon from "@/features/dashboard/components/icon";
+import { Clock, MapPin } from "lucide-react";
 import type { PortalOverview } from "@/features/portal/types";
 
 /** Read-only weekly class schedule (ตารางเรียน) for the portal viewer. */
@@ -33,7 +33,7 @@ export default function WeeklySchedule({ overview }: { overview: PortalOverview 
               className="flex items-center justify-center gap-2 py-2.5 text-[12.5px] font-medium text-muted"
               style={{ backgroundColor: "var(--surface-sunken)", borderBottom: "1px solid var(--line)" }}
             >
-              <Icon name="time" sx={{ fontSize: 15, color: "var(--faint)" }} />
+              <Clock className="size-[15px] text-faint" />
               {p.label} · {p.start}–{p.end}
             </div>
           ) : (
@@ -59,7 +59,7 @@ export default function WeeklySchedule({ overview }: { overview: PortalOverview 
                       >
                         <p className="text-[12.5px] font-semibold text-ink-strong leading-snug">{cell.subject}</p>
                         <p className="mt-1 flex items-center gap-1 text-[11.5px] text-muted">
-                          <Icon name="place" sx={{ fontSize: 13 }} />
+                          <MapPin className="size-[13px]" />
                           {cell.room}
                         </p>
                         <p className="truncate text-[11.5px] text-faint">{cell.teacher}</p>

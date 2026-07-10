@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import { UserCheck } from "lucide-react";
 import PageHeader from "@/features/dashboard/components/page-header";
-import Icon from "@/features/dashboard/components/icon";
 import AttendanceModeTabs from "@/features/attendance/components/attendance-mode-tabs";
 import AttendanceControls from "@/features/attendance/components/attendance-controls";
 import AttendanceRoster from "@/features/attendance/components/attendance-roster";
@@ -85,8 +85,8 @@ function PromptCard({ title, message }: { title: string; message: string }): Rea
       className="flex flex-col items-center gap-3 rounded-[16px] px-6 py-16 text-center"
       style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)" }}
     >
-      <span className="grid size-12 place-items-center rounded-full" style={{ backgroundColor: "var(--surface-2)", color: "var(--faint)" }} aria-hidden="true">
-        <Icon name="how_to_reg" sx={{ fontSize: 24 }} />
+      <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint" aria-hidden="true">
+        <UserCheck className="size-6" />
       </span>
       <p className="text-[15px] font-semibold text-ink-strong">{title}</p>
       <p className="max-w-sm text-[13.5px] text-muted">{message}</p>

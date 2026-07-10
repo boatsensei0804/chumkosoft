@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import Icon from "@/features/dashboard/components/icon";
+import { ChevronLeft, MessageSquare } from "lucide-react";
 import SectionCard from "@/features/dashboard/components/section-card";
 import StatusChip from "@/features/dashboard/components/status-chip";
 import { getStudentDetail } from "@/services/student-service";
@@ -100,7 +100,7 @@ export default async function StudentDetailPage({ params }: StudentDetailPagePro
   return (
     <div className="flex flex-col gap-5">
       <Link href="/dashboard/students" className="inline-flex w-fit items-center gap-1.5 text-[13px] font-semibold text-muted transition-colors hover:text-ink">
-        <Icon name="chevron_down" sx={{ fontSize: 18, transform: "rotate(90deg)" }} />
+        <ChevronLeft className="size-[18px]" />
         กลับไปรายชื่อนักเรียน
       </Link>
 
@@ -198,8 +198,8 @@ export default async function StudentDetailPage({ params }: StudentDetailPagePro
                       <span className="ml-2 text-[12.5px] font-normal text-muted">({g.relation})</span>
                     </p>
                     {g.linked && (
-                      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11.5px] font-semibold" style={{ backgroundColor: "var(--success-soft)", color: "oklch(0.42 0.1 152)" }}>
-                        <Icon name="chat" sx={{ fontSize: 13 }} />
+                      <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[11.5px] font-semibold text-[oklch(0.42_0.1_152)]">
+                        <MessageSquare className="size-[13px]" />
                         ผูก LINE แล้ว
                       </span>
                     )}

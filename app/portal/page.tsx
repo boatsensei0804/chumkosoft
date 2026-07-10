@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Icon from "@/features/dashboard/components/icon";
+import { GraduationCap, CalendarDays } from "lucide-react";
 import WeeklySchedule from "@/features/portal/components/weekly-schedule";
 import { getCurrentUser } from "@/lib/dal";
 import { getPortalOverview } from "@/features/portal/services/portal-service";
@@ -34,7 +34,7 @@ export default async function PortalPage(): Promise<React.ReactNode> {
         </h1>
         {overview.classroomCode && (
           <p className="mt-2 inline-flex items-center gap-2 text-[13.5px]" style={{ color: "var(--band-muted)" }}>
-            <Icon name="school" sx={{ fontSize: 16 }} />
+            <GraduationCap className="size-4" />
             ชั้น {overview.classroomCode} · {overview.gradeLevel}
             {overview.termLabel ? ` · ${overview.termLabel}` : ""}
           </p>
@@ -43,7 +43,7 @@ export default async function PortalPage(): Promise<React.ReactNode> {
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
-          <Icon name="calendar" sx={{ fontSize: 20, color: "var(--brand-strong)" }} />
+          <CalendarDays className="size-5 text-brand-strong" />
           <h2 className="text-[16px] font-bold text-ink-strong">{roleNote}</h2>
         </div>
 
@@ -68,7 +68,7 @@ function EmptyState({ studentResolved }: { studentResolved: boolean }): React.Re
         style={{ backgroundColor: "var(--surface-2)", color: "var(--faint)" }}
         aria-hidden="true"
       >
-        <Icon name="calendar" sx={{ fontSize: 24 }} />
+        <CalendarDays className="size-6" />
       </span>
       <p className="text-[15px] font-semibold text-ink-strong">ยังไม่มีตารางเรียน</p>
       <p className="max-w-sm text-[13.5px] text-muted">

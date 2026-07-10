@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Icon from "./icon";
+import { CalendarDays, Download, Plus } from "lucide-react";
 
 interface WelcomeBandProps {
   greeting: string;
@@ -60,7 +60,7 @@ export default function WelcomeBand({
               {term}
             </span>
             <span className="tabular inline-flex items-center gap-1.5 text-[12.5px]" style={{ color: "var(--band-muted)" }}>
-              <Icon name="calendar" sx={{ fontSize: 15 }} />
+              <CalendarDays className="size-[15px]" />
               {date}
             </span>
           </div>
@@ -82,7 +82,7 @@ export default function WelcomeBand({
             className="inline-flex items-center gap-2 rounded-[10px] px-4 py-2.5 text-[14px] font-semibold transition-colors"
             style={{ border: "1px solid var(--band-line)", color: "var(--band-ink)" }}
           >
-            <Icon name="download" sx={{ fontSize: 18 }} />
+            <Download className="size-[18px]" />
             ส่งออกรายงาน
           </button>
           <Link
@@ -90,7 +90,7 @@ export default function WelcomeBand({
             className="inline-flex items-center gap-2 rounded-[10px] px-4 py-2.5 text-[14px] font-semibold transition-transform hover:-translate-y-px"
             style={{ backgroundColor: "var(--band-ink)", color: "var(--band-from)" }}
           >
-            <Icon name="add" sx={{ fontSize: 18 }} />
+            <Plus className="size-[18px]" />
             เพิ่มนักเรียน
           </Link>
         </div>

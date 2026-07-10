@@ -1,7 +1,7 @@
 "use client";
 
 import { useDraggable } from "@dnd-kit/core";
-import Icon from "@/features/dashboard/components/icon";
+import { CheckCircle2, Plus, BookOpen } from "lucide-react";
 import { subjectColors } from "../data";
 import type { Offering } from "../types";
 
@@ -44,7 +44,7 @@ function PaletteCard({ offering, remaining }: PaletteCardProps): React.ReactNode
       </div>
       {done ? (
         <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ backgroundColor: "var(--success-soft)", color: "oklch(0.42 0.1 152)" }}>
-          <Icon name="success" sx={{ fontSize: 14 }} />
+          <CheckCircle2 className="size-3.5" />
           ครบ
         </span>
       ) : (
@@ -92,7 +92,7 @@ export default function Palette({ offerings, remainingById, onAddSubject, canAdd
           className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed py-2 text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
           style={{ borderColor: "var(--brand)", color: "var(--brand-ink)", backgroundColor: "var(--brand-softer)" }}
         >
-          <Icon name="add" sx={{ fontSize: 18 }} />
+          <Plus className="size-[18px]" />
           มอบหมายวิชาให้ครู
         </button>
       </div>
@@ -103,7 +103,7 @@ export default function Palette({ offerings, remainingById, onAddSubject, canAdd
         ) : (
           <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
             <span className="grid size-10 place-items-center rounded-full" style={{ backgroundColor: "var(--surface-2)", color: "var(--faint)" }} aria-hidden="true">
-              <Icon name="menu_book" sx={{ fontSize: 20 }} />
+              <BookOpen className="size-5" />
             </span>
             <p className="text-[13px] font-medium text-ink">ห้องนี้ยังไม่มีรายวิชา</p>
             <p className="text-[12px] text-muted">กด “มอบหมายวิชาให้ครู” เพื่อเพิ่มวิชาและผู้สอน แล้วจึงลากลงตาราง</p>

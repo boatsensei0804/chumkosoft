@@ -1,4 +1,4 @@
-import Icon from "./icon";
+import { CalendarDays, MapPin } from "lucide-react";
 import SectionCard from "./section-card";
 import type { ScheduleItem } from "../types";
 
@@ -30,8 +30,8 @@ export default function TodaySchedule({ items, weekdayLabel, classroomCode, isSc
     >
       {items.length === 0 ? (
         <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
-          <span className="grid size-11 place-items-center rounded-full" style={{ backgroundColor: "var(--surface-2)", color: "var(--faint)" }} aria-hidden="true">
-            <Icon name="calendar" sx={{ fontSize: 22 }} />
+          <span className="grid size-11 place-items-center rounded-full bg-surface-2 text-faint" aria-hidden="true">
+            <CalendarDays className="size-[22px]" />
           </span>
           <p className="text-[14px] font-semibold text-ink-strong">
             {isSchoolDay ? "ยังไม่มีคาบเรียนในวันนี้" : "วันนี้เป็นวันหยุด ไม่มีคาบเรียน"}
@@ -74,7 +74,7 @@ export default function TodaySchedule({ items, weekdayLabel, classroomCode, isSc
                   {item.classroom} · {item.teacher}
                 </p>
                 <p className="mt-1 inline-flex items-center gap-1 text-[12.5px] text-faint">
-                  <Icon name="place" sx={{ fontSize: 14 }} />
+                  <MapPin className="size-3.5" />
                   {item.room}
                 </p>
               </div>

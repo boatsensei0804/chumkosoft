@@ -1,4 +1,4 @@
-import Icon from "./icon";
+import { GraduationCap, Users, BookOpen, ClipboardList, TrendingUp, TrendingDown, type LucideIcon } from "lucide-react";
 import type { Figure } from "../types";
 
 function formatValue(value: number): string {
@@ -6,7 +6,7 @@ function formatValue(value: number): string {
 }
 
 interface FigureStyle {
-  icon: string;
+  icon: LucideIcon;
   bg: string;
   fg: string;
 }
@@ -17,13 +17,13 @@ interface FigureStyle {
  * the service; falls back to a neutral brand treatment for unknown keys.
  */
 const figureStyles: Record<string, FigureStyle> = {
-  students: { icon: "school", bg: "var(--brand-soft)", fg: "var(--brand-strong)" },
-  teachers: { icon: "groups", bg: "var(--accent-soft)", fg: "oklch(0.45 0.11 220)" },
-  courses: { icon: "menu_book", bg: "var(--success-soft)", fg: "oklch(0.42 0.1 152)" },
-  pending: { icon: "pending_actions", bg: "var(--warning-soft)", fg: "oklch(0.5 0.13 60)" },
+  students: { icon: GraduationCap, bg: "var(--brand-soft)", fg: "var(--brand-strong)" },
+  teachers: { icon: Users, bg: "var(--accent-soft)", fg: "oklch(0.45 0.11 220)" },
+  courses: { icon: BookOpen, bg: "var(--success-soft)", fg: "oklch(0.42 0.1 152)" },
+  pending: { icon: ClipboardList, bg: "var(--warning-soft)", fg: "oklch(0.5 0.13 60)" },
 };
 
-const fallbackStyle: FigureStyle = { icon: "insights", bg: "var(--brand-soft)", fg: "var(--brand-strong)" };
+const fallbackStyle: FigureStyle = { icon: TrendingUp, bg: "var(--brand-soft)", fg: "var(--brand-strong)" };
 
 interface SummaryFiguresProps {
   figures: Figure[];
@@ -38,7 +38,9 @@ export default function SummaryFigures({ figures }: SummaryFiguresProps): React.
     >
       {figures.map((figure) => {
         const style = figureStyles[figure.key] ?? fallbackStyle;
+        const FigureIcon = style.icon;
         const up = figure.deltaPct >= 0;
+        const TrendIcon = up ? TrendingUp : TrendingDown;
         // A pending backlog is an action item, not a neutral stat — flag it.
         const needsAttention = figure.key === "pending" && figure.value > 0;
         return (
@@ -58,7 +60,7 @@ export default function SummaryFigures({ figures }: SummaryFiguresProps): React.
                 style={{ backgroundColor: style.bg, color: style.fg }}
                 aria-hidden="true"
               >
-                <Icon name={style.icon} sx={{ fontSize: 18 }} />
+                <FigureIcon className="size-[18px]" />
               </span>
             </div>
             <div className="flex items-baseline gap-1.5">
@@ -79,7 +81,7 @@ export default function SummaryFigures({ figures }: SummaryFiguresProps): React.
                     color: up ? "oklch(0.42 0.1 152)" : "oklch(0.48 0.16 25)",
                   }}
                 >
-                  <Icon name={up ? "trending_up" : "trending_down"} sx={{ fontSize: 15 }} />
+                  <TrendIcon className="size-[15px]" />
                   {up ? "+" : ""}
                   {figure.deltaPct}%
                 </span>

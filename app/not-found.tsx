@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Search, LayoutDashboard } from "lucide-react";
 import BrandMark from "@/features/dashboard/components/brand-mark";
-import Icon from "@/features/dashboard/components/icon";
 
 export const metadata: Metadata = {
   title: "ไม่พบหน้าที่ต้องการ — chumkosoft",
@@ -28,7 +28,7 @@ export default function NotFound(): React.ReactNode {
               style={{ backgroundColor: "var(--brand-soft)", color: "var(--brand-ink)" }}
               aria-hidden="true"
             >
-              <Icon name="search" sx={{ fontSize: 26 }} />
+              <Search className="size-6" />
             </span>
             <p className="mt-4 text-[40px] font-bold tracking-tight text-ink-strong">404</p>
             <h1 className="text-[18px] font-bold text-ink-strong">ไม่พบหน้าที่ต้องการ</h1>
@@ -40,7 +40,7 @@ export default function NotFound(): React.ReactNode {
               className="mt-6 inline-flex items-center gap-2 rounded-[10px] px-4 py-2.5 text-[14px] font-semibold"
               style={{ backgroundColor: "var(--primary)", color: "var(--on-primary)" }}
             >
-              <Icon name="dashboard" sx={{ fontSize: 18 }} />
+              <LayoutDashboard className="size-[18px]" />
               กลับสู่หน้าหลัก
             </Link>
           </div>
