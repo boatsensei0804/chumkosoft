@@ -191,11 +191,11 @@ export async function addOfferingRecord(
 export async function deleteOfferingRecord(id: string): Promise<ActionResult> {
   const offering = await repo.getOfferingRef(id);
   if (!offering) return { ok: false, message: "ไม่พบรายวิชาของห้อง" };
-  if (await repo.offeringHasSlots(id)) {
-    return { ok: false, message: "ลบไม่ได้ เพราะรายวิชานี้ถูกจัดลงตารางสอนแล้ว กรุณาลบออกจากตารางก่อน" };
-  }
-  await repo.softDeleteOffering(id);
-  return { ok: true, message: "นำรายวิชาออกจากห้องเรียบร้อย" };
+  // Cascade: removing the offering also clears any periods it was placed into,
+  // so the subject can be un-assigned straight from the timetable page.
+  const removedSlots = await repo.softDeleteOfferingWithSlots(id);
+  const suffix = removedSlots > 0 ? ` (นำ ${removedSlots} คาบออกจากตารางด้วย)` : "";
+  return { ok: true, message: `นำรายวิชาออกจากห้องเรียบร้อย${suffix}` };
 }
 
 export async function getOfferingClassroomId(id: string): Promise<string | null> {

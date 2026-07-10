@@ -58,6 +58,25 @@ export async function setActiveYear(id: string): Promise<void> {
   ]);
 }
 
+export async function getYearRef(id: string): Promise<{ isActive: boolean } | null> {
+  return prisma.academicYear.findFirst({ where: { id, isDeleted: false }, select: { isActive: true } });
+}
+
+/** True when any student is enrolled under this year — blocks deletion. */
+export async function yearHasEnrolledStudents(id: string): Promise<boolean> {
+  const count = await prisma.enrollment.count({ where: { academicYearId: id, isDeleted: false } });
+  return count > 0;
+}
+
+/** Soft-deletes a year and cascades the soft delete to its terms (one transaction). */
+export async function softDeleteYear(id: string): Promise<void> {
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.term.updateMany({ where: { academicYearId: id, isDeleted: false }, data: { isDeleted: true, deletedAt: now, isActive: false } }),
+    prisma.academicYear.update({ where: { id }, data: { isDeleted: true, deletedAt: now, isActive: false } }),
+  ]);
+}
+
 export async function termNumberExists(academicYearId: string, number: number, excludeId?: string): Promise<boolean> {
   const row = await prisma.term.findFirst({
     where: { academicYearId, number, isDeleted: false, ...(excludeId ? { id: { not: excludeId } } : {}) },

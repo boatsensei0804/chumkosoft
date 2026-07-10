@@ -51,6 +51,15 @@ export async function setActiveYearAction(id: string): Promise<ActionResult> {
   });
 }
 
+export async function deleteYearAction(id: string): Promise<ActionResult> {
+  return runAction(async () => {
+    await requireRoles(["ADMIN"]);
+    const result = await service.deleteYear(id);
+    if (result.ok) revalidatePath(SETTINGS_PATH);
+    return result;
+  });
+}
+
 // ── Term ─────────────────────────────────────────────────────────────────────
 
 export async function saveTermAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {

@@ -73,6 +73,19 @@ export async function setActiveTerm(termId: string): Promise<ActionResult> {
   return { ok: true, message: "ตั้งเป็นภาคเรียนปัจจุบันแล้ว ข้อมูลทั้งระบบจะอ้างอิงภาคเรียนนี้" };
 }
 
+export async function deleteYear(id: string): Promise<ActionResult> {
+  const year = await repo.getYearRef(id);
+  if (!year) return { ok: false, message: "ไม่พบปีการศึกษา" };
+  if (year.isActive) {
+    return { ok: false, message: "ลบปีปัจจุบันไม่ได้ กรุณาตั้งปีอื่นเป็นปีปัจจุบันก่อน" };
+  }
+  if (await repo.yearHasEnrolledStudents(id)) {
+    return { ok: false, message: "ลบไม่ได้ เพราะมีนักเรียนลงทะเบียนในปีการศึกษานี้" };
+  }
+  await repo.softDeleteYear(id);
+  return { ok: true, message: "ลบปีการศึกษาเรียบร้อย (ซ่อนพร้อมภาคเรียนในปีนี้)" };
+}
+
 export async function deleteTerm(id: string): Promise<ActionResult> {
   await repo.softDeleteTerm(id);
   return { ok: true, message: "ลบภาคเรียนเรียบร้อย" };

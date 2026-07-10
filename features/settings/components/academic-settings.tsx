@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import YearFormDialog from "./year-form-dialog";
 import TermFormDialog from "./term-form-dialog";
-import { setActiveYearAction, setActiveTermAction, deleteTermAction } from "@/features/settings/actions";
+import { setActiveYearAction, setActiveTermAction, deleteTermAction, deleteYearAction } from "@/features/settings/actions";
 import type { AcademicYearSetting, TermSetting, TermStatus } from "../types";
 
 const statusLabel: Record<TermStatus, string> = { UPCOMING: "รอเปิดเทอม", ACTIVE: "กำลังเรียน", CLOSED: "ปิดแล้ว" };
@@ -34,6 +34,7 @@ export default function AcademicSettings({ years }: { years: AcademicYearSetting
     suggested: 1,
   });
   const [deletingTerm, setDeletingTerm] = useState<TermSetting | null>(null);
+  const [deletingYear, setDeletingYear] = useState<AcademicYearSetting | null>(null);
   const [isDeletePending, startDelete] = useTransition();
 
   function notify(result: { ok: boolean; message?: string }): void {
@@ -55,6 +56,15 @@ export default function AcademicSettings({ years }: { years: AcademicYearSetting
       const result = await deleteTermAction(deletingTerm.id);
       notify(result);
       setDeletingTerm(null);
+    });
+  }
+
+  function confirmDeleteYear(): void {
+    if (!deletingYear) return;
+    startDelete(async () => {
+      const result = await deleteYearAction(deletingYear.id);
+      notify(result);
+      setDeletingYear(null);
     });
   }
 
@@ -116,6 +126,14 @@ export default function AcademicSettings({ years }: { years: AcademicYearSetting
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>แก้ไขปีการศึกษา</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`ลบปีการศึกษา ${year.buddhistYear}`} onClick={() => setDeletingYear(year)}>
+                        <Trash2 className="size-[18px]" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>ลบปีการศึกษา</TooltipContent>
                   </Tooltip>
                 </div>
               </div>
@@ -212,6 +230,21 @@ export default function AcademicSettings({ years }: { years: AcademicYearSetting
           pending={isDeletePending}
           onConfirm={confirmDeleteTerm}
           onClose={() => setDeletingTerm(null)}
+        />
+
+        <ConfirmDialog
+          open={deletingYear !== null}
+          title="ลบปีการศึกษา"
+          message={
+            deletingYear
+              ? `ต้องการลบ “ปีการศึกษา ${deletingYear.buddhistYear}” ใช่หรือไม่? ภาคเรียน ${deletingYear.terms.length} รายการในปีนี้จะถูกซ่อนด้วย (ลบไม่ได้ถ้าเป็นปีปัจจุบันหรือมีนักเรียนลงทะเบียน)`
+              : ""
+          }
+          confirmLabel="ลบปีการศึกษา"
+          destructive
+          pending={isDeletePending}
+          onConfirm={confirmDeleteYear}
+          onClose={() => setDeletingYear(null)}
         />
       </div>
     </TooltipProvider>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
@@ -19,8 +19,10 @@ import Palette from "./palette";
 import Grid from "./grid";
 import SlotBlock from "./slot-block";
 import OfferingFormDialog from "@/features/classrooms/components/offering-form-dialog";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { checkConflict } from "../conflicts";
 import { placeSlotAction, moveSlotAction, removeSlotAction } from "@/app/dashboard/timetable/actions";
+import { deleteOfferingAction } from "@/features/classrooms/offering-actions";
 import type { ConflictResult, ContextOption, DayInfo, ExternalBusy, Offering, PeriodRow, PlacedSlot } from "../types";
 import type { OfferingOptions } from "@/features/classrooms/types";
 
@@ -58,6 +60,8 @@ export default function TimetableBuilder({
   const [active, setActive] = useState<DragData | null>(null);
   const [saving, setSaving] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
+  const [removingOffering, setRemovingOffering] = useState<Offering | null>(null);
+  const [isRemoving, startRemove] = useTransition();
 
   // Switch the board's term/classroom by driving URL search params; the server
   // component re-renders with the selected context's real offerings and slots.
@@ -185,7 +189,25 @@ export default function TimetableBuilder({
     }
   }
 
+  // Delete a whole subject from this class — cascades to its placed periods.
+  function confirmRemoveOffering(): void {
+    const offering = removingOffering;
+    if (!offering) return;
+    startRemove(async () => {
+      const result = await deleteOfferingAction(offering.id);
+      if (result.ok) {
+        setSlots((prev) => prev.filter((s) => s.offeringId !== offering.id));
+        toast.success(result.message ?? `ลบ ${offering.courseName} แล้ว`);
+        router.refresh();
+      } else {
+        toast.error(result.message ?? "ลบไม่สำเร็จ");
+      }
+      setRemovingOffering(null);
+    });
+  }
+
   const activeOffering = active ? offeringsById.get(active.offeringId) : undefined;
+  const placedForRemoving = removingOffering ? slots.filter((s) => s.offeringId === removingOffering.id).length : 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -228,6 +250,7 @@ export default function TimetableBuilder({
             remainingById={remainingById}
             onAddSubject={() => setAssignOpen(true)}
             canAddSubject={Boolean(context)}
+            onRemoveSubject={setRemovingOffering}
           />
           <Grid
             days={days}
@@ -263,6 +286,21 @@ export default function TimetableBuilder({
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={removingOffering !== null}
+        title="ลบรายวิชาออกจากห้อง"
+        message={
+          removingOffering
+            ? `ต้องการลบ “${removingOffering.courseName}” (${removingOffering.teacherName}) ออกจากห้องนี้ใช่หรือไม่?${placedForRemoving > 0 ? ` จะนำ ${placedForRemoving} คาบที่จัดไว้ในตารางออกด้วย` : ""}`
+            : ""
+        }
+        confirmLabel="ลบรายวิชา"
+        destructive
+        pending={isRemoving}
+        onConfirm={confirmRemoveOffering}
+        onClose={() => setRemovingOffering(null)}
+      />
     </div>
   );
 }

@@ -211,6 +211,19 @@ export async function softDeleteOffering(id: string): Promise<void> {
   await prisma.courseOffering.update({ where: { id }, data: { isDeleted: true, deletedAt: new Date() } });
 }
 
+/**
+ * Soft-deletes an offering together with any timetable slots it was placed into,
+ * in one transaction. Returns how many placed slots were removed (for messaging).
+ */
+export async function softDeleteOfferingWithSlots(id: string): Promise<number> {
+  const now = new Date();
+  const [slotResult] = await prisma.$transaction([
+    prisma.timetableSlot.updateMany({ where: { courseOfferingId: id, isDeleted: false }, data: { isDeleted: true, deletedAt: now } }),
+    prisma.courseOffering.update({ where: { id }, data: { isDeleted: true, deletedAt: now } }),
+  ]);
+  return slotResult.count;
+}
+
 export async function referenceExists(model: "course" | "room", id: string): Promise<boolean> {
   if (model === "course") {
     return (await prisma.course.findFirst({ where: { id, isDeleted: false }, select: { id: true } })) !== null;

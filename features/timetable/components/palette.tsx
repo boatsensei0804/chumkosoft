@@ -1,16 +1,17 @@
 "use client";
 
 import { useDraggable } from "@dnd-kit/core";
-import { CheckCircle2, Plus, BookOpen } from "lucide-react";
+import { CheckCircle2, Plus, BookOpen, Trash2 } from "lucide-react";
 import { subjectColors } from "../data";
 import type { Offering } from "../types";
 
 interface PaletteCardProps {
   offering: Offering;
   remaining: number;
+  onRemove: () => void;
 }
 
-function PaletteCard({ offering, remaining }: PaletteCardProps): React.ReactNode {
+function PaletteCard({ offering, remaining, onRemove }: PaletteCardProps): React.ReactNode {
   const done = remaining <= 0;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `offering:${offering.id}`,
@@ -52,6 +53,19 @@ function PaletteCard({ offering, remaining }: PaletteCardProps): React.ReactNode
           เหลือ {remaining}
         </span>
       )}
+      {/* Remove the whole subject from this class (cascades to placed periods). stopPropagation keeps drag from firing. */}
+      <button
+        type="button"
+        aria-label={`ลบวิชา ${offering.courseName} ออกจากห้อง`}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove();
+        }}
+        className="grid size-7 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-danger-soft hover:text-danger"
+      >
+        <Trash2 className="size-[16px]" />
+      </button>
     </div>
   );
 }
@@ -61,9 +75,10 @@ interface PaletteProps {
   remainingById: Map<string, number>;
   onAddSubject: () => void;
   canAddSubject: boolean;
+  onRemoveSubject: (offering: Offering) => void;
 }
 
-export default function Palette({ offerings, remainingById, onAddSubject, canAddSubject }: PaletteProps): React.ReactNode {
+export default function Palette({ offerings, remainingById, onAddSubject, canAddSubject, onRemoveSubject }: PaletteProps): React.ReactNode {
   const remainingTotal = offerings.reduce((sum, o) => sum + Math.max(0, remainingById.get(o.id) ?? 0), 0);
 
   return (
@@ -99,7 +114,7 @@ export default function Palette({ offerings, remainingById, onAddSubject, canAdd
 
       <div className="flex flex-col gap-2 overflow-y-auto p-3" style={{ maxHeight: "calc(100dvh - 320px)" }}>
         {offerings.length > 0 ? (
-          offerings.map((o) => <PaletteCard key={o.id} offering={o} remaining={remainingById.get(o.id) ?? 0} />)
+          offerings.map((o) => <PaletteCard key={o.id} offering={o} remaining={remainingById.get(o.id) ?? 0} onRemove={() => onRemoveSubject(o)} />)
         ) : (
           <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
             <span className="grid size-10 place-items-center rounded-full" style={{ backgroundColor: "var(--surface-2)", color: "var(--faint)" }} aria-hidden="true">
