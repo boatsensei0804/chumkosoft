@@ -3,7 +3,6 @@ import Link from "next/link";
 import { ScanFace } from "lucide-react";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { Button } from "@/components/ui/button";
-import { Toaster } from "@/components/ui/sonner";
 import ScanSettingForm from "@/features/kiosk/components/scan-setting-form";
 import KioskManager from "@/features/kiosk/components/kiosk-manager";
 import { requireRoles } from "@/lib/dal";
@@ -38,8 +37,6 @@ export default async function KioskPage(): Promise<React.ReactNode> {
         <ScanSettingForm setting={setting} />
         <KioskManager accounts={accounts} />
       </div>
-
-      <Toaster position="bottom-center" richColors />
     </>
   );
 }

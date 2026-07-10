@@ -1,13 +1,11 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
-import Alert from "@mui/material/Alert";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { saveCourseAction } from "@/features/courses/actions";
 import { idleAction } from "@/types/form";
 import type { CourseSummary } from "@/features/courses/types";
@@ -21,15 +19,10 @@ interface CourseFormDialogProps {
 
 export default function CourseFormDialog({ open, course, onClose, onSaved }: CourseFormDialogProps): React.ReactNode {
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      fullWidth
-      maxWidth="sm"
-      slotProps={{ paper: { sx: { borderRadius: "var(--radius-lg)" } } }}
-      aria-labelledby="course-form-title"
-    >
-      {open && <CourseFormBody key={course?.id ?? "new"} course={course} onClose={onClose} onSaved={onSaved} />}
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        {open && <CourseFormBody key={course?.id ?? "new"} course={course} onClose={onClose} onSaved={onSaved} />}
+      </DialogContent>
     </Dialog>
   );
 }
@@ -45,85 +38,55 @@ function CourseFormBody({
 }): React.ReactNode {
   const [state, formAction, pending] = useActionState(saveCourseAction, idleAction);
   const isEdit = course !== null;
+  const err = state.fieldErrors ?? {};
 
   useEffect(() => {
-    if (state.ok) {
-      onSaved();
-    }
+    if (state.ok) onSaved();
   }, [state.ok, onSaved]);
 
   return (
     <form action={formAction}>
-      <DialogTitle id="course-form-title" sx={{ fontWeight: 700, color: "var(--ink-strong)" }}>
-        {isEdit ? "แก้ไขรายวิชา" : "เพิ่มรายวิชา"}
-      </DialogTitle>
+      <DialogHeader>
+        <DialogTitle>{isEdit ? "แก้ไขรายวิชา" : "เพิ่มรายวิชา"}</DialogTitle>
+      </DialogHeader>
 
-      <DialogContent>
-        {course && <input type="hidden" name="id" value={course.id} />}
+      {course && <input type="hidden" name="id" value={course.id} />}
 
-        {state.message && !state.ok && (
-          <Alert severity="error" sx={{ mb: 2, borderRadius: "var(--radius-sm)" }}>
-            {state.message}
-          </Alert>
-        )}
+      {state.message && !state.ok && (
+        <p className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{state.message}</p>
+      )}
 
-        <div className="flex flex-col gap-4 pt-1">
-          <TextField
-            name="code"
-            label="รหัสวิชา"
-            defaultValue={course?.code ?? ""}
-            required
-            fullWidth
-            autoFocus
-            disabled={pending}
-            error={Boolean(state.fieldErrors?.code)}
-            helperText={state.fieldErrors?.code}
-            placeholder="เช่น ค30201"
-          />
-          <TextField
-            name="name"
-            label="ชื่อรายวิชา"
-            defaultValue={course?.name ?? ""}
-            required
-            fullWidth
-            disabled={pending}
-            error={Boolean(state.fieldErrors?.name)}
-            helperText={state.fieldErrors?.name}
-            placeholder="เช่น คณิตศาสตร์เพิ่มเติม"
-          />
-          <TextField
-            name="credits"
-            label="หน่วยกิต"
-            type="number"
-            defaultValue={course?.credits ?? ""}
-            fullWidth
-            disabled={pending}
-            error={Boolean(state.fieldErrors?.credits)}
-            helperText={state.fieldErrors?.credits ?? "เว้นว่างได้หากไม่มีหน่วยกิต"}
-            slotProps={{ htmlInput: { step: 0.5, min: 0, max: 20 } }}
-          />
-          <TextField
-            name="description"
-            label="คำอธิบายรายวิชา"
-            defaultValue={course?.description ?? ""}
-            fullWidth
-            multiline
-            minRows={2}
-            disabled={pending}
-            error={Boolean(state.fieldErrors?.description)}
-            helperText={state.fieldErrors?.description}
-          />
+      <div className="flex flex-col gap-4 py-4">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="course-code">รหัสวิชา</Label>
+          <Input id="course-code" name="code" defaultValue={course?.code ?? ""} required autoFocus disabled={pending} aria-invalid={Boolean(err.code)} placeholder="เช่น ค30201" />
+          {err.code && <p className="text-xs text-destructive">{err.code}</p>}
         </div>
-      </DialogContent>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="course-name">ชื่อรายวิชา</Label>
+          <Input id="course-name" name="name" defaultValue={course?.name ?? ""} required disabled={pending} aria-invalid={Boolean(err.name)} placeholder="เช่น คณิตศาสตร์เพิ่มเติม" />
+          {err.name && <p className="text-xs text-destructive">{err.name}</p>}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="course-credits">หน่วยกิต</Label>
+          <Input id="course-credits" name="credits" type="number" step={0.5} min={0} max={20} defaultValue={course?.credits ?? ""} disabled={pending} aria-invalid={Boolean(err.credits)} />
+          <p className={err.credits ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>{err.credits ?? "เว้นว่างได้หากไม่มีหน่วยกิต"}</p>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="course-description">คำอธิบายรายวิชา</Label>
+          <Textarea id="course-description" name="description" defaultValue={course?.description ?? ""} rows={3} disabled={pending} aria-invalid={Boolean(err.description)} />
+          {err.description && <p className="text-xs text-destructive">{err.description}</p>}
+        </div>
+      </div>
 
-      <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-        <Button onClick={onClose} disabled={pending} variant="text">
+      <DialogFooter>
+        <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>
           ยกเลิก
         </Button>
-        <Button type="submit" disabled={pending} variant="contained">
+        <Button type="submit" disabled={pending}>
           {pending ? "กำลังบันทึก…" : isEdit ? "บันทึก" : "เพิ่มรายวิชา"}
         </Button>
-      </DialogActions>
+      </DialogFooter>
     </form>
   );
 }

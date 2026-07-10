@@ -1,11 +1,16 @@
 "use client";
 
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
-import DialogActions from "@mui/material/DialogActions";
-import Button from "@mui/material/Button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -19,7 +24,11 @@ interface ConfirmDialogProps {
   onClose: () => void;
 }
 
-/** Reusable confirmation dialog for irreversible-feeling actions (e.g. delete). */
+/**
+ * Reusable confirmation dialog for irreversible-feeling actions (e.g. delete).
+ * shadcn AlertDialog under the hood; the props API is unchanged from the old MUI
+ * version so every existing caller keeps working.
+ */
 export default function ConfirmDialog({
   open,
   title,
@@ -32,39 +41,28 @@ export default function ConfirmDialog({
   onClose,
 }: ConfirmDialogProps): React.ReactNode {
   return (
-    <Dialog
-      open={open}
-      onClose={pending ? undefined : onClose}
-      slotProps={{ paper: { sx: { borderRadius: "var(--radius-lg)", maxWidth: 420 } } }}
-      aria-labelledby="confirm-dialog-title"
-    >
-      <DialogTitle id="confirm-dialog-title" sx={{ fontWeight: 700, color: "var(--ink-strong)" }}>
-        {title}
-      </DialogTitle>
-      <DialogContent>
-        <DialogContentText sx={{ color: "var(--muted)", fontSize: 14 }}>{message}</DialogContentText>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-        <Button onClick={onClose} disabled={pending} variant="text">
-          {cancelLabel}
-        </Button>
-        <Button
-          onClick={onConfirm}
-          disabled={pending}
-          variant="contained"
-          sx={
-            destructive
-              ? {
-                  backgroundImage: "none",
-                  backgroundColor: "var(--danger)",
-                  "&:hover": { backgroundColor: "oklch(0.5 0.19 25)" },
-                }
-              : undefined
-          }
-        >
-          {pending ? "กำลังดำเนินการ…" : confirmLabel}
-        </Button>
-      </DialogActions>
-    </Dialog>
+    <AlertDialog open={open} onOpenChange={(next) => !next && !pending && onClose()}>
+      <AlertDialogContent className="max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{message}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>{cancelLabel}</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={pending}
+            onClick={(e) => {
+              // The caller owns closing (usually after its async call resolves), so
+              // keep the dialog open instead of letting Radix auto-dismiss it.
+              e.preventDefault();
+              onConfirm();
+            }}
+            className={cn(destructive && "bg-destructive text-white hover:bg-destructive/90")}
+          >
+            {pending ? "กำลังดำเนินการ…" : confirmLabel}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

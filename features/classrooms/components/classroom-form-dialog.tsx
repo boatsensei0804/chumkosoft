@@ -1,16 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import TextField from "@mui/material/TextField";
-import MenuItem from "@mui/material/MenuItem";
-import Checkbox from "@mui/material/Checkbox";
-import ListItemText from "@mui/material/ListItemText";
-import Button from "@mui/material/Button";
-import Alert from "@mui/material/Alert";
+import { useActionState, useEffect } from "react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 import { saveClassroomAction } from "@/features/classrooms/actions";
 import { idleAction } from "@/types/form";
 import type { ClassroomRow, TeacherOption } from "@/features/classrooms/types";
@@ -25,8 +21,10 @@ interface ClassroomFormDialogProps {
 
 export default function ClassroomFormDialog({ open, classroom, teachers, onClose, onSaved }: ClassroomFormDialogProps): React.ReactNode {
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { borderRadius: "var(--radius-lg)" } } }} aria-labelledby="classroom-form-title">
-      {open && <Body key={classroom?.id ?? "new"} classroom={classroom} teachers={teachers} onClose={onClose} onSaved={onSaved} />}
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        {open && <Body key={classroom?.id ?? "new"} classroom={classroom} teachers={teachers} onClose={onClose} onSaved={onSaved} />}
+      </DialogContent>
     </Dialog>
   );
 }
@@ -44,7 +42,8 @@ function Body({
 }): React.ReactNode {
   const [state, formAction, pending] = useActionState(saveClassroomAction, idleAction);
   const isEdit = classroom !== null;
-  const [advisorIds, setAdvisorIds] = useState<string[]>(classroom?.advisors.map((a) => a.id) ?? []);
+  const err = state.fieldErrors ?? {};
+  const advisorIds = classroom?.advisors.map((a) => a.id) ?? [];
 
   useEffect(() => {
     if (state.ok) onSaved();
@@ -52,85 +51,61 @@ function Body({
 
   return (
     <form action={formAction}>
-      <DialogTitle id="classroom-form-title" sx={{ fontWeight: 700, color: "var(--ink-strong)" }}>
-        {isEdit ? "แก้ไขห้องเรียน" : "เพิ่มห้องเรียน"}
-      </DialogTitle>
-      <DialogContent>
-        {classroom && <input type="hidden" name="id" value={classroom.id} />}
-        {state.message && !state.ok && (
-          <Alert severity="error" sx={{ mb: 2, borderRadius: "var(--radius-sm)" }}>
-            {state.message}
-          </Alert>
-        )}
-        <div className="flex flex-col gap-4 pt-1">
-          <TextField
-            name="code"
-            label="ชื่อห้อง"
-            defaultValue={classroom?.code ?? ""}
-            required
-            fullWidth
-            autoFocus
-            disabled={pending}
-            error={Boolean(state.fieldErrors?.code)}
-            helperText={state.fieldErrors?.code}
-            placeholder="เช่น ม.4/1"
-          />
-          <TextField
-            name="gradeLevel"
-            label="ระดับชั้น"
-            defaultValue={classroom?.gradeLevel ?? ""}
-            required
-            fullWidth
-            disabled={pending}
-            error={Boolean(state.fieldErrors?.gradeLevel)}
-            helperText={state.fieldErrors?.gradeLevel}
-            placeholder="เช่น มัธยมปลาย"
-          />
-          <TextField
-            label="ครูที่ปรึกษา (เลือกได้หลายคน)"
-            select
-            value={advisorIds}
-            onChange={(e) => {
-              const v = e.target.value;
-              setAdvisorIds(typeof v === "string" ? v.split(",") : (v as unknown as string[]));
-            }}
-            fullWidth
-            disabled={pending}
-            error={Boolean(state.fieldErrors?.advisorIds)}
-            helperText={state.fieldErrors?.advisorIds ?? "เลือกครูประจำชั้น เลือกได้มากกว่า 1 คน (เว้นว่างได้)"}
-            slotProps={{
-              inputLabel: { shrink: true },
-              select: {
-                multiple: true,
-                displayEmpty: true,
-                renderValue: (selected) => {
-                  const ids = selected as string[];
-                  if (ids.length === 0) return <span style={{ color: "var(--faint)" }}>ยังไม่กำหนด</span>;
-                  return teachers.filter((t) => ids.includes(t.id)).map((t) => t.name).join(", ");
-                },
-              },
-            }}
-          >
-            {teachers.map((t) => (
-              <MenuItem key={t.id} value={t.id}>
-                <Checkbox checked={advisorIds.includes(t.id)} size="small" sx={{ py: 0.25 }} />
-                <ListItemText primary={t.name} />
-              </MenuItem>
-            ))}
-          </TextField>
-          {advisorIds.map((id) => (
-            <input key={id} type="hidden" name="advisorIds" value={id} />
-          ))}
+      <DialogHeader>
+        <DialogTitle>{isEdit ? "แก้ไขห้องเรียน" : "เพิ่มห้องเรียน"}</DialogTitle>
+      </DialogHeader>
+
+      {classroom && <input type="hidden" name="id" value={classroom.id} />}
+
+      {state.message && !state.ok && (
+        <p className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{state.message}</p>
+      )}
+
+      <div className="flex flex-col gap-4 py-4">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="classroom-code">ชื่อห้อง</Label>
+          <Input id="classroom-code" name="code" defaultValue={classroom?.code ?? ""} required autoFocus disabled={pending} aria-invalid={Boolean(err.code)} placeholder="เช่น ม.4/1" />
+          {err.code && <p className="text-xs text-destructive">{err.code}</p>}
         </div>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-        <Button onClick={onClose} disabled={pending} variant="text">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="classroom-grade">ระดับชั้น</Label>
+          <Input id="classroom-grade" name="gradeLevel" defaultValue={classroom?.gradeLevel ?? ""} required disabled={pending} aria-invalid={Boolean(err.gradeLevel)} placeholder="เช่น มัธยมปลาย" />
+          {err.gradeLevel && <p className="text-xs text-destructive">{err.gradeLevel}</p>}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label>ครูที่ปรึกษา (เลือกได้หลายคน)</Label>
+          <div className={cn("flex max-h-52 flex-col gap-1 overflow-y-auto rounded-md border border-input p-2", err.advisorIds && "border-destructive")}>
+            {teachers.length === 0 ? (
+              <p className="px-1 py-2 text-[13px] text-faint">ยังไม่มีครูในระบบ</p>
+            ) : (
+              teachers.map((t) => {
+                const id = `advisor-${t.id}`;
+                return (
+                  <div key={t.id} className="flex items-center gap-2 rounded-sm px-1.5 py-1.5 hover:bg-surface-2">
+                    <Checkbox id={id} name="advisorIds" value={t.id} defaultChecked={advisorIds.includes(t.id)} disabled={pending} />
+                    <Label htmlFor={id} className="w-full cursor-pointer text-[13.5px] font-normal">
+                      {t.name}
+                    </Label>
+                  </div>
+                );
+              })
+            )}
+          </div>
+          <p className={cn("text-xs", err.advisorIds ? "text-destructive" : "text-muted-foreground")}>
+            {err.advisorIds ?? "เลือกครูประจำชั้น เลือกได้มากกว่า 1 คน (เว้นว่างได้)"}
+          </p>
+        </div>
+      </div>
+
+      <DialogFooter>
+        <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>
           ยกเลิก
         </Button>
-        <Button type="submit" disabled={pending} variant="contained">
+        <Button type="submit" disabled={pending}>
           {pending ? "กำลังบันทึก…" : isEdit ? "บันทึก" : "เพิ่มห้องเรียน"}
         </Button>
-      </DialogActions>
+      </DialogFooter>
     </form>
   );
 }

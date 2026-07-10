@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { redirect } from "next/navigation";
+import { Toaster } from "@/components/ui/sonner";
 import AppShell from "@/features/dashboard/components/app-shell";
 import { getCurrentUser } from "@/lib/dal";
 import { STAFF_ROLES, homePathForRole } from "@/features/auth/roles";
@@ -16,6 +17,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   return (
     <AppShell user={user} today={today}>
       {children}
+      {/* One toaster for every dashboard page (sonner). */}
+      <Toaster position="bottom-center" richColors />
     </AppShell>
   );
 }

@@ -1,14 +1,11 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import TextField from "@mui/material/TextField";
-import MenuItem from "@mui/material/MenuItem";
-import Button from "@mui/material/Button";
-import Alert from "@mui/material/Alert";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { addOfferingAction } from "@/features/classrooms/offering-actions";
 import { idleAction } from "@/types/form";
 import type { OfferingOptions } from "@/features/classrooms/types";
@@ -25,14 +22,17 @@ interface OfferingFormDialogProps {
 
 export default function OfferingFormDialog({ open, classroomId, termId, options, onClose, onSaved }: OfferingFormDialogProps): React.ReactNode {
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { borderRadius: "var(--radius-lg)" } } }} aria-labelledby="offering-form-title">
-      {open && <Body key={`${classroomId}:${termId ?? ""}`} classroomId={classroomId} termId={termId} options={options} onClose={onClose} onSaved={onSaved} />}
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        {open && <Body key={`${classroomId}:${termId ?? ""}`} classroomId={classroomId} termId={termId} options={options} onClose={onClose} onSaved={onSaved} />}
+      </DialogContent>
     </Dialog>
   );
 }
 
 function Body({ classroomId, termId, options, onClose, onSaved }: { classroomId: string; termId?: string; options: OfferingOptions; onClose: () => void; onSaved: () => void }): React.ReactNode {
   const [state, formAction, pending] = useActionState(addOfferingAction, idleAction);
+  const err = state.fieldErrors ?? {};
 
   useEffect(() => {
     if (state.ok) onSaved();
@@ -40,67 +40,72 @@ function Body({ classroomId, termId, options, onClose, onSaved }: { classroomId:
 
   return (
     <form action={formAction}>
-      <DialogTitle id="offering-form-title" sx={{ fontWeight: 700, color: "var(--ink-strong)" }}>
-        เพิ่มรายวิชาให้ห้องเรียน
-      </DialogTitle>
-      <DialogContent>
-        <input type="hidden" name="classroomId" value={classroomId} />
-        {termId && <input type="hidden" name="termId" value={termId} />}
-        {state.message && !state.ok && (
-          <Alert severity="error" sx={{ mb: 2, borderRadius: "var(--radius-sm)" }}>
-            {state.message}
-          </Alert>
-        )}
-        <div className="flex flex-col gap-4 pt-1">
-          <TextField name="courseId" label="รายวิชา" select defaultValue="" required fullWidth disabled={pending} error={Boolean(state.fieldErrors?.courseId)} helperText={state.fieldErrors?.courseId}>
-            <MenuItem value="">เลือกรายวิชา…</MenuItem>
+      <DialogHeader>
+        <DialogTitle>เพิ่มรายวิชาให้ห้องเรียน</DialogTitle>
+      </DialogHeader>
+
+      <input type="hidden" name="classroomId" value={classroomId} />
+      {termId && <input type="hidden" name="termId" value={termId} />}
+
+      {state.message && !state.ok && (
+        <p className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{state.message}</p>
+      )}
+
+      <div className="flex flex-col gap-4 py-4">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="offering-course">รายวิชา</Label>
+          <NativeSelect id="offering-course" name="courseId" defaultValue="" required disabled={pending} invalid={Boolean(err.courseId)}>
+            <option value="">เลือกรายวิชา…</option>
             {options.courses.map((c) => (
-              <MenuItem key={c.id} value={c.id}>
+              <option key={c.id} value={c.id}>
                 {c.label}
-              </MenuItem>
+              </option>
             ))}
-          </TextField>
-
-          <TextField name="teacherId" label="ผู้สอน" select defaultValue="" required fullWidth disabled={pending} error={Boolean(state.fieldErrors?.teacherId)} helperText={state.fieldErrors?.teacherId}>
-            <MenuItem value="">เลือกผู้สอน…</MenuItem>
-            {options.teachers.map((t) => (
-              <MenuItem key={t.id} value={t.id}>
-                {t.name}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          <TextField name="roomId" label="ห้องเรียน/ห้องปฏิบัติการ" select defaultValue="" required fullWidth disabled={pending} error={Boolean(state.fieldErrors?.roomId)} helperText={state.fieldErrors?.roomId}>
-            <MenuItem value="">เลือกห้อง…</MenuItem>
-            {options.rooms.map((r) => (
-              <MenuItem key={r.id} value={r.id}>
-                {r.label}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          <TextField
-            name="periodsPerWeek"
-            label="จำนวนคาบต่อสัปดาห์"
-            type="number"
-            defaultValue={1}
-            required
-            fullWidth
-            disabled={pending}
-            error={Boolean(state.fieldErrors?.periodsPerWeek)}
-            helperText={state.fieldErrors?.periodsPerWeek}
-            slotProps={{ htmlInput: { min: 1, max: 20 } }}
-          />
+          </NativeSelect>
+          {err.courseId && <p className="text-xs text-destructive">{err.courseId}</p>}
         </div>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-        <Button onClick={onClose} disabled={pending} variant="text">
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="offering-teacher">ผู้สอน</Label>
+          <NativeSelect id="offering-teacher" name="teacherId" defaultValue="" required disabled={pending} invalid={Boolean(err.teacherId)}>
+            <option value="">เลือกผู้สอน…</option>
+            {options.teachers.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </NativeSelect>
+          {err.teacherId && <p className="text-xs text-destructive">{err.teacherId}</p>}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="offering-room">ห้องเรียน/ห้องปฏิบัติการ</Label>
+          <NativeSelect id="offering-room" name="roomId" defaultValue="" required disabled={pending} invalid={Boolean(err.roomId)}>
+            <option value="">เลือกห้อง…</option>
+            {options.rooms.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.label}
+              </option>
+            ))}
+          </NativeSelect>
+          {err.roomId && <p className="text-xs text-destructive">{err.roomId}</p>}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="offering-periods">จำนวนคาบต่อสัปดาห์</Label>
+          <Input id="offering-periods" name="periodsPerWeek" type="number" min={1} max={20} defaultValue={1} required disabled={pending} aria-invalid={Boolean(err.periodsPerWeek)} />
+          {err.periodsPerWeek && <p className="text-xs text-destructive">{err.periodsPerWeek}</p>}
+        </div>
+      </div>
+
+      <DialogFooter>
+        <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>
           ยกเลิก
         </Button>
-        <Button type="submit" disabled={pending} variant="contained">
+        <Button type="submit" disabled={pending}>
           {pending ? "กำลังบันทึก…" : "เพิ่มรายวิชา"}
         </Button>
-      </DialogActions>
+      </DialogFooter>
     </form>
   );
 }
