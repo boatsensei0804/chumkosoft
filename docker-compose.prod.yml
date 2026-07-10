@@ -1,0 +1,57 @@
+# Production hardening overlay for an Ubuntu (or any Linux) server.
+#
+# Use it ON TOP of the base compose file:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile tunnel up -d --build
+#
+# What it changes vs. the dev stack:
+#   • postgres / redis / minio are NOT published to the host — they're reachable
+#     only over the internal compose network (the app talks to them by service name).
+#   • the app is bound to 127.0.0.1 only; the public internet reaches it through the
+#     Cloudflare Tunnel (outbound-only), so no inbound port is ever exposed.
+#   • migrate applies schema migrations WITHOUT seeding dev accounts
+#     (the base stack seeds admin@chumko.ac.th / password123 — never do that in prod).
+#   • json-file log rotation on every container so logs can't fill the disk.
+#
+# `!override` replaces the base value instead of appending (needs Compose ≥ v2.24).
+
+x-logging: &prod-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    logging: *prod-logging
+    ports: !override [] # internal only
+
+  redis:
+    logging: *prod-logging
+    ports: !override [] # internal only
+
+  minio:
+    logging: *prod-logging
+    # No host ports. To let browsers load face images, publish MinIO through a
+    # second Cloudflare public hostname (files.<domain> → minio:9000) and set
+    # MINIO_PUBLIC_* in .env accordingly — see docs/DEPLOY.md.
+    ports: !override []
+
+  minio-setup:
+    logging: *prod-logging
+
+  migrate:
+    logging: *prod-logging
+    # Production: apply migrations only. Do NOT seed (would create known-password
+    # dev accounts). Create the first admin explicitly after deploy instead.
+    command: !override ["sh", "-c", "npx prisma migrate deploy"]
+
+  app:
+    logging: *prod-logging
+    environment:
+      NODE_ENV: production
+    # Bound to loopback; the tunnel (same host, internal network) fronts it.
+    ports: !override
+      - "127.0.0.1:3000:3000"
+
+  cloudflared:
+    logging: *prod-logging
