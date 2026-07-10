@@ -1,13 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import Avatar from "@mui/material/Avatar";
-import Icon from "@/features/dashboard/components/icon";
+import { ChevronLeft, Users, UserCheck } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import StatusChip from "@/features/dashboard/components/status-chip";
 import SectionCard from "@/features/dashboard/components/section-card";
 import ClassroomOfferings from "@/features/classrooms/components/classroom-offerings";
@@ -31,15 +27,15 @@ export default async function ClassroomDetailPage({ params }: ClassroomDetailPag
   return (
     <div className="flex flex-col gap-5">
       <Link href="/dashboard/classrooms" className="inline-flex w-fit items-center gap-1.5 text-[13px] font-semibold text-muted transition-colors hover:text-ink">
-        <Icon name="chevron_down" sx={{ fontSize: 18, transform: "rotate(90deg)" }} />
+        <ChevronLeft className="size-[18px]" />
         กลับไปรายการห้องเรียน
       </Link>
 
       {/* Header: the relationship anchor — classroom + homeroom teacher */}
-      <section className="flex flex-col gap-4 rounded-[16px] p-5 sm:flex-row sm:items-center sm:justify-between" style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)" }}>
+      <section className="flex flex-col gap-4 rounded-2xl border border-line bg-card p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3.5">
-          <span className="grid size-12 place-items-center rounded-[12px]" style={{ backgroundColor: "var(--brand-soft)", color: "var(--brand-ink)" }}>
-            <Icon name="groups" sx={{ fontSize: 24 }} />
+          <span className="grid size-12 place-items-center rounded-[12px] bg-brand-soft text-brand-ink">
+            <Users className="size-6" />
           </span>
           <div>
             <h1 className="text-[22px] font-bold text-ink-strong">{detail.code}</h1>
@@ -50,9 +46,9 @@ export default async function ClassroomDetailPage({ params }: ClassroomDetailPag
           </div>
         </div>
 
-        <div className="flex items-start gap-3 rounded-[12px] px-4 py-3" style={{ backgroundColor: "var(--surface-2)", border: "1px solid var(--line)" }}>
-          <span className="grid size-9 shrink-0 place-items-center rounded-full" style={{ backgroundColor: "var(--brand-soft)", color: "var(--brand-ink)" }} aria-hidden="true">
-            <Icon name="how_to_reg" sx={{ fontSize: 19 }} />
+        <div className="flex items-start gap-3 rounded-[12px] border border-line bg-surface-2 px-4 py-3">
+          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand-soft text-brand-ink" aria-hidden="true">
+            <UserCheck className="size-[19px]" />
           </span>
           <div>
             <p className="text-[11.5px] font-semibold uppercase tracking-wide text-faint">
@@ -79,26 +75,28 @@ export default async function ClassroomDetailPage({ params }: ClassroomDetailPag
         <SectionCard title="รายชื่อนักเรียนในห้อง" caption={`${detail.roster.length.toLocaleString("th-TH")} คน · ภาคเรียนปัจจุบัน`} bodyClassName="p-0">
           {detail.roster.length > 0 ? (
             <div className="overflow-x-auto">
-              <Table sx={{ minWidth: 420 }}>
-                <TableHead>
+              <Table className="min-w-[420px]">
+                <TableHeader>
                   <TableRow>
-                    <TableCell>นักเรียน</TableCell>
-                    <TableCell align="right">สถานะ</TableCell>
+                    <TableHead>นักเรียน</TableHead>
+                    <TableHead className="text-right">สถานะ</TableHead>
                   </TableRow>
-                </TableHead>
+                </TableHeader>
                 <TableBody>
                   {detail.roster.map((s) => (
-                    <TableRow key={s.id} sx={{ "&:last-child td": { borderBottom: 0 } }}>
+                    <TableRow key={s.id}>
                       <TableCell>
                         <div className="flex items-center gap-2.5">
-                          <Avatar sx={{ width: 30, height: 30, bgcolor: "var(--brand-soft)", color: "var(--brand-ink)", fontSize: 12 }}>{s.name.charAt(0)}</Avatar>
+                          <Avatar className="size-[30px]">
+                            <AvatarFallback className="bg-brand-soft text-[12px] font-semibold text-brand-ink">{s.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
                           <div className="min-w-0">
                             <p className="truncate text-[13.5px] font-medium text-ink-strong">{s.name}</p>
                             <p className="tabular text-[12px] text-muted">รหัส {s.code}</p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell className="text-right">
                         <StatusChip status={s.status} />
                       </TableCell>
                     </TableRow>

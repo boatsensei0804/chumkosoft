@@ -1,9 +1,9 @@
 "use client";
 
 import { useActionState } from "react";
-import Alert from "@mui/material/Alert";
-import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { loginAction, type LoginFormState } from "@/features/auth/actions";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 
@@ -15,43 +15,22 @@ export default function LoginForm({ t }: { t: Dictionary["login"] }): React.Reac
   return (
     <form action={formAction} className="flex flex-col gap-4" noValidate>
       {state.error && (
-        <Alert
-          severity="error"
-          role="alert"
-          sx={{
-            borderRadius: "var(--radius-sm)",
-            backgroundColor: "var(--danger-soft)",
-            color: "var(--ink-strong)",
-            "& .MuiAlert-icon": { color: "var(--danger)" },
-          }}
-        >
+        <p role="alert" className="rounded-md border border-destructive/30 bg-danger-soft px-3 py-2 text-sm font-medium text-ink-strong">
           {state.error}
-        </Alert>
+        </p>
       )}
 
-      <TextField
-        name="email"
-        type="email"
-        label={t.email}
-        autoComplete="email"
-        defaultValue={state.email}
-        required
-        fullWidth
-        autoFocus
-        disabled={isPending}
-      />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="login-email">{t.email}</Label>
+        <Input id="login-email" name="email" type="email" autoComplete="email" defaultValue={state.email} required autoFocus disabled={isPending} />
+      </div>
 
-      <TextField
-        name="password"
-        type="password"
-        label={t.password}
-        autoComplete="current-password"
-        required
-        fullWidth
-        disabled={isPending}
-      />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="login-password">{t.password}</Label>
+        <Input id="login-password" name="password" type="password" autoComplete="current-password" required disabled={isPending} />
+      </div>
 
-      <Button type="submit" variant="contained" size="large" fullWidth disabled={isPending}>
+      <Button type="submit" size="lg" className="w-full" disabled={isPending}>
         {isPending ? t.submitting : t.submit}
       </Button>
     </form>

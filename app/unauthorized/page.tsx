@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Button from "@mui/material/Button";
+import { Info, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import BrandMark from "@/features/dashboard/components/brand-mark";
-import Icon from "@/features/dashboard/components/icon";
 import { logoutAction } from "@/features/auth/actions";
 import { getCurrentUser } from "@/lib/dal";
 import { ROLE_LABELS } from "@/features/auth/roles";
@@ -14,29 +14,16 @@ export default async function UnauthorizedPage(): Promise<React.ReactNode> {
   const user = await getCurrentUser();
 
   return (
-    <main
-      className="grid min-h-dvh place-items-center px-4 py-10"
-      style={{
-        background: "linear-gradient(180deg, var(--surface) 0%, oklch(0.945 0.024 254) 100%)",
-      }}
-    >
+    <main className="grid min-h-dvh place-items-center bg-[linear-gradient(180deg,var(--surface)_0%,oklch(0.945_0.024_254)_100%)] px-4 py-10">
       <div className="w-full max-w-[440px]">
         <div className="mb-6 flex justify-center">
           <BrandMark />
         </div>
 
-        <section
-          className="overflow-hidden rounded-[16px]"
-          style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)", boxShadow: "0 8px 30px oklch(0.45 0.15 254 / 0.08)" }}
-          aria-labelledby="unauthorized-heading"
-        >
+        <section className="overflow-hidden rounded-2xl border border-line bg-card shadow-[0_8px_30px_oklch(0.45_0.15_254_/_0.08)]" aria-labelledby="unauthorized-heading">
           <div className="flex flex-col items-center px-7 pb-7 pt-8 text-center">
-            <span
-              className="grid size-12 place-items-center rounded-full"
-              style={{ backgroundColor: "var(--surface-2)", color: "var(--muted)" }}
-              aria-hidden="true"
-            >
-              <Icon name="info" sx={{ fontSize: 26 }} />
+            <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-muted" aria-hidden="true">
+              <Info className="size-6" />
             </span>
 
             <h1 id="unauthorized-heading" className="mt-4 text-[20px] font-bold text-ink-strong">
@@ -48,8 +35,8 @@ export default async function UnauthorizedPage(): Promise<React.ReactNode> {
             </p>
 
             <form action={logoutAction} className="mt-6 w-full">
-              <Button type="submit" variant="outlined" size="large" fullWidth startIcon={<Icon name="logout" sx={{ fontSize: 18 }} />}>
-                ออกจากระบบ
+              <Button type="submit" variant="outline" size="lg" className="w-full">
+                <LogOut className="size-[18px]" /> ออกจากระบบ
               </Button>
             </form>
           </div>

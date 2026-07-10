@@ -12,8 +12,8 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import Snackbar from "@mui/material/Snackbar";
-import Icon from "@/features/dashboard/components/icon";
+import { toast } from "sonner";
+import { Info, Clock } from "lucide-react";
 import ContextBar from "./context-bar";
 import Palette from "./palette";
 import Grid from "./grid";
@@ -28,12 +28,6 @@ interface DragData {
   type: "offering" | "slot";
   offeringId: string;
   slotId?: string;
-}
-
-interface ToastState {
-  open: boolean;
-  message: string;
-  kind: "error" | "success";
 }
 
 interface TimetableBuilderProps {
@@ -64,7 +58,6 @@ export default function TimetableBuilder({
   const [active, setActive] = useState<DragData | null>(null);
   const [saving, setSaving] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
-  const [toast, setToast] = useState<ToastState>({ open: false, message: "", kind: "success" });
 
   // Switch the board's term/classroom by driving URL search params; the server
   // component re-renders with the selected context's real offerings and slots.
@@ -140,11 +133,11 @@ export default function TimetableBuilder({
       ignoreSlotId: data.slotId,
     });
     if (!res.ok) {
-      setToast({ open: true, message: res.reason ?? "วางไม่ได้", kind: "error" });
+      toast.error(res.reason ?? "วางไม่ได้");
       return;
     }
     if (data.type !== "slot" && (remainingById.get(offering.id) ?? 0) <= 0) {
-      setToast({ open: true, message: `${offering.courseName} จัดครบตามจำนวนคาบแล้ว`, kind: "error" });
+      toast.error(`${offering.courseName} จัดครบตามจำนวนคาบแล้ว`);
       return;
     }
 
@@ -157,7 +150,7 @@ export default function TimetableBuilder({
           : await placeSlotAction(offering.id, over.day, over.periodId);
 
       if (!result.ok) {
-        setToast({ open: true, message: result.reason ?? "บันทึกไม่สำเร็จ", kind: "error" });
+        toast.error(result.reason ?? "บันทึกไม่สำเร็จ");
         return;
       }
 
@@ -169,7 +162,7 @@ export default function TimetableBuilder({
 
       const dayLabel = daysByKey.get(over.day)?.label ?? "";
       const periodLabel = periodsById.get(over.periodId)?.label ?? "";
-      setToast({ open: true, message: `บันทึก ${offering.courseName} · ${dayLabel} ${periodLabel}`, kind: "success" });
+      toast.success(`บันทึก ${offering.courseName} · ${dayLabel} ${periodLabel}`);
     } finally {
       setSaving(false);
     }
@@ -181,12 +174,12 @@ export default function TimetableBuilder({
     try {
       const result = await removeSlotAction(slotId);
       if (!result.ok) {
-        setToast({ open: true, message: result.reason ?? "ลบไม่สำเร็จ", kind: "error" });
+        toast.error(result.reason ?? "ลบไม่สำเร็จ");
         return;
       }
       setSlots((prev) => prev.filter((s) => s.id !== slotId));
       const offering = removed ? offeringsById.get(removed.offeringId) : undefined;
-      if (offering) setToast({ open: true, message: `เอา ${offering.courseName} ออกแล้ว`, kind: "success" });
+      if (offering) toast.success(`เอา ${offering.courseName} ออกแล้ว`);
     } finally {
       setSaving(false);
     }
@@ -207,25 +200,22 @@ export default function TimetableBuilder({
         total={totalRequired}
       />
 
-      <div
-        className="flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-[12px] px-4 py-2.5 text-[12.5px]"
-        style={{ backgroundColor: "var(--brand-softer)", color: "var(--muted)" }}
-      >
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-[12px] bg-brand-softer px-4 py-2.5 text-[12.5px] text-muted">
         <span className="inline-flex items-center gap-1.5 font-medium text-ink">
-          <Icon name="info" sx={{ fontSize: 16, color: "var(--brand-strong)" }} />
+          <Info className="size-4 text-brand-strong" />
           ลากวิชาจากด้านซ้ายมาวางในช่องคาบ — บันทึกลงฐานข้อมูลอัตโนมัติ
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="size-3 rounded" style={{ border: "1.5px dashed var(--brand-strong)", backgroundColor: "var(--brand-soft)" }} />
+          <span className="size-3 rounded border-[1.5px] border-dashed border-brand-strong bg-brand-soft" />
           วางได้
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="size-3 rounded" style={{ border: "1.5px dashed color-mix(in oklch, var(--danger) 55%, transparent)", backgroundColor: "var(--danger-soft)" }} />
+          <span className="size-3 rounded border-[1.5px] border-dashed border-[color-mix(in_oklch,var(--danger)_55%,transparent)] bg-danger-soft" />
           ชนคาบ (ครู/ห้อง/ชั้นซ้ำ)
         </span>
         {saving && (
-          <span className="ml-auto inline-flex items-center gap-1.5 font-medium" style={{ color: "var(--brand-ink)" }}>
-            <Icon name="time" sx={{ fontSize: 15 }} />
+          <span className="ml-auto inline-flex items-center gap-1.5 font-medium text-brand-ink">
+            <Clock className="size-[15px]" />
             กำลังบันทึก…
           </span>
         )}
@@ -268,34 +258,11 @@ export default function TimetableBuilder({
           onClose={() => setAssignOpen(false)}
           onSaved={() => {
             setAssignOpen(false);
-            setToast({ open: true, message: "มอบหมายวิชาให้ห้องเรียบร้อย ลากวิชาลงตารางได้เลย", kind: "success" });
+            toast.success("มอบหมายวิชาให้ห้องเรียบร้อย ลากวิชาลงตารางได้เลย");
             router.refresh();
           }}
         />
       )}
-
-      <Snackbar
-        open={toast.open}
-        autoHideDuration={2600}
-        onClose={() => setToast((t) => ({ ...t, open: false }))}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <div
-          className="flex items-center gap-2.5 rounded-[12px] px-4 py-3 text-[13.5px] font-semibold"
-          style={{
-            backgroundColor: toast.kind === "error" ? "var(--danger-soft)" : "var(--bg)",
-            color: toast.kind === "error" ? "oklch(0.45 0.17 25)" : "var(--ink)",
-            border: `1px solid ${toast.kind === "error" ? "color-mix(in oklch, var(--danger) 30%, transparent)" : "var(--line)"}`,
-            boxShadow: "var(--shadow-lg)",
-          }}
-        >
-          <Icon
-            name={toast.kind === "error" ? "warning" : "success"}
-            sx={{ fontSize: 19, color: toast.kind === "error" ? "var(--danger)" : "var(--success)" }}
-          />
-          {toast.message}
-        </div>
-      </Snackbar>
     </div>
   );
 }

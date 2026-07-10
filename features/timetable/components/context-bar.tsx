@@ -1,8 +1,8 @@
 "use client";
 
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import Icon from "@/features/dashboard/components/icon";
+import { CalendarDays, CheckCircle2 } from "lucide-react";
+import { NativeSelect } from "@/components/ui/native-select";
+import { cn } from "@/lib/utils";
 import type { ContextOption } from "../types";
 
 interface ContextBarProps {
@@ -15,17 +15,6 @@ interface ContextBarProps {
   placed: number;
   total: number;
 }
-
-const selectSx = {
-  minWidth: 150,
-  backgroundColor: "var(--bg)",
-  borderRadius: "10px",
-  fontSize: 14,
-  fontWeight: 600,
-  "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--line-strong)" },
-  "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "var(--brand)" },
-  "& .MuiSelect-select": { paddingBlock: "9px" },
-};
 
 export default function ContextBar({
   terms,
@@ -42,50 +31,47 @@ export default function ContextBar({
     <div className="flex flex-wrap items-center gap-3">
       <label className="flex items-center gap-2">
         <span className="text-[13px] font-medium text-muted">ภาคเรียน</span>
-        <Select
+        <NativeSelect
           value={terms.some((t) => t.id === termId) ? termId : ""}
           onChange={(e) => onTermChange(e.target.value)}
-          size="small"
-          sx={selectSx}
-          displayEmpty
           disabled={terms.length === 0}
+          className="min-w-[150px] bg-card font-semibold"
+          aria-label="เลือกภาคเรียน"
         >
-          {terms.length === 0 && <MenuItem value="">— ไม่มีภาคเรียน —</MenuItem>}
+          {terms.length === 0 && <option value="">— ไม่มีภาคเรียน —</option>}
           {terms.map((t) => (
-            <MenuItem key={t.id} value={t.id}>
+            <option key={t.id} value={t.id}>
               {t.label}
-            </MenuItem>
+            </option>
           ))}
-        </Select>
+        </NativeSelect>
       </label>
       <label className="flex items-center gap-2">
         <span className="text-[13px] font-medium text-muted">ชั้นเรียน</span>
-        <Select
+        <NativeSelect
           value={classrooms.some((c) => c.id === classroomId) ? classroomId : ""}
           onChange={(e) => onClassroomChange(e.target.value)}
-          size="small"
-          sx={selectSx}
-          displayEmpty
           disabled={classrooms.length === 0}
+          className="min-w-[150px] bg-card font-semibold"
+          aria-label="เลือกชั้นเรียน"
         >
-          {classrooms.length === 0 && <MenuItem value="">— ไม่มีห้องเรียน —</MenuItem>}
+          {classrooms.length === 0 && <option value="">— ไม่มีห้องเรียน —</option>}
           {classrooms.map((c) => (
-            <MenuItem key={c.id} value={c.id}>
+            <option key={c.id} value={c.id}>
               {c.label}
-            </MenuItem>
+            </option>
           ))}
-        </Select>
+        </NativeSelect>
       </label>
 
       <div className="ml-auto flex items-center gap-2">
         <span
-          className="tabular inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold"
-          style={{
-            backgroundColor: complete ? "var(--success-soft)" : "var(--brand-soft)",
-            color: complete ? "oklch(0.42 0.1 152)" : "var(--brand-ink)",
-          }}
+          className={cn(
+            "tabular inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold",
+            complete ? "bg-success-soft text-[oklch(0.42_0.1_152)]" : "bg-brand-soft text-brand-ink",
+          )}
         >
-          <Icon name={complete ? "success" : "calendar"} sx={{ fontSize: 16 }} />
+          {complete ? <CheckCircle2 className="size-4" /> : <CalendarDays className="size-4" />}
           จัดแล้ว {placed}/{total} คาบ
         </span>
       </div>

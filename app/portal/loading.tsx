@@ -1,10 +1,10 @@
-import Skeleton from "@mui/material/Skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PortalLoading(): React.ReactNode {
   return (
     <div className="flex flex-col gap-6" aria-busy="true" aria-label="กำลังโหลด">
-      <Skeleton variant="rounded" height={120} sx={{ borderRadius: "20px", bgcolor: "var(--surface-sunken)" }} />
-      <Skeleton variant="rounded" height={360} sx={{ borderRadius: "16px", bgcolor: "var(--surface-sunken)" }} />
+      <Skeleton className="h-30 rounded-[20px]" />
+      <Skeleton className="h-90 rounded-2xl" />
     </div>
   );
 }
