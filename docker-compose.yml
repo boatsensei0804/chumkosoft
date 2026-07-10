@@ -110,6 +110,34 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  # Cloudflare Tunnel — exposes the app on a public HTTPS URL without opening a
+  # port or a static IP. Needed for LINE OA webhooks (public HTTPS callback) and
+  # for reaching the app off-network. Opt-in: only starts under the "tunnel"
+  # profile, so a plain `docker compose up` is unaffected.
+  #
+  # Setup (one time):
+  #   1. Cloudflare Zero Trust → Networks → Tunnels → Create a tunnel (Cloudflared).
+  #   2. Add a Public Hostname → Service = HTTP → URL = app:3000
+  #      (cloudflared shares this compose network, so it resolves the "app" host).
+  #   3. Copy the tunnel token into .env as CLOUDFLARE_TUNNEL_TOKEN, and set
+  #      APP_ALLOWED_ORIGINS to that public hostname (so Server Actions aren't blocked).
+  #   4. Rebuild the app (APP_ALLOWED_ORIGINS is read at build) and start:
+  #        docker compose --profile tunnel up -d --build
+  #   5. Point the LINE Messaging API webhook at https://<hostname>/api/line/webhook.
+  #
+  # Quick throwaway URL for testing (no account, random *.trycloudflare.com, changes
+  # each run): docker compose run --rm cloudflared tunnel --url http://app:3000
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: chumkosoft-cloudflared
+    restart: unless-stopped
+    profiles: ["tunnel"]
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - app
+
   # One-shot: waits for MinIO, then creates the app bucket.
   minio-setup:
     image: minio/mc:latest
