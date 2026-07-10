@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Icon from "@/features/dashboard/components/icon";
+import { CalendarDays, Clock } from "lucide-react";
 import { Segmented } from "./controls";
 import AcademicSettings from "./academic-settings";
 import PeriodSettings from "./period-settings";
@@ -23,8 +23,8 @@ export default function SettingsTabs({ years, periods }: SettingsTabsProps): Rea
         value={tab}
         onChange={(v) => setTab(v as Tab)}
         options={[
-          { value: "academic", label: "ปีการศึกษาและภาคเรียน", icon: <Icon name="calendar" sx={{ fontSize: 17 }} /> },
-          { value: "periods", label: "คาบเรียน", icon: <Icon name="time" sx={{ fontSize: 17 }} /> },
+          { value: "academic", label: "ปีการศึกษาและภาคเรียน", icon: <CalendarDays className="size-[17px]" /> },
+          { value: "periods", label: "คาบเรียน", icon: <Clock className="size-[17px]" /> },
         ]}
       />
 

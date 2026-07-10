@@ -2,25 +2,24 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Button from "@mui/material/Button";
-import Avatar from "@mui/material/Avatar";
-import Snackbar from "@mui/material/Snackbar";
-import Alert from "@mui/material/Alert";
-import Icon from "@/features/dashboard/components/icon";
+import { toast } from "sonner";
+import { Check, LogOut, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 import { checkInAction, checkOutAction } from "@/features/attendance/school-entry-actions";
 import type { SchoolEntryRoster as Roster, SchoolEntryState, SchoolEntryStudent } from "@/features/attendance/types";
 
-const STATE_META: Record<SchoolEntryState, { label: string; bg: string; fg: string }> = {
-  ABSENT: { label: "ยังไม่มา", bg: "var(--surface-sunken)", fg: "var(--muted)" },
-  IN: { label: "อยู่ในโรงเรียน", bg: "var(--success-soft)", fg: "oklch(0.42 0.1 152)" },
-  OUT: { label: "กลับแล้ว", bg: "var(--brand-soft)", fg: "var(--brand-ink)" },
+const STATE_META: Record<SchoolEntryState, { label: string; className: string }> = {
+  ABSENT: { label: "ยังไม่มา", className: "bg-surface-sunken text-muted" },
+  IN: { label: "อยู่ในโรงเรียน", className: "bg-success-soft text-[oklch(0.42_0.1_152)]" },
+  OUT: { label: "กลับแล้ว", className: "bg-brand-soft text-brand-ink" },
 };
 
 export default function SchoolEntryRoster({ roster }: { roster: Roster }): React.ReactNode {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startAction] = useTransition();
-  const [toast, setToast] = useState<{ severity: "success" | "error"; message: string } | null>(null);
 
   const counts = useMemo(() => {
     const acc = { present: 0, absent: 0 };
@@ -35,17 +34,21 @@ export default function SchoolEntryRoster({ roster }: { roster: Roster }): React
     setPendingId(studentId);
     startAction(async () => {
       const result = await action(studentId, roster.date);
-      setToast({ severity: result.ok ? "success" : "error", message: result.message ?? (result.ok ? "บันทึกแล้ว" : "ไม่สำเร็จ") });
+      if (result.ok) {
+        toast.success(result.message ?? "บันทึกแล้ว");
+        router.refresh();
+      } else {
+        toast.error(result.message ?? "ไม่สำเร็จ");
+      }
       setPendingId(null);
-      if (result.ok) router.refresh();
     });
   }
 
   if (roster.students.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-[16px] px-6 py-16 text-center" style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)" }}>
-        <span className="grid size-12 place-items-center rounded-full" style={{ backgroundColor: "var(--surface-2)", color: "var(--faint)" }} aria-hidden="true">
-          <Icon name="groups" sx={{ fontSize: 24 }} />
+      <div className="flex flex-col items-center gap-3 rounded-2xl border border-line bg-card px-6 py-16 text-center">
+        <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint" aria-hidden="true">
+          <Users className="size-6" />
         </span>
         <p className="text-[15px] font-semibold text-ink-strong">ไม่มีนักเรียนให้แสดง</p>
         <p className="text-[13.5px] text-muted">ยังไม่มีนักเรียนลงทะเบียนในภาคเรียนปัจจุบัน หรือในชั้นเรียนที่เลือก</p>
@@ -56,29 +59,21 @@ export default function SchoolEntryRoster({ roster }: { roster: Roster }): React
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2 text-[12.5px]">
-        <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold" style={{ backgroundColor: "var(--success-soft)", color: "oklch(0.42 0.1 152)" }}>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-1 font-semibold text-[oklch(0.42_0.1_152)]">
           มาแล้ว <span className="tabular">{counts.present}</span>
         </span>
-        <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold" style={{ backgroundColor: "var(--surface-sunken)", color: "var(--muted)" }}>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-sunken px-2.5 py-1 font-semibold text-muted">
           ยังไม่มา <span className="tabular">{counts.absent}</span>
         </span>
       </div>
 
-      <div className="overflow-hidden rounded-[16px]" style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)" }}>
+      <div className="overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
         <ul className="flex flex-col">
           {roster.students.map((s) => (
             <EntryRow key={s.studentId} student={s} pending={pendingId === s.studentId} onCheckIn={() => run(s.studentId, checkInAction)} onCheckOut={() => run(s.studentId, checkOutAction)} />
           ))}
         </ul>
       </div>
-
-      <Snackbar open={toast !== null} autoHideDuration={4000} onClose={() => setToast(null)} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
-        {toast ? (
-          <Alert severity={toast.severity} variant="filled" onClose={() => setToast(null)} sx={{ borderRadius: "var(--radius-sm)" }}>
-            {toast.message}
-          </Alert>
-        ) : undefined}
-      </Snackbar>
     </div>
   );
 }
@@ -96,9 +91,11 @@ function EntryRow({
 }): React.ReactNode {
   const meta = STATE_META[student.state];
   return (
-    <li className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between" style={{ borderBottom: "1px solid var(--line)" }}>
+    <li className="flex flex-col gap-3 border-b border-line px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
-        <Avatar sx={{ width: 34, height: 34, bgcolor: "var(--brand-soft)", color: "var(--brand-ink)", fontSize: 13 }}>{student.name.charAt(0)}</Avatar>
+        <Avatar className="size-[34px]">
+          <AvatarFallback className="bg-brand-soft text-[13px] font-semibold text-brand-ink">{student.name.charAt(0)}</AvatarFallback>
+        </Avatar>
         <div className="min-w-0">
           <p className="truncate text-[14px] font-semibold text-ink-strong">{student.name}</p>
           <p className="tabular text-[12px] text-muted">
@@ -108,13 +105,9 @@ function EntryRow({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ backgroundColor: meta.bg, color: meta.fg }}>
-          {meta.label}
-        </span>
+        <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-semibold", meta.className)}>{meta.label}</span>
         {student.isLate && student.state !== "ABSENT" && (
-          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11.5px] font-semibold" style={{ backgroundColor: "var(--warning-soft)", color: "oklch(0.5 0.12 55)" }}>
-            มาสาย
-          </span>
+          <span className="inline-flex items-center rounded-full bg-warning-soft px-2 py-0.5 text-[11.5px] font-semibold text-[oklch(0.5_0.12_55)]">มาสาย</span>
         )}
         {student.checkInAt && (
           <span className="tabular text-[12.5px] text-muted">
@@ -124,13 +117,13 @@ function EntryRow({
         )}
 
         {student.state === "ABSENT" && (
-          <Button size="small" variant="contained" disabled={pending} onClick={onCheckIn} startIcon={<Icon name="check" sx={{ fontSize: 16 }} />}>
-            บันทึกเข้า
+          <Button size="sm" disabled={pending} onClick={onCheckIn}>
+            <Check className="size-4" /> บันทึกเข้า
           </Button>
         )}
         {student.state === "IN" && (
-          <Button size="small" variant="outlined" disabled={pending} onClick={onCheckOut} startIcon={<Icon name="logout" sx={{ fontSize: 16 }} />}>
-            บันทึกออก
+          <Button size="sm" variant="outline" disabled={pending} onClick={onCheckOut}>
+            <LogOut className="size-4" /> บันทึกออก
           </Button>
         )}
       </div>

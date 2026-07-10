@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import TextField from "@mui/material/TextField";
-import MenuItem from "@mui/material/MenuItem";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import type { ClassroomOption } from "@/features/attendance/types";
 
 interface SchoolEntryControlsProps {
@@ -22,34 +23,23 @@ export default function SchoolEntryControls({ classrooms, classroomId, date }: S
   }
 
   return (
-    <div
-      className="flex flex-col gap-3 rounded-[16px] p-4 sm:flex-row sm:items-end"
-      style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)" }}
-    >
-      <TextField
-        label="ชั้นเรียน"
-        select
-        value={classroomId}
-        onChange={(e) => navigate(e.target.value, date)}
-        fullWidth
-        sx={{ maxWidth: { sm: 300 } }}
-      >
-        <MenuItem value="">ทุกชั้นเรียน</MenuItem>
-        {classrooms.map((c) => (
-          <MenuItem key={c.id} value={c.id}>
-            {c.code} · {c.gradeLevel}
-          </MenuItem>
-        ))}
-      </TextField>
+    <div className="flex flex-col gap-3 rounded-2xl border border-line bg-card p-4 shadow-sm sm:flex-row sm:items-end">
+      <div className="flex flex-col gap-1.5 sm:max-w-[300px] sm:flex-1">
+        <Label htmlFor="entry-classroom">ชั้นเรียน</Label>
+        <NativeSelect id="entry-classroom" value={classroomId} onChange={(e) => navigate(e.target.value, date)}>
+          <option value="">ทุกชั้นเรียน</option>
+          {classrooms.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.code} · {c.gradeLevel}
+            </option>
+          ))}
+        </NativeSelect>
+      </div>
 
-      <TextField
-        label="วันที่"
-        type="date"
-        value={date}
-        onChange={(e) => navigate(classroomId, e.target.value)}
-        sx={{ maxWidth: { sm: 200 } }}
-        slotProps={{ inputLabel: { shrink: true } }}
-      />
+      <div className="flex flex-col gap-1.5 sm:w-[200px]">
+        <Label htmlFor="entry-date">วันที่</Label>
+        <Input id="entry-date" type="date" value={date} onChange={(e) => navigate(classroomId, e.target.value)} />
+      </div>
     </div>
   );
 }

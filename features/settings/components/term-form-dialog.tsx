@@ -1,14 +1,11 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import TextField from "@mui/material/TextField";
-import MenuItem from "@mui/material/MenuItem";
-import Button from "@mui/material/Button";
-import Alert from "@mui/material/Alert";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { saveTermAction } from "@/features/settings/actions";
 import { idleAction } from "@/types/form";
 import type { TermSetting } from "@/features/settings/types";
@@ -28,26 +25,12 @@ interface TermFormDialogProps {
   onSaved: () => void;
 }
 
-export default function TermFormDialog({
-  open,
-  academicYearId,
-  term,
-  suggestedNumber,
-  onClose,
-  onSaved,
-}: TermFormDialogProps): React.ReactNode {
+export default function TermFormDialog({ open, academicYearId, term, suggestedNumber, onClose, onSaved }: TermFormDialogProps): React.ReactNode {
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { borderRadius: "var(--radius-lg)" } } }} aria-labelledby="term-form-title">
-      {open && (
-        <Body
-          key={term?.id ?? "new"}
-          academicYearId={academicYearId}
-          term={term}
-          suggestedNumber={suggestedNumber}
-          onClose={onClose}
-          onSaved={onSaved}
-        />
-      )}
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="sm:max-w-sm">
+        {open && <Body key={term?.id ?? "new"} academicYearId={academicYearId} term={term} suggestedNumber={suggestedNumber} onClose={onClose} onSaved={onSaved} />}
+      </DialogContent>
     </Dialog>
   );
 }
@@ -67,6 +50,7 @@ function Body({
 }): React.ReactNode {
   const [state, formAction, pending] = useActionState(saveTermAction, idleAction);
   const isEdit = term !== null;
+  const err = state.fieldErrors ?? {};
 
   useEffect(() => {
     if (state.ok) onSaved();
@@ -74,92 +58,60 @@ function Body({
 
   return (
     <form action={formAction}>
-      <DialogTitle id="term-form-title" sx={{ fontWeight: 700, color: "var(--ink-strong)" }}>
-        {isEdit ? "แก้ไขภาคเรียน" : "เพิ่มภาคเรียน"}
-      </DialogTitle>
-      <DialogContent>
-        <input type="hidden" name="academicYearId" value={academicYearId} />
-        {term && <input type="hidden" name="id" value={term.id} />}
-        {state.message && !state.ok && (
-          <Alert severity="error" sx={{ mb: 2, borderRadius: "var(--radius-sm)" }}>
-            {state.message}
-          </Alert>
-        )}
-        <div className="flex flex-col gap-4 pt-1">
-          <div className="grid grid-cols-[110px_1fr] gap-4">
-            <TextField
-              name="number"
-              label="ภาคเรียนที่"
-              type="number"
-              defaultValue={term?.number ?? suggestedNumber}
-              required
-              disabled={pending}
-              error={Boolean(state.fieldErrors?.number)}
-              helperText={state.fieldErrors?.number}
-              slotProps={{ htmlInput: { min: 1, max: 6 } }}
-            />
-            <TextField
-              name="name"
-              label="ชื่อภาคเรียน"
-              defaultValue={term?.name ?? ""}
-              required
-              fullWidth
-              autoFocus
-              disabled={pending}
-              error={Boolean(state.fieldErrors?.name)}
-              helperText={state.fieldErrors?.name}
-              placeholder="เช่น ภาคเรียนที่ 1"
-            />
+      <DialogHeader>
+        <DialogTitle>{isEdit ? "แก้ไขภาคเรียน" : "เพิ่มภาคเรียน"}</DialogTitle>
+      </DialogHeader>
+
+      <input type="hidden" name="academicYearId" value={academicYearId} />
+      {term && <input type="hidden" name="id" value={term.id} />}
+
+      {state.message && !state.ok && (
+        <p className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{state.message}</p>
+      )}
+
+      <div className="flex flex-col gap-4 py-4">
+        <div className="grid grid-cols-[110px_1fr] gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="term-number">ภาคเรียนที่</Label>
+            <Input id="term-number" name="number" type="number" min={1} max={6} defaultValue={term?.number ?? suggestedNumber} required disabled={pending} aria-invalid={Boolean(err.number)} />
+            {err.number && <p className="text-xs text-destructive">{err.number}</p>}
           </div>
-          <TextField
-            name="startDate"
-            label="วันเปิดภาคเรียน"
-            type="date"
-            defaultValue={term?.startDate ?? ""}
-            required
-            fullWidth
-            disabled={pending}
-            error={Boolean(state.fieldErrors?.startDate)}
-            helperText={state.fieldErrors?.startDate}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-          <TextField
-            name="endDate"
-            label="วันปิดภาคเรียน"
-            type="date"
-            defaultValue={term?.endDate ?? ""}
-            required
-            fullWidth
-            disabled={pending}
-            error={Boolean(state.fieldErrors?.endDate)}
-            helperText={state.fieldErrors?.endDate}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-          <TextField
-            name="status"
-            label="สถานะ"
-            select
-            defaultValue={term?.status ?? "UPCOMING"}
-            required
-            fullWidth
-            disabled={pending}
-          >
-            {STATUS_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </TextField>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="term-name">ชื่อภาคเรียน</Label>
+            <Input id="term-name" name="name" defaultValue={term?.name ?? ""} required autoFocus disabled={pending} aria-invalid={Boolean(err.name)} placeholder="เช่น ภาคเรียนที่ 1" />
+            {err.name && <p className="text-xs text-destructive">{err.name}</p>}
+          </div>
         </div>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-        <Button onClick={onClose} disabled={pending} variant="text">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="term-start">วันเปิดภาคเรียน</Label>
+          <Input id="term-start" name="startDate" type="date" defaultValue={term?.startDate ?? ""} required disabled={pending} aria-invalid={Boolean(err.startDate)} />
+          {err.startDate && <p className="text-xs text-destructive">{err.startDate}</p>}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="term-end">วันปิดภาคเรียน</Label>
+          <Input id="term-end" name="endDate" type="date" defaultValue={term?.endDate ?? ""} required disabled={pending} aria-invalid={Boolean(err.endDate)} />
+          {err.endDate && <p className="text-xs text-destructive">{err.endDate}</p>}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="term-status">สถานะ</Label>
+          <NativeSelect id="term-status" name="status" defaultValue={term?.status ?? "UPCOMING"} required disabled={pending}>
+            {STATUS_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+      </div>
+
+      <DialogFooter>
+        <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>
           ยกเลิก
         </Button>
-        <Button type="submit" disabled={pending} variant="contained">
+        <Button type="submit" disabled={pending}>
           {pending ? "กำลังบันทึก…" : isEdit ? "บันทึก" : "เพิ่ม"}
         </Button>
-      </DialogActions>
+      </DialogFooter>
     </form>
   );
 }
