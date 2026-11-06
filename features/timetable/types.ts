@@ -28,6 +28,8 @@ export type SubjectColor =
 /** A course offered to this class this term — the draggable unit. */
 export interface Offering {
   id: string;
+  classroomId?: string;
+  classroomCode?: string;
   courseCode: string;
   courseName: string;
   teacherId: string;
@@ -50,6 +52,7 @@ export interface PlacedSlot {
 export interface ExternalBusy {
   day: DayKey;
   periodId: string;
+  classroomIds?: string[];
   teacherIds: string[];
   roomIds: string[];
 }
@@ -58,6 +61,43 @@ export interface ExternalBusy {
 export interface ContextOption {
   id: string;
   label: string;
+}
+
+export interface ScheduleOverviewSlot {
+  id: string;
+  offeringId: string;
+  classroomId: string;
+  classroomCode: string;
+  teacherId: string;
+  teacherName: string;
+  courseCode: string;
+  courseName: string;
+  roomName: string;
+  roomId: string;
+  day: DayKey;
+  periodId: string;
+}
+
+export interface ScheduleOverviewTeacher {
+  id: string;
+  name: string;
+}
+
+export interface ScheduleOverviewClassroom {
+  id: string;
+  code: string;
+  gradeLevel: string;
+  requiredPeriods: number;
+  slots: number;
+}
+
+export interface ScheduleOverviewData {
+  classrooms: ScheduleOverviewClassroom[];
+  teachers: ScheduleOverviewTeacher[];
+  slots: ScheduleOverviewSlot[];
+  offerings: Offering[];
+  requiredPeriods: number;
+  placedPeriods: number;
 }
 
 export type ConflictKind = "class" | "teacher" | "room";

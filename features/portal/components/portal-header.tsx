@@ -9,8 +9,7 @@ export default function PortalHeader({ user }: { user: CurrentUser }): React.Rea
     <header
       className="sticky top-0 z-10 flex h-16 items-center gap-3 px-4 sm:px-6"
       style={{
-        backgroundColor: "color-mix(in oklch, var(--bg) 85%, transparent)",
-        backdropFilter: "saturate(1.4) blur(8px)",
+        backgroundColor: "var(--bg)",
         borderBottom: "1px solid var(--line)",
       }}
     >

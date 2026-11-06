@@ -21,12 +21,12 @@ export default function SidebarContent({ user, onNavigate }: SidebarContentProps
     .filter((g) => g.items.length > 0);
 
   return (
-    <div className="flex h-full flex-col" style={{ backgroundColor: "var(--surface-2)" }}>
+    <div className="flex h-full flex-col bg-bg">
       <div className="flex h-16 items-center px-5" style={{ borderBottom: "1px solid var(--line)" }}>
         <BrandMark />
       </div>
 
-      <nav aria-label="เมนูหลัก" className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 py-5">
+      <nav aria-label="เมนูหลัก" className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-4">
         {groups.map((group, i) => (
           <div key={group.label ?? `group-${i}`}>
             {group.label && (

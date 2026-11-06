@@ -36,21 +36,10 @@ export default function AppShell({ children, user, today }: AppShellProps): Reac
   }, []);
 
   return (
-    <div className="relative min-h-dvh bg-[linear-gradient(180deg,var(--surface)_0%,oklch(0.945_0.024_254)_100%)]">
-      {/* Ambient guilloché texture — fixed, behind all content */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-0"
-        style={{
-          backgroundImage:
-            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='22'%3E%3Cpath d='M0 11 Q 32 -1 64 11 T 128 11' fill='none' stroke='%233b5bdb' stroke-width='1' stroke-opacity='0.08'/%3E%3C/svg%3E\")",
-          backgroundSize: "128px 22px",
-          maskImage: "linear-gradient(180deg, transparent 0%, #000 22%, #000 100%)",
-        }}
-      />
+    <div className="relative min-h-dvh bg-surface">
 
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-[var(--z-sticky)] hidden w-[264px] border-r border-line lg:block">
+      <aside className="fixed inset-y-0 left-0 z-[var(--z-sticky)] hidden w-[256px] border-r border-line bg-bg lg:block">
         <SidebarContent user={user} />
       </aside>
 
@@ -65,9 +54,9 @@ export default function AppShell({ children, user, today }: AppShellProps): Reac
       </Sheet>
 
       {/* Content column */}
-      <div className="relative z-10 lg:pl-[264px]">
+      <div className="relative z-10 lg:pl-[256px]">
         <TopBar user={user} onOpenNav={() => setNavOpen(true)} today={today} onOpenPalette={() => setPaletteOpen(true)} />
-        <main className="mx-auto max-w-[1400px] px-4 py-6 lg:px-8 lg:py-8">{children}</main>
+        <main className="mx-auto max-w-[1480px] px-4 py-5 sm:px-6 sm:py-7 xl:px-8">{children}</main>
       </div>
 
       <CommandPalette open={paletteOpen} items={commandItems} onClose={() => setPaletteOpen(false)} />

@@ -8,8 +8,8 @@ export default function WeeklySchedule({ overview }: { overview: PortalOverview 
 
   return (
     <div
-      className="overflow-x-auto rounded-[16px]"
-      style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)" }}
+      className="overflow-x-auto rounded-xl"
+      style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)" }}
     >
       <div className="min-w-[720px]">
         {/* Header row: weekdays */}

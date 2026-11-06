@@ -27,7 +27,7 @@ interface StaffFormDialogProps {
 export default function StaffFormDialog({ open, staff, canManageAccounts, onClose, onSaved }: StaffFormDialogProps): React.ReactNode {
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="flex max-h-[min(90dvh,900px)] flex-col overflow-hidden p-0 sm:max-w-2xl">
         {open && <StaffFormBody key={staff?.id ?? "new"} staff={staff} canManageAccounts={canManageAccounts} onClose={onClose} onSaved={onSaved} />}
       </DialogContent>
     </Dialog>
@@ -78,18 +78,19 @@ function StaffFormBody({
   }
 
   return (
-    <form action={formAction}>
-      <DialogHeader>
+    <form action={formAction} className="flex min-h-0 flex-1 flex-col">
+      <DialogHeader className="shrink-0 border-b border-line px-6 py-5 pr-14 text-left">
         <DialogTitle>{isEdit ? "แก้ไขข้อมูลบุคลากร" : "เพิ่มบุคลากร"}</DialogTitle>
       </DialogHeader>
 
       {staff && <input type="hidden" name="id" value={staff.id} />}
 
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
       {state.message && !state.ok && (
-        <p className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{state.message}</p>
+        <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{state.message}</p>
       )}
 
-      <div className="flex flex-col gap-4 py-4">
+      <div className="flex flex-col gap-4">
         {/* ── ข้อมูลทั่วไป ── */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-[130px_1fr]">
           {txt("prefix", "คำนำหน้า", staff?.prefix ?? null, { placeholder: "อ." })}
@@ -114,7 +115,12 @@ function StaffFormBody({
           {txt("position", "ตำแหน่ง", staff?.position ?? null, { placeholder: "เช่น หัวหน้ากลุ่มสาระคณิตศาสตร์" })}
         </div>
 
-        {/* ── ข้อมูลส่วนบุคคล ── */}
+        <details className="group rounded-xl border border-line bg-surface px-4">
+          <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 py-3 text-sm font-semibold text-ink-strong [&::-webkit-details-marker]:hidden">
+            <span>ข้อมูลส่วนบุคคล</span>
+            <span className="text-xs font-normal text-muted">วันเกิด บัตรประชาชน และช่องทางติดต่อ</span>
+          </summary>
+          <div className="flex flex-col gap-4 border-t border-line py-4">
         <SectionHeading>ข้อมูลส่วนบุคคล</SectionHeading>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {txt("birthDate", "วัน/เดือน/ปีเกิด", staff?.birthDate ?? null, { type: "date" })}
@@ -124,6 +130,8 @@ function StaffFormBody({
           {txt("phone", "เบอร์โทรศัพท์", staff?.phone ?? null)}
           {txt("email", "อีเมล", staff?.email ?? null, { type: "email" })}
         </div>
+          </div>
+        </details>
 
         {canManageAccounts && (
           <>
@@ -150,6 +158,12 @@ function StaffFormBody({
           </>
         )}
 
+        <details className="group rounded-xl border border-line bg-surface px-4">
+          <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 py-3 text-sm font-semibold text-ink-strong [&::-webkit-details-marker]:hidden">
+            <span>ข้อมูลวิชาชีพและการศึกษา</span>
+            <span className="text-xs font-normal text-muted">ข้อมูลราชการ ใบประกอบวิชาชีพ และวุฒิการศึกษา</span>
+          </summary>
+          <div className="flex flex-col gap-4 border-t border-line py-4">
         {/* ── ข้อมูลราชการและใบประกอบวิชาชีพ ── */}
         <SectionHeading>ข้อมูลราชการและใบประกอบวิชาชีพ</SectionHeading>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -174,9 +188,12 @@ function StaffFormBody({
           {txt("fieldMaster", "สาขา", staff?.fieldMaster ?? null)}
           {txt("universityMaster", "มหาวิทยาลัย", staff?.universityMaster ?? null)}
         </div>
+          </div>
+        </details>
+      </div>
       </div>
 
-      <DialogFooter>
+      <DialogFooter className="shrink-0 border-t border-line bg-bg px-6 py-3 sm:flex-row sm:justify-end">
         <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>
           ยกเลิก
         </Button>

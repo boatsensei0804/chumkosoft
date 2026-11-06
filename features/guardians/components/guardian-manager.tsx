@@ -32,8 +32,6 @@ type Editing = { studentId: string; studentName: string; guardian: GuardianRow |
 function detailLine(g: GuardianRow): string {
   return [
     g.relation,
-    g.occupation && `อาชีพ ${g.occupation}`,
-    g.monthlyIncome !== null ? `รายได้ ${g.monthlyIncome.toLocaleString("th-TH")} บาท/เดือน` : null,
     g.phone && `โทร ${g.phone}`,
   ]
     .filter(Boolean)
@@ -97,7 +95,7 @@ export default function GuardianManager({ page, query, classrooms, classroomId }
             <p className="text-[15px] font-semibold text-ink-strong">ไม่พบนักเรียนในห้องที่เลือก</p>
           </div>
         ) : (
-          <div className={cn("overflow-hidden rounded-2xl border border-line bg-card shadow-sm transition-opacity", isPending && "opacity-60")}>
+          <div className={cn("overflow-x-auto rounded-xl border border-line bg-card transition-opacity", isPending && "opacity-60")}>
             <Table className="min-w-[820px]">
               <TableHeader>
                 <TableRow>

@@ -34,7 +34,7 @@ interface StudentFormDialogProps {
 export default function StudentFormDialog({ open, student, classrooms, onClose, onSaved }: StudentFormDialogProps): React.ReactNode {
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="flex max-h-[min(90dvh,900px)] flex-col overflow-hidden p-0 sm:max-w-3xl">
         {open && <StudentFormBody key={student?.id ?? "new"} student={student} classrooms={classrooms} onClose={onClose} onSaved={onSaved} />}
       </DialogContent>
     </Dialog>
@@ -121,18 +121,19 @@ function StudentFormBody({
   }
 
   return (
-    <form action={formAction}>
-      <DialogHeader>
+    <form action={formAction} className="flex min-h-0 flex-1 flex-col">
+      <DialogHeader className="shrink-0 border-b border-line px-6 py-5 pr-14 text-left">
         <DialogTitle>{isEdit ? "แก้ไขข้อมูลนักเรียน" : "เพิ่มนักเรียน"}</DialogTitle>
       </DialogHeader>
 
       {s && <input type="hidden" name="id" value={s.id} />}
 
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
       {state.message && !state.ok && (
-        <p className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{state.message}</p>
+        <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{state.message}</p>
       )}
 
-      <div className="flex flex-col gap-4 py-4">
+      <div className="flex flex-col gap-4">
         {/* ── ข้อมูลทั่วไป ── */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-[130px_1fr]">
           {txt("prefix", "คำนำหน้า", s?.prefix ?? null, { placeholder: "ด.ช. / น.ส." })}
@@ -166,6 +167,12 @@ function StudentFormBody({
           </p>
         </div>
 
+        <details className="group rounded-xl border border-line bg-surface px-4">
+          <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 py-3 text-sm font-semibold text-ink-strong [&::-webkit-details-marker]:hidden">
+            <span>ข้อมูลเพิ่มเติม</span>
+            <span className="text-xs font-normal text-muted">ข้อมูลติดต่อ สุขภาพ ที่อยู่ และข้อมูลประกอบ</span>
+          </summary>
+          <div className="flex flex-col gap-4 border-t border-line py-4">
         {/* ── ตัวตน / ติดต่อ ── */}
         <SectionHeading>ข้อมูลตัวตนและติดต่อ</SectionHeading>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -258,8 +265,11 @@ function StudentFormBody({
         <SectionHeading>ความพิการ (เลือกได้หลายข้อ)</SectionHeading>
         {checkGroup("disabilities", DISABILITIES, s?.disabilities ?? [])}
       </div>
+        </details>
+      </div>
+      </div>
 
-      <DialogFooter>
+      <DialogFooter className="shrink-0 border-t border-line bg-bg px-6 py-3 sm:flex-row sm:justify-end">
         <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>
           ยกเลิก
         </Button>

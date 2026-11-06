@@ -6,6 +6,7 @@ import StudentsBrowser from "@/features/dashboard/components/students-browser";
 import { listStudentsPaginated, listClassroomOptions, getStudentStats } from "@/services/student-service";
 import { parsePage } from "@/types/pagination";
 import type { EnrolmentStatus } from "@/features/dashboard/types";
+import { getActiveTermLabel } from "@/services/dashboard-service";
 
 export const metadata: Metadata = {
   title: "นักเรียน · chumkosoft",
@@ -23,26 +24,27 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps):
   const params = await searchParams;
   const query = params.q ?? "";
   const filter = FILTERS.includes(params.filter as EnrolmentStatus) ? (params.filter as "all" | EnrolmentStatus) : "all";
-  const [result, classrooms, stats] = await Promise.all([
+  const [result, classrooms, stats, termLabel] = await Promise.all([
     listStudentsPaginated({ page: parsePage(params.page), search: query, filter }),
     listClassroomOptions(),
     getStudentStats(),
+    getActiveTermLabel(),
   ]);
 
   return (
     <>
       <PageHeader
         title="นักเรียน"
-        subtitle={`ทะเบียนนักเรียนทั้งหมด ${stats.total.toLocaleString("th-TH")} คน · ปีการศึกษา 2568`}
+        subtitle={`ทะเบียนนักเรียนทั้งหมด ${stats.total.toLocaleString("th-TH")} คน · ${termLabel}`}
       />
-      <StatStrip
+      {stats.total > 0 && <StatStrip
         items={[
           { label: "นักเรียนทั้งหมด", value: stats.total, hint: "คน", icon: GraduationCap, tone: "brand" },
           { label: "กำลังศึกษา", value: stats.active, hint: "คน", icon: CircleCheck, tone: "success" },
           { label: "รออนุมัติ", value: stats.pending, hint: "คน", icon: Clock, tone: "warning" },
           { label: "ลาพัก", value: stats.leave, hint: "คน", icon: PauseCircle, tone: "default" },
         ]}
-      />
+      />}
       <StudentsBrowser page={result} query={query} filter={filter} classrooms={classrooms} />
     </>
   );

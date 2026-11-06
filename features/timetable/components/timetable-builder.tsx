@@ -13,7 +13,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { toast } from "sonner";
-import { Info, Clock } from "lucide-react";
+import { Info, Clock, GraduationCap, Users } from "lucide-react";
 import ContextBar from "./context-bar";
 import Palette from "./palette";
 import Grid from "./grid";
@@ -25,6 +25,9 @@ import { placeSlotAction, moveSlotAction, removeSlotAction } from "@/app/dashboa
 import { deleteOfferingAction } from "@/features/classrooms/offering-actions";
 import type { ConflictResult, ContextOption, DayInfo, ExternalBusy, Offering, PeriodRow, PlacedSlot } from "../types";
 import type { OfferingOptions } from "@/features/classrooms/types";
+import type { ScheduleOverviewData } from "../types";
+import { NativeSelect } from "@/components/ui/native-select";
+import { cn } from "@/lib/utils";
 
 interface DragData {
   type: "offering" | "slot";
@@ -40,8 +43,8 @@ interface TimetableBuilderProps {
   days: DayInfo[];
   periods: PeriodRow[];
   offerings: Offering[];
-  initialSlots: PlacedSlot[];
   externalBusy: ExternalBusy[];
+  overview: ScheduleOverviewData;
 }
 
 export default function TimetableBuilder({
@@ -52,11 +55,13 @@ export default function TimetableBuilder({
   days,
   periods,
   offerings,
-  initialSlots,
   externalBusy,
+  overview,
 }: TimetableBuilderProps): React.ReactNode {
   const router = useRouter();
-  const [slots, setSlots] = useState<PlacedSlot[]>(() => initialSlots.map((s) => ({ ...s })));
+  const [editorMode, setEditorMode] = useState<"classroom" | "teacher">("classroom");
+  const [teacherId, setTeacherId] = useState(overview.teachers[0]?.id ?? "");
+  const [slots, setSlots] = useState<PlacedSlot[]>(() => overview.slots.map(({ id, offeringId, day, periodId }) => ({ id, offeringId, day, periodId })));
   const [active, setActive] = useState<DragData | null>(null);
   const [saving, setSaving] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
@@ -79,36 +84,59 @@ export default function TimetableBuilder({
     useSensor(KeyboardSensor),
   );
 
-  const offeringsById = useMemo(() => new Map(offerings.map((o) => [o.id, o])), [offerings]);
+  const allOfferingsById = useMemo(() => new Map(overview.offerings.map((o) => [o.id, o])), [overview.offerings]);
+  const visibleOfferings = useMemo(
+    () => editorMode === "classroom" ? offerings : overview.offerings.filter((offering) => offering.teacherId === teacherId),
+    [editorMode, offerings, overview.offerings, teacherId],
+  );
+  const visibleOfferingsById = useMemo(() => new Map(visibleOfferings.map((o) => [o.id, o])), [visibleOfferings]);
+  const visibleSlots = useMemo(() => slots.filter((slot) => {
+    const offering = allOfferingsById.get(slot.offeringId);
+    return editorMode === "classroom" ? offering?.classroomId === context?.classroomId : offering?.teacherId === teacherId;
+  }), [slots, allOfferingsById, editorMode, context?.classroomId, teacherId]);
+  const activeExternalBusy = useMemo<ExternalBusy[]>(() => {
+    if (editorMode === "classroom") return externalBusy;
+    const map = new Map<string, ExternalBusy>();
+    for (const slot of overview.slots) {
+      if (slot.teacherId === teacherId) continue;
+      const key = `${slot.day}:${slot.periodId}`;
+      const busy = map.get(key) ?? { day: slot.day, periodId: slot.periodId, classroomIds: [], teacherIds: [], roomIds: [] };
+      if (!busy.classroomIds?.includes(slot.classroomId)) busy.classroomIds?.push(slot.classroomId);
+      if (!busy.teacherIds.includes(slot.teacherId)) busy.teacherIds.push(slot.teacherId);
+      if (!busy.roomIds.includes(slot.roomId)) busy.roomIds.push(slot.roomId);
+      map.set(key, busy);
+    }
+    return [...map.values()];
+  }, [editorMode, externalBusy, overview.slots, teacherId]);
   const periodsById = useMemo(() => new Map(periods.map((p) => [p.id, p])), [periods]);
   const daysByKey = useMemo(() => new Map(days.map((d) => [d.key, d])), [days]);
 
   const slotsByCell = useMemo(() => {
     const map = new Map<string, PlacedSlot>();
-    for (const s of slots) map.set(`${s.day}:${s.periodId}`, s);
+    for (const s of visibleSlots) map.set(`${s.day}:${s.periodId}`, s);
     return map;
-  }, [slots]);
+  }, [visibleSlots]);
 
   const remainingById = useMemo(() => {
     const map = new Map<string, number>();
-    for (const o of offerings) map.set(o.id, o.periodsPerWeek);
-    for (const s of slots) map.set(s.offeringId, (map.get(s.offeringId) ?? 0) - 1);
+    for (const o of visibleOfferings) map.set(o.id, o.periodsPerWeek);
+    for (const s of visibleSlots) map.set(s.offeringId, (map.get(s.offeringId) ?? 0) - 1);
     return map;
-  }, [offerings, slots]);
+  }, [visibleOfferings, visibleSlots]);
 
-  const totalRequired = useMemo(() => offerings.reduce((n, o) => n + o.periodsPerWeek, 0), [offerings]);
+  const totalRequired = useMemo(() => visibleOfferings.reduce((n, o) => n + o.periodsPerWeek, 0), [visibleOfferings]);
 
   const conflictFor = (day: string, periodId: string): ConflictResult | undefined => {
     if (!active) return undefined;
-    const offering = offeringsById.get(active.offeringId);
+    const offering = visibleOfferingsById.get(active.offeringId);
     if (!offering) return undefined;
     return checkConflict({
       offering,
       day: day as PlacedSlot["day"],
       periodId,
-      slots,
-      offeringsById,
-      externalBusy,
+      slots: visibleSlots,
+      offeringsById: visibleOfferingsById,
+      externalBusy: activeExternalBusy,
       ignoreSlotId: active.slotId,
     });
   };
@@ -123,7 +151,7 @@ export default function TimetableBuilder({
     if (!data || !e.over) return;
 
     const over = e.over.data.current as { day: PlacedSlot["day"]; periodId: string } | undefined;
-    const offering = offeringsById.get(data.offeringId);
+    const offering = visibleOfferingsById.get(data.offeringId);
     if (!over || !offering) return;
 
     // Instant client-side check for snappy feedback.
@@ -131,9 +159,9 @@ export default function TimetableBuilder({
       offering,
       day: over.day,
       periodId: over.periodId,
-      slots,
-      offeringsById,
-      externalBusy,
+      slots: visibleSlots,
+      offeringsById: visibleOfferingsById,
+      externalBusy: activeExternalBusy,
       ignoreSlotId: data.slotId,
     });
     if (!res.ok) {
@@ -182,7 +210,7 @@ export default function TimetableBuilder({
         return;
       }
       setSlots((prev) => prev.filter((s) => s.id !== slotId));
-      const offering = removed ? offeringsById.get(removed.offeringId) : undefined;
+      const offering = removed ? allOfferingsById.get(removed.offeringId) : undefined;
       if (offering) toast.success(`เอา ${offering.courseName} ออกแล้ว`);
     } finally {
       setSaving(false);
@@ -206,8 +234,9 @@ export default function TimetableBuilder({
     });
   }
 
-  const activeOffering = active ? offeringsById.get(active.offeringId) : undefined;
+  const activeOffering = active ? visibleOfferingsById.get(active.offeringId) : undefined;
   const placedForRemoving = removingOffering ? slots.filter((s) => s.offeringId === removingOffering.id).length : 0;
+  const teacherMode = editorMode === "teacher";
 
   return (
     <div className="flex flex-col gap-4">
@@ -218,9 +247,33 @@ export default function TimetableBuilder({
         classrooms={classrooms}
         classroomId={context?.classroomId ?? ""}
         onClassroomChange={(v) => changeContext({ classroom: v })}
-        placed={slots.length}
+        placed={visibleSlots.length}
         total={totalRequired}
+        showClassroom={!teacherMode}
       />
+
+      <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-line bg-bg px-4 py-3">
+        <div>
+          <p className="text-xs font-medium text-muted">จัดตารางโดยเลือกมุมมอง</p>
+          <div role="tablist" aria-label="จัดตารางตามห้องหรือครู" className="mt-2 inline-flex gap-1 rounded-lg bg-surface-2 p-1">
+            <button type="button" role="tab" aria-selected={!teacherMode} onClick={() => setEditorMode("classroom")} className={cn("inline-flex items-center gap-2 rounded-md px-3 py-2 text-[13px] font-semibold", !teacherMode ? "bg-bg text-brand-ink shadow-sm" : "text-muted hover:text-ink-strong")}>
+              <GraduationCap className="size-4" /> ตามชั้นเรียน
+            </button>
+            <button type="button" role="tab" aria-selected={teacherMode} onClick={() => setEditorMode("teacher")} className={cn("inline-flex items-center gap-2 rounded-md px-3 py-2 text-[13px] font-semibold", teacherMode ? "bg-bg text-brand-ink shadow-sm" : "text-muted hover:text-ink-strong")}>
+              <Users className="size-4" /> ตามครู
+            </button>
+          </div>
+        </div>
+        {teacherMode && (
+          <label className="flex min-w-[220px] flex-col gap-1.5 text-xs font-medium text-muted">
+            เลือกครูผู้สอน
+            <NativeSelect value={teacherId} onChange={(event) => setTeacherId(event.target.value)} disabled={overview.teachers.length === 0} className="bg-bg font-semibold">
+              {overview.teachers.length === 0 && <option value="">ยังไม่มีครูที่ได้รับมอบหมายวิชา</option>}
+              {overview.teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}
+            </NativeSelect>
+          </label>
+        )}
+      </div>
 
       <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-[12px] bg-brand-softer px-4 py-2.5 text-[12.5px] text-muted">
         <span className="inline-flex items-center gap-1.5 font-medium text-ink">
@@ -246,17 +299,21 @@ export default function TimetableBuilder({
       <DndContext id="timetable-dnd" sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActive(null)}>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[300px_1fr] lg:items-start">
           <Palette
-            offerings={offerings}
+            offerings={visibleOfferings}
             remainingById={remainingById}
             onAddSubject={() => setAssignOpen(true)}
-            canAddSubject={Boolean(context)}
+            canAddSubject={Boolean(context) && !teacherMode}
             onRemoveSubject={setRemovingOffering}
+            allowManage={!teacherMode}
+            title={teacherMode ? "วิชาที่ได้รับมอบหมาย" : "รายวิชาประจำห้อง"}
+            description={teacherMode ? "ลากคาบของครูไปจัดในตาราง" : "ลากวิชาจากห้องนี้ลงในช่องคาบ"}
+            emptyMessage={teacherMode ? "ครูคนนี้ยังไม่มีวิชาที่ได้รับมอบหมาย" : "ห้องนี้ยังไม่มีรายวิชา"}
           />
           <Grid
             days={days}
             periods={periods}
             slotsByCell={slotsByCell}
-            offeringsById={offeringsById}
+            offeringsById={visibleOfferingsById}
             dragging={active !== null}
             conflictFor={conflictFor}
             onRemove={handleRemove}
@@ -272,7 +329,7 @@ export default function TimetableBuilder({
         </DragOverlay>
       </DndContext>
 
-      {context && (
+      {context && !teacherMode && (
         <OfferingFormDialog
           open={assignOpen}
           classroomId={context.classroomId}
@@ -288,7 +345,7 @@ export default function TimetableBuilder({
       )}
 
       <ConfirmDialog
-        open={removingOffering !== null}
+        open={!teacherMode && removingOffering !== null}
         title="ลบรายวิชาออกจากห้อง"
         message={
           removingOffering

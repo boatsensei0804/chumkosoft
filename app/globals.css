@@ -1,4 +1,84 @@
 @import "tailwindcss";
+
+@page line-a4 {
+  size: A4 portrait;
+  margin: 8mm;
+}
+
+.line-print-page {
+  page: line-a4;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 4mm;
+  width: 194mm;
+  height: 281mm;
+  padding: 0;
+  break-after: page;
+  page-break-after: always;
+}
+
+.line-parent-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 0.35mm solid #d7e0e9;
+  border-radius: 4mm;
+  background: white;
+  color: #18324c;
+  padding: 4mm;
+  box-shadow: 0 1mm 3mm rgb(24 50 76 / 8%);
+  font-family: "Noto Sans Thai", "Thonburi", sans-serif;
+}
+
+.line-parent-card__head {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 0.3mm solid #e1e8ef;
+  padding-bottom: 2mm;
+  color: #52677c;
+  font-size: 8pt;
+  font-weight: 700;
+}
+
+.line-parent-card__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 33mm;
+  gap: 2mm;
+  align-items: center;
+  padding: 3mm 0 2mm;
+}
+
+.line-parent-card__identity { min-width: 0; }
+.line-parent-card__eyebrow { color: #718399; font-size: 7pt; font-weight: 700; }
+.line-parent-card__identity h2 { margin-top: 1mm; overflow-wrap: anywhere; font-size: 12pt; font-weight: 800; line-height: 1.3; }
+.line-parent-card__identity h3 { margin-top: 1mm; overflow-wrap: anywhere; font-size: 10pt; font-weight: 750; line-height: 1.3; }
+.line-parent-card__identity p:not(.line-parent-card__eyebrow) { margin-top: 0.7mm; color: #52677c; font-size: 8pt; }
+.line-parent-card__rule { margin: 2.5mm 0; border-top: 0.3mm solid #e1e8ef; }
+.line-parent-card__qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 1mm; color: #52677c; font-size: 7pt; text-align: center; }
+.line-parent-card__qr { width: 29mm; height: 29mm; object-fit: contain; }
+.line-parent-card__steps { display: flex; flex: 1; flex-direction: column; justify-content: center; gap: 1mm; border-radius: 2.5mm; background: #f3f7fb; padding: 2.5mm; font-size: 7.4pt; line-height: 1.35; }
+.line-parent-card__steps b { color: #15558b; font-size: 8pt; }
+.line-parent-card__code { display: flex; align-items: center; justify-content: space-between; gap: 2mm; margin-top: 2.5mm; border: 0.35mm dashed #82acd0; border-radius: 2.5mm; background: #f4f9ff; padding: 2mm 2.5mm; }
+.line-parent-card__code span { color: #52677c; font-size: 7pt; }
+.line-parent-card__code strong { color: #124f86; font-size: 14pt; font-weight: 850; letter-spacing: 1.4mm; }
+.line-parent-card footer { overflow: hidden; margin-top: 1.5mm; color: #718399; font-size: 6pt; text-overflow: ellipsis; white-space: nowrap; }
+
+@media screen {
+  .line-parent-card { min-height: 86mm; }
+}
+
+@media print {
+  body:has(.line-print-root) * { visibility: hidden !important; }
+  body:has(.line-print-root) .line-print-root,
+  body:has(.line-print-root) .line-print-root * { visibility: visible !important; }
+  body:has(.line-print-root) .line-print-root { position: absolute; inset: 0; width: 100%; min-height: 0; background: white; padding: 0; }
+  .line-print-toolbar { display: none !important; }
+  .line-print-pages { display: block; max-width: none; }
+  .line-print-page { gap: 4mm; margin: 0; }
+  .line-parent-card { border-radius: 3mm; box-shadow: none; }
+}
 @import "tw-animate-css";
 
 /*
@@ -13,11 +93,11 @@
 */
 
 :root {
-  /* Surfaces — pure white cards over a cool blue-white app background */
-  --bg: oklch(1 0 0);
-  --surface: oklch(0.978 0.012 250);
-  --surface-2: oklch(0.966 0.015 250);
-  --surface-sunken: oklch(0.948 0.018 250);
+  /* Quiet neutral surfaces: strong reading contrast without decorative noise. */
+  --bg: oklch(0.995 0.002 255);
+  --surface: oklch(0.979 0.004 255);
+  --surface-2: oklch(0.965 0.006 255);
+  --surface-sunken: oklch(0.946 0.008 255);
 
   /* Ink — cool near-black; strong contrast for hours of reading */
   --ink: oklch(0.25 0.022 262);
@@ -28,21 +108,21 @@
   --faint: oklch(0.54 0.028 256);
 
   /* Lines — cool hairlines */
-  --line: oklch(0.905 0.014 252);
-  --line-strong: oklch(0.84 0.02 252);
+  --line: oklch(0.9 0.008 255);
+  --line-strong: oklch(0.82 0.012 255);
 
   /* Brand — azure blue identity: logo, active nav, selection, key figures, chart */
-  --brand: oklch(0.55 0.15 252);
-  --brand-strong: oklch(0.45 0.15 254);
-  --brand-ink: oklch(0.42 0.14 254);
-  --brand-soft: oklch(0.95 0.032 250);
-  --brand-softer: oklch(0.972 0.02 250);
+  --brand: oklch(0.52 0.13 252);
+  --brand-strong: oklch(0.43 0.13 254);
+  --brand-ink: oklch(0.38 0.12 254);
+  --brand-soft: oklch(0.95 0.022 250);
+  --brand-softer: oklch(0.976 0.012 250);
 
   /* Primary action — blue gradient (see MUI theme); solid values are the fallback */
-  --primary: oklch(0.48 0.15 253);
-  --primary-hover: oklch(0.42 0.15 254);
-  --primary-grad-from: oklch(0.54 0.15 250);
-  --primary-grad-to: oklch(0.42 0.15 256);
+  --primary: oklch(0.45 0.14 253);
+  --primary-hover: oklch(0.39 0.14 254);
+  --primary-grad-from: oklch(0.48 0.14 250);
+  --primary-grad-to: oklch(0.42 0.14 256);
   --on-primary: oklch(0.99 0.006 250);
 
   /* Blue — second brand tone (Thai academic gold-on-blue heraldry) */
@@ -76,12 +156,12 @@
   --focus: oklch(0.52 0.15 252);
 
   /* Radii + elevation */
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 16px;
-  --shadow-sm: 0 1px 2px oklch(0.4 0.08 258 / 0.08), 0 1px 3px oklch(0.4 0.08 258 / 0.05);
-  --shadow-md: 0 6px 16px oklch(0.4 0.09 258 / 0.09), 0 2px 5px oklch(0.4 0.08 258 / 0.06);
-  --shadow-lg: 0 16px 40px oklch(0.4 0.1 258 / 0.12), 0 4px 10px oklch(0.4 0.08 258 / 0.06);
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 1px 2px oklch(0.3 0.02 255 / 0.05);
+  --shadow-md: 0 4px 12px oklch(0.3 0.02 255 / 0.08);
+  --shadow-lg: 0 12px 32px oklch(0.3 0.02 255 / 0.12);
 }
 
 @theme inline {
@@ -157,12 +237,38 @@ html {
 }
 
 body {
-  background: var(--bg);
+  background: var(--surface);
   color: var(--ink);
   font-family: var(--font-sans);
   font-feature-settings: "cv01", "ss01";
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: oklch(0.86 0.055 250);
+  color: var(--ink-strong);
+}
+
+/* Consistent, compact vertical rhythm for school-office workflows. */
+[data-slot="table-container"] {
+  max-width: 100%;
+}
+
+[data-slot="table"] th {
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+[data-slot="table"] td {
+  height: 3.25rem;
+}
+
+[data-slot="table"] tbody tr:hover {
+  background: var(--brand-softer);
 }
 
 /* Numeric alignment for tables and figures */

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, Download, Plus } from "lucide-react";
+import { CalendarDays, Plus } from "lucide-react";
 
 interface WelcomeBandProps {
   greeting: string;
@@ -22,33 +22,9 @@ export default function WelcomeBand({
 }: WelcomeBandProps): React.ReactNode {
   return (
     <section
-      className="relative overflow-hidden rounded-[20px] px-6 py-6 sm:px-8 sm:py-7"
-      style={{
-        background: "linear-gradient(115deg, var(--band-from) 0%, var(--band-to) 100%)",
-        boxShadow: "var(--shadow-md)",
-      }}
+      className="relative overflow-hidden rounded-xl px-5 py-5 sm:px-7 sm:py-6"
+      style={{ background: "var(--band-from)" }}
     >
-      {/* Guilloché line pattern */}
-      <svg
-        className="pointer-events-none absolute inset-0 h-full w-full"
-        aria-hidden="true"
-        preserveAspectRatio="none"
-      >
-        <defs>
-          <pattern id="guilloche" width="128" height="22" patternUnits="userSpaceOnUse">
-            <path d="M0 11 Q 32 -1 64 11 T 128 11" fill="none" stroke="var(--band-line)" strokeWidth="1" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#guilloche)" />
-      </svg>
-
-      {/* Soft gold glow, top-right — ties gold to the blue band */}
-      <div
-        className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full"
-        style={{ background: "radial-gradient(circle, var(--brand) 0%, transparent 62%)", opacity: 0.22 }}
-        aria-hidden="true"
-      />
-
       <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
@@ -76,15 +52,7 @@ export default function WelcomeBand({
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2.5">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-[10px] px-4 py-2.5 text-[14px] font-semibold transition-colors"
-            style={{ border: "1px solid var(--band-line)", color: "var(--band-ink)" }}
-          >
-            <Download className="size-[18px]" />
-            ส่งออกรายงาน
-          </button>
+        <div className="flex flex-wrap items-center gap-2.5">
           <Link
             href="/dashboard/students"
             className="inline-flex items-center gap-2 rounded-[10px] px-4 py-2.5 text-[14px] font-semibold transition-transform hover:-translate-y-px"

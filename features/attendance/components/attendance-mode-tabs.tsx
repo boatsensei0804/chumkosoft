@@ -1,13 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ClipboardCheck, UserCheck, type LucideIcon } from "lucide-react";
+import { CalendarCheck, ClipboardCheck, UserCheck, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Mode = "class" | "school";
+type Mode = "class" | "school" | "homeroom";
 
 const TABS: { key: Mode; label: string; icon: LucideIcon }[] = [
   { key: "class", label: "เช็คชื่อเข้าเรียน", icon: ClipboardCheck },
+  { key: "homeroom", label: "เช็คชื่อประจำห้อง", icon: CalendarCheck },
   { key: "school", label: "เช็คชื่อเข้าโรงเรียน", icon: UserCheck },
 ];
 

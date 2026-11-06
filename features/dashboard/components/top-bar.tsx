@@ -23,7 +23,7 @@ interface TopBarProps {
 
 export default function TopBar({ user, onOpenNav, today, onOpenPalette }: TopBarProps): React.ReactNode {
   return (
-    <header className="sticky top-0 z-[var(--z-sticky)] flex h-16 items-center gap-3 border-b border-line bg-[color-mix(in_oklch,var(--bg)_82%,transparent)] px-4 backdrop-blur-md backdrop-saturate-150 lg:px-8">
+    <header className="sticky top-0 z-[var(--z-sticky)] flex h-16 items-center gap-3 border-b border-line bg-bg px-4 lg:px-8">
       <Button variant="ghost" size="icon" onClick={onOpenNav} aria-label="เปิดเมนู" className="lg:hidden">
         <Menu className="size-5" />
       </Button>
@@ -34,7 +34,7 @@ export default function TopBar({ user, onOpenNav, today, onOpenPalette }: TopBar
         onClick={onOpenPalette}
         aria-label="ค้นหาและไปยังหน้า (⌘K)"
         aria-keyshortcuts="Meta+K Control+K"
-        className="flex w-full max-w-md items-center gap-2.5 rounded-[10px] border border-line bg-surface-2 px-3 py-2 text-left transition-colors hover:border-line-strong"
+        className="flex w-full max-w-lg items-center gap-2.5 rounded-lg border border-line bg-surface px-3 py-2 text-left transition-colors hover:border-line-strong"
       >
         <Search className="size-[19px] text-faint" />
         <span className="flex-1 text-[14px] text-faint">ค้นหาเมนู ไปยังหน้า…</span>

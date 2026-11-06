@@ -2,6 +2,7 @@ import "server-only";
 
 import { randomInt } from "node:crypto";
 import * as repo from "@/features/line/repositories/line-repository";
+import * as guardianRepo from "@/features/guardians/repositories/guardian-repository";
 import { pushText, replyText } from "@/lib/line";
 import { logAudit } from "@/lib/audit";
 import type { ActionResult } from "@/types/form";
@@ -22,6 +23,22 @@ export async function generateLinkCode(guardianId: string): Promise<ActionResult
   const code = String(randomInt(100000, 1000000));
   await repo.setLinkCode(guardianId, code);
   return { ok: true, message: "สร้างรหัสผูกบัญชีแล้ว", code };
+}
+
+/** Generate missing link codes for every not-yet-linked guardian in a classroom. */
+export async function prepareClassroomLinkCodes(classroomId: string): Promise<ActionResult & { created?: number }> {
+  const rows = await guardianRepo.findClassroomGuardiansForPrint(classroomId);
+  const needsCode = rows.flatMap((student) => student.guardians)
+    .filter((guardian) => !guardian.lineUserId && !guardian.lineLinkCode);
+  const used = new Set<string>();
+  const updates = needsCode.map((guardian) => {
+    let code = String(randomInt(100000, 1000000));
+    while (used.has(code)) code = String(randomInt(100000, 1000000));
+    used.add(code);
+    return { id: guardian.id, code };
+  });
+  const created = await guardianRepo.updateMissingGuardianLinkCodes(updates);
+  return { ok: true, created, message: `เตรียมรหัสใหม่ ${created} ราย · คงรหัสเดิมที่ยังไม่ถูกใช้ไว้แล้ว` };
 }
 
 export async function unlinkGuardianLine(guardianId: string): Promise<ActionResult> {

@@ -100,6 +100,47 @@ export async function countGuardiansByLine(search: string, classroomId?: string)
   return { linked, pending };
 }
 
+/** Full classroom guardian roster for batch LINE setup and printable handouts. */
+export async function findClassroomGuardiansForPrint(classroomId: string) {
+  const termId = await activeTermId();
+  if (!termId) return [];
+  return prisma.student.findMany({
+    where: {
+      isDeleted: false,
+      enrollments: { some: { classroomId, termId, isDeleted: false } },
+      guardians: { some: { isDeleted: false } },
+    },
+    orderBy: { studentCode: "asc" },
+    select: {
+      id: true,
+      studentCode: true,
+      prefix: true,
+      firstName: true,
+      lastName: true,
+      enrollments: {
+        where: { classroomId, termId, isDeleted: false },
+        take: 1,
+        select: { classroom: { select: { code: true } } },
+      },
+      guardians: {
+        where: { isDeleted: false },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, prefix: true, fullName: true, relation: true, lineUserId: true, lineLinkCode: true },
+      },
+    },
+  });
+}
+
+/** Add codes only to guardians who are not linked and do not already have a pending code. */
+export async function updateMissingGuardianLinkCodes(rows: { id: string; code: string }[]): Promise<number> {
+  if (rows.length === 0) return 0;
+  const results = await prisma.$transaction(rows.map(({ id, code }) => prisma.guardian.updateMany({
+    where: { id, isDeleted: false, lineUserId: null, lineLinkCode: null },
+    data: { lineLinkCode: code },
+  })));
+  return results.reduce((count, result) => count + result.count, 0);
+}
+
 export async function studentExists(id: string): Promise<boolean> {
   return (await prisma.student.findFirst({ where: { id, isDeleted: false }, select: { id: true } })) !== null;
 }

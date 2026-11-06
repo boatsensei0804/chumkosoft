@@ -55,6 +55,14 @@ export async function findEntries(termId: string, date: Date) {
   });
 }
 
+/** School gate records for a calendar month. */
+export async function findEntriesInRange(termId: string, start: Date, endExclusive: Date) {
+  return prisma.schoolEntry.findMany({
+    where: { termId, date: { gte: start, lt: endExclusive }, isDeleted: false },
+    select: { studentId: true, date: true, checkInAt: true, isLate: true },
+  });
+}
+
 export async function getStudentTermRef(studentId: string, termId: string): Promise<boolean> {
   const enrollment = await prisma.enrollment.findFirst({
     where: { studentId, termId, isDeleted: false },

@@ -18,13 +18,13 @@ export default async function RoomsPage(): Promise<React.ReactNode> {
   return (
     <>
       <PageHeader title="ห้องและสถานที่" subtitle={`ห้องเรียน ห้องปฏิบัติการ และสถานที่ ${rooms.length.toLocaleString("th-TH")} แห่ง`} />
-      <StatStrip
+      {rooms.length > 0 && <StatStrip
         items={[
           { label: "ห้องทั้งหมด", value: rooms.length, hint: "แห่ง", icon: MapPin, tone: "brand" },
           { label: "ใช้สอนอยู่", value: inUse, hint: "แห่ง", icon: BookOpen, tone: "success" },
           { label: "ว่าง", value: rooms.length - inUse, hint: "แห่ง", icon: DoorOpen, tone: "default" },
         ]}
-      />
+      />}
       <RoomsBrowser rooms={rooms} />
     </>
   );

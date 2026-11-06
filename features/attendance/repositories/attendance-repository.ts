@@ -70,6 +70,24 @@ export async function findAttendance(offeringId: string, date: Date) {
   });
 }
 
+/** Attendance records for a calendar month. Dates are stored at UTC midnight. */
+export async function findAttendanceInRange(offeringId: string, start: Date, endExclusive: Date) {
+  return prisma.classAttendance.findMany({
+    where: { courseOfferingId: offeringId, date: { gte: start, lt: endExclusive }, isDeleted: false },
+    select: { studentId: true, date: true, status: true },
+  });
+}
+
+/** Weekdays on which this offering is scheduled. */
+export async function findScheduledWeekdays(offeringId: string) {
+  const slots = await prisma.timetableSlot.findMany({
+    where: { courseOfferingId: offeringId, isDeleted: false },
+    select: { dayOfWeek: true },
+    distinct: ["dayOfWeek"],
+  });
+  return slots.map((slot) => slot.dayOfWeek);
+}
+
 export async function getStaffIdForUser(userId: string): Promise<string | null> {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { staffId: true } });
   return user?.staffId ?? null;

@@ -22,7 +22,7 @@ export default async function ScanPage(): Promise<React.ReactNode> {
   return (
     <div
       className="min-h-dvh"
-      style={{ background: "linear-gradient(180deg, var(--surface) 0%, oklch(0.945 0.024 254) 100%)" }}
+      style={{ background: "var(--surface)" }}
     >
       <PortalHeader user={user} />
 

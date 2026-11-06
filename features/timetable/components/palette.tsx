@@ -9,9 +9,10 @@ interface PaletteCardProps {
   offering: Offering;
   remaining: number;
   onRemove: () => void;
+  allowRemove: boolean;
 }
 
-function PaletteCard({ offering, remaining, onRemove }: PaletteCardProps): React.ReactNode {
+function PaletteCard({ offering, remaining, onRemove, allowRemove }: PaletteCardProps): React.ReactNode {
   const done = remaining <= 0;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `offering:${offering.id}`,
@@ -40,7 +41,7 @@ function PaletteCard({ offering, remaining, onRemove }: PaletteCardProps): React
       <span className="mt-0.5 h-9 w-1.5 shrink-0 self-stretch rounded-full" style={{ backgroundColor: c.bar }} aria-hidden="true" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[13.5px] font-semibold text-ink-strong">{offering.courseName}</p>
-        <p className="truncate text-[12px] text-muted">{offering.teacherName}</p>
+        <p className="truncate text-[12px] text-muted">{offering.classroomCode ? `ห้อง ${offering.classroomCode} · ` : ""}{offering.teacherName}</p>
         <p className="truncate text-[11.5px] text-faint">{offering.roomName}</p>
       </div>
       {done ? (
@@ -54,7 +55,7 @@ function PaletteCard({ offering, remaining, onRemove }: PaletteCardProps): React
         </span>
       )}
       {/* Remove the whole subject from this class (cascades to placed periods). stopPropagation keeps drag from firing. */}
-      <button
+      {allowRemove && <button
         type="button"
         aria-label={`ลบวิชา ${offering.courseName} ออกจากห้อง`}
         onPointerDown={(e) => e.stopPropagation()}
@@ -65,7 +66,7 @@ function PaletteCard({ offering, remaining, onRemove }: PaletteCardProps): React
         className="grid size-7 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-danger-soft hover:text-danger"
       >
         <Trash2 className="size-[16px]" />
-      </button>
+      </button>}
     </div>
   );
 }
@@ -76,9 +77,13 @@ interface PaletteProps {
   onAddSubject: () => void;
   canAddSubject: boolean;
   onRemoveSubject: (offering: Offering) => void;
+  allowManage?: boolean;
+  title?: string;
+  description?: string;
+  emptyMessage?: string;
 }
 
-export default function Palette({ offerings, remainingById, onAddSubject, canAddSubject, onRemoveSubject }: PaletteProps): React.ReactNode {
+export default function Palette({ offerings, remainingById, onAddSubject, canAddSubject, onRemoveSubject, allowManage = true, title = "รายวิชา", description = "ลากวิชาไปวางในช่องคาบเรียน", emptyMessage = "ห้องนี้ยังไม่มีรายวิชา" }: PaletteProps): React.ReactNode {
   const remainingTotal = offerings.reduce((sum, o) => sum + Math.max(0, remainingById.get(o.id) ?? 0), 0);
 
   return (
@@ -88,18 +93,18 @@ export default function Palette({ offerings, remainingById, onAddSubject, canAdd
     >
       <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: "1px solid var(--line)" }}>
         <div>
-          <h2 className="text-[14px] font-bold text-ink-strong">รายวิชา</h2>
-          <p className="text-[12px] text-muted">ลากวิชาไปวางในช่องคาบเรียน</p>
+          <h2 className="text-[14px] font-bold text-ink-strong">{title}</h2>
+          <p className="text-[12px] text-muted">{description}</p>
         </div>
         <span
           className="tabular rounded-full px-2 py-0.5 text-[12px] font-semibold"
           style={{ backgroundColor: remainingTotal === 0 ? "var(--success-soft)" : "var(--brand-soft)", color: remainingTotal === 0 ? "oklch(0.42 0.1 152)" : "var(--brand-ink)" }}
         >
-          {remainingTotal === 0 ? "จัดครบแล้ว" : `ค้าง ${remainingTotal} คาบ`}
+          {offerings.length === 0 ? "ยังไม่มีรายวิชา" : remainingTotal === 0 ? "จัดครบแล้ว" : `ค้าง ${remainingTotal} คาบ`}
         </span>
       </div>
 
-      <div className="px-3 pt-3">
+      {allowManage && <div className="px-3 pt-3">
         <button
           type="button"
           onClick={onAddSubject}
@@ -110,18 +115,18 @@ export default function Palette({ offerings, remainingById, onAddSubject, canAdd
           <Plus className="size-[18px]" />
           มอบหมายวิชาให้ครู
         </button>
-      </div>
+      </div>}
 
       <div className="flex flex-col gap-2 overflow-y-auto p-3" style={{ maxHeight: "calc(100dvh - 320px)" }}>
         {offerings.length > 0 ? (
-          offerings.map((o) => <PaletteCard key={o.id} offering={o} remaining={remainingById.get(o.id) ?? 0} onRemove={() => onRemoveSubject(o)} />)
+          offerings.map((o) => <PaletteCard key={o.id} offering={o} remaining={remainingById.get(o.id) ?? 0} onRemove={() => onRemoveSubject(o)} allowRemove={allowManage} />)
         ) : (
           <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
             <span className="grid size-10 place-items-center rounded-full" style={{ backgroundColor: "var(--surface-2)", color: "var(--faint)" }} aria-hidden="true">
               <BookOpen className="size-5" />
             </span>
-            <p className="text-[13px] font-medium text-ink">ห้องนี้ยังไม่มีรายวิชา</p>
-            <p className="text-[12px] text-muted">กด “มอบหมายวิชาให้ครู” เพื่อเพิ่มวิชาและผู้สอน แล้วจึงลากลงตาราง</p>
+            <p className="text-[13px] font-medium text-ink">{emptyMessage}</p>
+            <p className="text-[12px] text-muted">{allowManage ? "กด “มอบหมายวิชาให้ครู” เพื่อเพิ่มวิชาและผู้สอน แล้วจึงลากลงตาราง" : "เมื่อมอบหมายวิชาให้ครูแล้ว วิชาจะแสดงในรายการนี้"}</p>
           </div>
         )}
       </div>

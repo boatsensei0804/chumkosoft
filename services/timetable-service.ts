@@ -8,6 +8,8 @@ import type {
   PeriodRow,
   PlacedSlot,
   SubjectColor,
+  ScheduleOverviewData,
+  ScheduleOverviewSlot,
 } from "@/features/timetable/types";
 
 const DAYS: DayInfo[] = [
@@ -30,7 +32,7 @@ function formatRoom(r: { code: string; name: string | null; building: string | n
 }
 
 export interface TimetableBoard {
-  context: { termId: string; termName: string; classroomId: string; classroomCode: string } | null;
+  context: { termId: string; termName: string; academicYearId: string; classroomId: string; classroomCode: string } | null;
   terms: ContextOption[];
   classrooms: ContextOption[];
   days: DayInfo[];
@@ -82,6 +84,8 @@ export async function getTimetableBoard(opts?: { termId?: string; classroomId?: 
 
   const offerings: Offering[] = offeringRows.map((o, i) => ({
     id: o.id,
+    classroomId: ctx.classroomId,
+    classroomCode: ctx.classroomCode,
     courseCode: o.course.code,
     courseName: o.course.name,
     teacherId: o.teacherId,
@@ -104,9 +108,11 @@ export async function getTimetableBoard(opts?: { termId?: string; classroomId?: 
     const key = `${b.dayOfWeek}:${b.periodId}`;
     let e = busyMap.get(key);
     if (!e) {
-      e = { day: b.dayOfWeek as DayKey, periodId: b.periodId, teacherIds: [], roomIds: [] };
+      e = { day: b.dayOfWeek as DayKey, periodId: b.periodId, classroomIds: [], teacherIds: [], roomIds: [] };
       busyMap.set(key, e);
     }
+    e.classroomIds ??= [];
+    if (!e.classroomIds.includes(b.classroomId)) e.classroomIds.push(b.classroomId);
     if (!e.teacherIds.includes(b.teacherId)) e.teacherIds.push(b.teacherId);
     if (!e.roomIds.includes(b.roomId)) e.roomIds.push(b.roomId);
   }
@@ -115,6 +121,7 @@ export async function getTimetableBoard(opts?: { termId?: string; classroomId?: 
     context: {
       termId: ctx.termId,
       termName: ctx.termName,
+      academicYearId: ctx.academicYearId,
       classroomId: ctx.classroomId,
       classroomCode: ctx.classroomCode,
     },
@@ -125,6 +132,70 @@ export async function getTimetableBoard(opts?: { termId?: string; classroomId?: 
     offerings,
     slots,
     externalBusy: [...busyMap.values()],
+  };
+}
+
+/** School-wide timetable summary data, including courses with no placed slots yet. */
+export async function getTimetableOverview(termId: string, academicYearId: string): Promise<ScheduleOverviewData> {
+  const [offeringRows, classroomRows] = await Promise.all([
+    repo.getScheduleOverview(termId),
+    repo.listScheduleClassrooms(academicYearId),
+  ]);
+  const roomCounts = new Map<string, { required: number; placed: number }>();
+  const teachers = new Map<string, ScheduleOverviewData["teachers"][number]>();
+  const slots: ScheduleOverviewSlot[] = [];
+  const offerings: Offering[] = offeringRows.map((offering, index) => ({
+    id: offering.id,
+    classroomId: offering.classroomId,
+    classroomCode: offering.classroom.code,
+    courseCode: offering.course.code,
+    courseName: offering.course.name,
+    teacherId: offering.teacherId,
+    teacherName: formatTeacher(offering.teacher),
+    roomId: offering.roomId,
+    roomName: formatRoom(offering.room),
+    color: COLORS[index % COLORS.length],
+    periodsPerWeek: offering.periodsPerWeek,
+  }));
+
+  for (let index = 0; index < offeringRows.length; index += 1) {
+    const offering = offeringRows[index];
+    const counts = roomCounts.get(offering.classroomId) ?? { required: 0, placed: 0 };
+    counts.required += offering.periodsPerWeek;
+    counts.placed += offering.timetableSlots.length;
+    roomCounts.set(offering.classroomId, counts);
+    teachers.set(offering.teacherId, { id: offering.teacherId, name: formatTeacher(offering.teacher) });
+    for (const slot of offering.timetableSlots) {
+      slots.push({
+        id: slot.id,
+        offeringId: offering.id,
+        classroomId: offering.classroomId,
+        classroomCode: offering.classroom.code,
+        teacherId: offering.teacherId,
+        teacherName: formatTeacher(offering.teacher),
+        courseCode: offering.course.code,
+        courseName: offering.course.name,
+        roomName: formatRoom(offering.room),
+        roomId: offering.roomId,
+        day: slot.dayOfWeek as DayKey,
+        periodId: slot.periodId,
+      });
+    }
+  }
+
+  const classrooms = classroomRows.map((classroom) => ({
+    ...classroom,
+    requiredPeriods: roomCounts.get(classroom.id)?.required ?? 0,
+    slots: roomCounts.get(classroom.id)?.placed ?? 0,
+  }));
+
+  return {
+    classrooms,
+    teachers: [...teachers.values()].sort((a, b) => a.name.localeCompare(b.name, "th")),
+    slots,
+    offerings,
+    requiredPeriods: offeringRows.reduce((total, offering) => total + offering.periodsPerWeek, 0),
+    placedPeriods: slots.length,
   };
 }
 

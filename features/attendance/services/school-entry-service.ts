@@ -2,7 +2,7 @@ import "server-only";
 
 import * as repo from "@/features/attendance/repositories/school-entry-repository";
 import { getScanSetting } from "@/features/kiosk/repositories/kiosk-repository";
-import type { ClassroomOption, SchoolEntryRoster, SchoolEntryState, SchoolEntryStudent } from "@/features/attendance/types";
+import type { AttendanceCalendarDay, ClassroomOption, SchoolEntryRoster, SchoolEntryState, SchoolEntryStudent } from "@/features/attendance/types";
 import type { ActionResult } from "@/types/form";
 
 /** Parses "yyyy-mm-dd" to a stable UTC-midnight Date. */
@@ -26,6 +26,63 @@ function bangkokTime(date: Date | null): string | null {
 
 function formatName(s: { prefix: string | null; firstName: string; lastName: string }): string {
   return [s.prefix, `${s.firstName} ${s.lastName}`].filter(Boolean).join(" ");
+}
+
+function monthRange(month: string): { start: Date; end: Date; year: number; monthIndex: number } | null {
+  const match = /^(\d{4})-(\d{2})$/.exec(month);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1;
+  if (monthIndex < 0 || monthIndex > 11) return null;
+  return {
+    start: new Date(Date.UTC(year, monthIndex, 1)),
+    end: new Date(Date.UTC(year, monthIndex + 1, 1)),
+    year,
+    monthIndex,
+  };
+}
+
+/** Persisted gate check-in counts per day, restricted to the user's roster. */
+export async function getSchoolEntryCalendar(
+  month: string,
+  classroomId: string,
+  advisorStaffId?: string | null,
+): Promise<AttendanceCalendarDay[] | null> {
+  const range = monthRange(month);
+  if (!range) return null;
+  const term = await repo.getActiveTerm();
+  if (!term) return [];
+
+  const [students, records] = await Promise.all([
+    repo.findEnrolledStudents(term.id, classroomId || undefined, advisorStaffId),
+    repo.findEntriesInRange(term.id, range.start, range.end),
+  ]);
+  const studentIds = new Set(students.map((student) => student.id));
+  const byDate = new Map<string, typeof records>();
+  for (const record of records) {
+    if (!studentIds.has(record.studentId) || !record.checkInAt) continue;
+    const key = record.date.toISOString().slice(0, 10);
+    const group = byDate.get(key) ?? [];
+    group.push(record);
+    byDate.set(key, group);
+  }
+
+  const total = students.length;
+  const numberOfDays = new Date(Date.UTC(range.year, range.monthIndex + 1, 0)).getUTCDate();
+  return Array.from({ length: numberOfDays }, (_, index): AttendanceCalendarDay => {
+    const date = new Date(Date.UTC(range.year, range.monthIndex, index + 1));
+    const iso = date.toISOString().slice(0, 10);
+    const checkedRecords = byDate.get(iso) ?? [];
+    const checked = checkedRecords.length;
+    return {
+      date: iso,
+      total,
+      checked,
+      unchecked: Math.max(0, total - checked),
+      late: checkedRecords.filter((record) => record.isLate).length,
+      state: total === 0 ? "no-session" : checked === 0 ? "empty" : checked >= total ? "complete" : "partial",
+    };
+  });
 }
 
 /** Classroom filter options. `advisorStaffId` limits to a teacher's homeroom(s); null = admin (all). */

@@ -55,6 +55,14 @@ enum AttendanceStatus {
   EXCUSED
 }
 
+enum DailyRollCallStatus {
+  PRESENT
+  LATE
+  ABSENT
+  SICK_LEAVE
+  PERSONAL_LEAVE
+}
+
 enum EntryMethod {
   CARD
   QR
@@ -140,6 +148,7 @@ model Term {
   timetableSlots   TimetableSlot[]
   enrollments      Enrollment[]
   classAttendances ClassAttendance[]
+  dailyAttendances DailyAttendance[]
   schoolEntries    SchoolEntry[]
 
   isDeleted Boolean   @default(false)
@@ -198,6 +207,7 @@ model Classroom {
   enrollments    Enrollment[]
   offerings      CourseOffering[]
   timetableSlots TimetableSlot[]
+  dailyAttendances DailyAttendance[]
 
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
@@ -305,6 +315,7 @@ model Student {
 
   enrollments      Enrollment[]
   classAttendances ClassAttendance[]
+  dailyAttendances DailyAttendance[]
   schoolEntries    SchoolEntry[]
   guardians        Guardian[]
   faceTemplates    FaceTemplate[]
@@ -349,6 +360,7 @@ model Staff {
   offerings          CourseOffering[]
   timetableSlots     TimetableSlot[]
   recordedAttendance ClassAttendance[] @relation("AttendanceRecorder")
+  recordedDailyAttendance DailyAttendance[] @relation("DailyAttendanceRecorder")
   user               User?
 
   isDeleted Boolean   @default(false)
@@ -521,6 +533,33 @@ model ClassAttendance {
 
   @@unique([courseOfferingId, studentId, date]) // one roll-call record per student per meeting
   @@index([termId, date])
+}
+
+// ---------------------------------------------------------------------------
+// Daily homeroom roll call — separate from subject attendance and gate entries
+// ---------------------------------------------------------------------------
+
+model DailyAttendance {
+  id           String                @id @default(cuid())
+  termId       String
+  term         Term                  @relation(fields: [termId], references: [id])
+  classroomId  String
+  classroom    Classroom             @relation(fields: [classroomId], references: [id])
+  studentId    String
+  student      Student               @relation(fields: [studentId], references: [id])
+  date         DateTime
+  status       DailyRollCallStatus
+  note         String?
+  recordedById String?
+  recordedBy   Staff?                @relation("DailyAttendanceRecorder", fields: [recordedById], references: [id])
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([termId, studentId, date])
+  @@index([termId, date, classroomId])
 }
 
 // ---------------------------------------------------------------------------

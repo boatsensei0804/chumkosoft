@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import PageHeader from "@/features/dashboard/components/page-header";
-import TimetableBuilder from "@/features/timetable/components/timetable-builder";
-import { getTimetableBoard } from "@/services/timetable-service";
+import TimetableWorkspace from "@/features/timetable/components/timetable-workspace";
+import { getTimetableBoard, getTimetableOverview } from "@/services/timetable-service";
 import { listOfferingOptions } from "@/features/classrooms/services/classroom-service";
 
 export const metadata: Metadata = {
@@ -20,13 +20,16 @@ export default async function TimetablePage({ searchParams }: TimetablePageProps
     getTimetableBoard({ termId: term, classroomId: classroom }),
     listOfferingOptions(),
   ]);
+  const overview = board.context
+    ? await getTimetableOverview(board.context.termId, board.context.academicYearId)
+    : { classrooms: [], teachers: [], slots: [], offerings: [], requiredPeriods: 0, placedPeriods: 0 };
   return (
     <>
       <PageHeader
         title="จัดตารางสอน"
-        subtitle="เลือกภาคเรียนและชั้นเรียน มอบหมายวิชาให้ครู แล้วลากวิชาลงในตารางรายสัปดาห์ ระบบจะป้องกันการจัดคาบชนของครู ห้อง และชั้นเรียนให้อัตโนมัติ และบันทึกลงฐานข้อมูลทันที"
+        subtitle="ดูภาพรวมคาบเรียนแยกตามห้องและวัน เปิดตารางรายห้องหรือรายครู แล้วสลับไปจัดหรือแก้คาบสอนได้จากหน้าเดียว"
       />
-      <TimetableBuilder
+      <TimetableWorkspace
         key={`${board.context?.termId ?? "none"}:${board.context?.classroomId ?? "none"}`}
         context={board.context}
         terms={board.terms}
@@ -35,8 +38,8 @@ export default async function TimetablePage({ searchParams }: TimetablePageProps
         days={board.days}
         periods={board.periods}
         offerings={board.offerings}
-        initialSlots={board.slots}
         externalBusy={board.externalBusy}
+        overview={overview}
       />
     </>
   );

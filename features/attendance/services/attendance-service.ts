@@ -3,7 +3,7 @@ import "server-only";
 import type { DayOfWeek } from "@prisma/client";
 import * as repo from "@/features/attendance/repositories/attendance-repository";
 import type { SaveAttendanceInput } from "@/features/attendance/schemas/attendance-schema";
-import type { AttendanceOffering, AttendanceRoster, AttendanceStatusKey, RosterStudent } from "@/features/attendance/types";
+import type { AttendanceCalendarDay, AttendanceOffering, AttendanceRoster, AttendanceStatusKey, RosterStudent } from "@/features/attendance/types";
 import type { ActionResult } from "@/types/form";
 
 const WEEKDAY_BY_INDEX: Record<number, DayOfWeek> = {
@@ -28,6 +28,66 @@ function parseCalendarDate(iso: string): { date: Date; day: DayOfWeek } | null {
 
 function formatName(s: { prefix: string | null; firstName: string; lastName: string }): string {
   return [s.prefix, `${s.firstName} ${s.lastName}`].filter(Boolean).join(" ");
+}
+
+function monthRange(month: string): { start: Date; end: Date; year: number; monthIndex: number } | null {
+  const match = /^(\d{4})-(\d{2})$/.exec(month);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1;
+  if (monthIndex < 0 || monthIndex > 11) return null;
+  return {
+    start: new Date(Date.UTC(year, monthIndex, 1)),
+    end: new Date(Date.UTC(year, monthIndex + 1, 1)),
+    year,
+    monthIndex,
+  };
+}
+
+/** Persisted roll-call counts for each scheduled day in a month. */
+export async function getAttendanceCalendar(
+  offeringId: string,
+  month: string,
+  teacherStaffId?: string | null,
+): Promise<AttendanceCalendarDay[] | null> {
+  const range = monthRange(month);
+  if (!range) return null;
+
+  const [term, offering] = await Promise.all([repo.getActiveTerm(), repo.getOfferingRef(offeringId)]);
+  if (!term || !offering || offering.termId !== term.id) return null;
+  if (teacherStaffId && offering.teacherId !== teacherStaffId) return null;
+
+  const [students, records, weekdays] = await Promise.all([
+    repo.findEnrolledStudents(offering.classroomId, term.id),
+    repo.findAttendanceInRange(offeringId, range.start, range.end),
+    repo.findScheduledWeekdays(offeringId),
+  ]);
+  const total = students.length;
+  const byDate = new Map<string, typeof records>();
+  for (const record of records) {
+    const key = record.date.toISOString().slice(0, 10);
+    const group = byDate.get(key) ?? [];
+    group.push(record);
+    byDate.set(key, group);
+  }
+
+  const scheduled = new Set(weekdays);
+  const numberOfDays = new Date(Date.UTC(range.year, range.monthIndex + 1, 0)).getUTCDate();
+  return Array.from({ length: numberOfDays }, (_, index): AttendanceCalendarDay => {
+    const date = new Date(Date.UTC(range.year, range.monthIndex, index + 1));
+    const iso = date.toISOString().slice(0, 10);
+    const saved = byDate.get(iso) ?? [];
+    const hasSession = scheduled.has(WEEKDAY_BY_INDEX[date.getUTCDay()]) || saved.length > 0;
+    const checked = saved.length;
+    return {
+      date: iso,
+      total,
+      checked,
+      unchecked: Math.max(0, total - checked),
+      late: saved.filter((row) => row.status === "LATE").length,
+      state: !hasSession ? "no-session" : checked === 0 ? "empty" : checked >= total ? "complete" : "partial",
+    };
+  });
 }
 
 /**

@@ -23,8 +23,8 @@ export default async function PortalPage(): Promise<React.ReactNode> {
   return (
     <div className="flex flex-col gap-6">
       <section
-        className="relative overflow-hidden rounded-[20px] px-6 py-6 sm:px-8"
-        style={{ background: "linear-gradient(115deg, var(--band-from) 0%, var(--band-to) 100%)", boxShadow: "var(--shadow-md)" }}
+        className="relative overflow-hidden rounded-xl px-5 py-5 sm:px-7 sm:py-6"
+        style={{ background: "var(--band-from)" }}
       >
         <p className="text-[12.5px]" style={{ color: "var(--band-muted)" }}>
           {formatThaiWeekdayLong(now)}

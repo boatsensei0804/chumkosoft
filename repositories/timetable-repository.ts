@@ -63,6 +63,37 @@ export async function listClassroomOptions(academicYearId: string) {
   });
 }
 
+/** All course offerings and placed timetable cells for the term, for read-only overviews. */
+export async function getScheduleOverview(termId: string) {
+  return prisma.courseOffering.findMany({
+    where: { termId, isDeleted: false },
+    orderBy: [{ classroom: { code: "asc" } }, { course: { code: "asc" } }],
+    select: {
+      id: true,
+      periodsPerWeek: true,
+      teacherId: true,
+      roomId: true,
+      classroomId: true,
+      classroom: { select: { code: true, gradeLevel: true } },
+      course: { select: { code: true, name: true } },
+      teacher: { select: { prefix: true, firstName: true, lastName: true } },
+      room: { select: { code: true, name: true, building: true } },
+      timetableSlots: {
+        where: { isDeleted: false },
+        select: { id: true, dayOfWeek: true, periodId: true },
+      },
+    },
+  });
+}
+
+export async function listScheduleClassrooms(academicYearId: string) {
+  return prisma.classroom.findMany({
+    where: { academicYearId, isDeleted: false },
+    orderBy: { code: "asc" },
+    select: { id: true, code: true, gradeLevel: true },
+  });
+}
+
 /** The active class's lessons on a given weekday, ordered by period. */
 export async function findSlotsForDay(dayOfWeek: DayOfWeek) {
   const ctx = await getActiveContext();
@@ -124,7 +155,7 @@ export async function getClassSlots(termId: string, classroomId: string) {
 export async function getExternalBusy(termId: string, classroomId: string) {
   return prisma.timetableSlot.findMany({
     where: { termId, isDeleted: false, classroomId: { not: classroomId } },
-    select: { dayOfWeek: true, periodId: true, teacherId: true, roomId: true },
+    select: { dayOfWeek: true, periodId: true, classroomId: true, teacherId: true, roomId: true },
   });
 }
 

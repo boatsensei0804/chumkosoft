@@ -43,24 +43,24 @@ export default function StatStrip({ items, className }: { items: StatItem[]; cla
   return (
     <section
       aria-label="สรุปสถานะข้อมูล"
-      className={cn("mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4", className)}
+      className={cn("mb-5 grid grid-cols-2 overflow-hidden rounded-xl border border-line bg-bg sm:grid-cols-3 lg:grid-cols-4", className)}
     >
       {items.map((item) => {
         const tone = item.tone ?? "default";
         const Icon = item.icon;
         return (
-          <div key={item.label} className="flex flex-col gap-2 rounded-2xl border border-line bg-card p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[12.5px] font-medium text-muted">{item.label}</p>
+          <div key={item.label} className="flex min-w-0 flex-col gap-1.5 border-b border-r border-line p-3.5 last:border-r-0 sm:p-4">
+            <div className="flex items-center gap-2">
               {Icon && (
-                <span className={cn("grid size-7 shrink-0 place-items-center rounded-lg", toneChip[tone])} aria-hidden="true">
-                  <Icon className="size-4" />
+                <span className={cn("grid size-6 shrink-0 place-items-center rounded-md", toneChip[tone])} aria-hidden="true">
+                  <Icon className="size-3.5" />
                 </span>
               )}
+              <p className="truncate text-[12px] font-medium text-muted">{item.label}</p>
             </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className={cn("tabular text-[24px] font-bold leading-none tracking-tight", toneValue[tone])}>{formatValue(item.value)}</span>
-              {item.hint && <span className="text-[12px] font-medium text-faint">{item.hint}</span>}
+            <div className="flex items-baseline gap-1.5 pl-8">
+              <span className={cn("tabular text-[21px] font-semibold leading-none tracking-tight", toneValue[tone])}>{formatValue(item.value)}</span>
+              {item.hint && <span className="text-[11.5px] font-medium text-faint">{item.hint}</span>}
             </div>
           </div>
         );

@@ -77,6 +77,24 @@ export async function listStudentGuardians(params: { page: number; search: strin
   return paginate(students, total, params.page, pageSize);
 }
 
+export async function getClassroomGuardianPrintData(classroomId: string) {
+  const rows = await repo.findClassroomGuardiansForPrint(classroomId);
+  return rows.map((student) => ({
+    studentId: student.id,
+    studentCode: student.studentCode,
+    studentName: personName(student),
+    classroom: student.enrollments[0]?.classroom.code ?? "—",
+    guardians: student.guardians.map((guardian) => ({
+      id: guardian.id,
+      prefix: guardian.prefix,
+      fullName: guardian.fullName,
+      relation: guardian.relation,
+      linked: guardian.lineUserId !== null,
+      linkCode: guardian.lineUserId ? null : guardian.lineLinkCode,
+    })),
+  }));
+}
+
 export async function createGuardianRecord(studentId: string, input: GuardianInput): Promise<ActionResult> {
   if (!(await repo.studentExists(studentId))) {
     return { ok: false, message: "ไม่พบนักเรียน" };

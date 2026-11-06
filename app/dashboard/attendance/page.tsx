@@ -6,8 +6,12 @@ import AttendanceControls from "@/features/attendance/components/attendance-cont
 import AttendanceRoster from "@/features/attendance/components/attendance-roster";
 import SchoolEntryControls from "@/features/attendance/components/school-entry-controls";
 import SchoolEntryRoster from "@/features/attendance/components/school-entry-roster";
-import { listAttendanceOfferings, getRoster } from "@/features/attendance/services/attendance-service";
-import { listEntryClassrooms, getSchoolEntryRoster } from "@/features/attendance/services/school-entry-service";
+import AttendanceCalendar from "@/features/attendance/components/attendance-calendar";
+import DailyRollCallOverview from "@/features/attendance/components/daily-roll-call-overview";
+import DailyRollCallRoster from "@/features/attendance/components/daily-roll-call-roster";
+import { listAttendanceOfferings, getAttendanceCalendar, getRoster } from "@/features/attendance/services/attendance-service";
+import { listEntryClassrooms, getSchoolEntryCalendar, getSchoolEntryRoster } from "@/features/attendance/services/school-entry-service";
+import { getDailyRollCallCalendar, getDailyRollCallOverview, getDailyClassRoster } from "@/features/attendance/services/daily-roll-call-service";
 import { requireRoles } from "@/lib/dal";
 import { STAFF_ROLES } from "@/features/auth/roles";
 
@@ -22,18 +26,19 @@ function todayInBangkok(): string {
 }
 
 interface AttendancePageProps {
-  searchParams: Promise<{ mode?: string; offering?: string; classroom?: string; date?: string }>;
+  searchParams: Promise<{ mode?: string; offering?: string; classroom?: string; date?: string; month?: string }>;
 }
 
 export default async function AttendancePage({ searchParams }: AttendancePageProps): Promise<React.ReactNode> {
   // Authoritative RBAC + who's looking: admins see every class; a teacher is
   // scoped to their own teaching offerings and advisory classrooms.
   const user = await requireRoles(STAFF_ROLES);
-  const teacherScope = user.role === "ADMIN" ? null : user.staffId;
+  const teacherScope = user.role === "ADMIN" ? null : user.staffId ?? "__no_staff__";
 
   const params = await searchParams;
-  const mode = params.mode === "school" ? "school" : "class";
+  const mode = params.mode === "school" ? "school" : params.mode === "homeroom" ? "homeroom" : "class";
   const date = params.date ?? todayInBangkok();
+  const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(params.month ?? "") ? params.month! : date.slice(0, 7);
 
   const scopeNote =
     user.role === "ADMIN"
@@ -42,7 +47,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
 
   return (
     <>
-      <PageHeader title="เช็คชื่อ" subtitle="บันทึกการมาเรียนรายคาบ และการเข้า–ออกโรงเรียนรายวัน" />
+      <PageHeader title="เช็คชื่อ" subtitle="เช็คชื่อรายวิชา เช็คชื่อประจำห้อง และบันทึกเวลาเข้า–ออกโรงเรียน" />
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2">
@@ -53,11 +58,41 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
           </span>
         </div>
         {mode === "class" ? (
-          <ClassMode selectedOfferingId={params.offering ?? ""} date={date} teacherScope={teacherScope} />
+          <ClassMode selectedOfferingId={params.offering ?? ""} date={date} month={month} teacherScope={teacherScope} />
+        ) : mode === "school" ? (
+          <SchoolMode classroomId={params.classroom ?? ""} date={date} month={month} teacherScope={teacherScope} />
         ) : (
-          <SchoolMode classroomId={params.classroom ?? ""} date={date} teacherScope={teacherScope} />
+          <HomeroomMode classroomId={params.classroom ?? ""} date={date} month={month} teacherScope={teacherScope} />
         )}
       </div>
+    </>
+  );
+}
+
+async function HomeroomMode({
+  classroomId,
+  date,
+  month,
+  teacherScope,
+}: {
+  classroomId: string;
+  date: string;
+  month: string;
+  teacherScope: string | null;
+}): Promise<React.ReactNode> {
+  if (classroomId) {
+    const roster = await getDailyClassRoster(date, classroomId, teacherScope);
+    return roster ? <DailyRollCallRoster roster={roster} /> : <PromptCard title="ไม่พบห้องเรียน" message="ห้องเรียนนี้ไม่มีในภาคเรียนปัจจุบัน หรือคุณไม่มีสิทธิ์เข้าถึง" />;
+  }
+
+  const [calendar, rooms] = await Promise.all([
+    getDailyRollCallCalendar(month, teacherScope),
+    getDailyRollCallOverview(date, teacherScope),
+  ]);
+  return (
+    <>
+      {calendar && <AttendanceCalendar mode="homeroom" month={month} selectedDate={date} days={calendar} />}
+      {rooms && <DailyRollCallOverview date={date} rooms={rooms} />}
     </>
   );
 }
@@ -65,18 +100,23 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
 async function ClassMode({
   selectedOfferingId,
   date,
+  month,
   teacherScope,
 }: {
   selectedOfferingId: string;
   date: string;
+  month: string;
   teacherScope: string | null;
 }): Promise<React.ReactNode> {
   const offerings = await listAttendanceOfferings(teacherScope);
-  const roster = selectedOfferingId ? await getRoster(selectedOfferingId, date, teacherScope) : null;
+  const [roster, calendar] = selectedOfferingId
+    ? await Promise.all([getRoster(selectedOfferingId, date, teacherScope), getAttendanceCalendar(selectedOfferingId, month, teacherScope)])
+    : [null, null];
 
   return (
     <>
       <AttendanceControls offerings={offerings} selectedOfferingId={selectedOfferingId} date={date} />
+      {calendar && <AttendanceCalendar mode="class" month={month} selectedDate={date} days={calendar} offeringId={selectedOfferingId} />}
       {offerings.length === 0 ? (
         <PromptCard title="ยังไม่มีรายวิชาที่เปิดสอน" message="กรุณาเปิดรายวิชาและจัดตารางสอนในภาคเรียนปัจจุบันก่อนเริ่มเช็คชื่อ" />
       ) : !selectedOfferingId ? (
@@ -93,20 +133,24 @@ async function ClassMode({
 async function SchoolMode({
   classroomId,
   date,
+  month,
   teacherScope,
 }: {
   classroomId: string;
   date: string;
+  month: string;
   teacherScope: string | null;
 }): Promise<React.ReactNode> {
-  const [classrooms, roster] = await Promise.all([
+  const [classrooms, roster, calendar] = await Promise.all([
     listEntryClassrooms(teacherScope),
     getSchoolEntryRoster(date, classroomId, teacherScope),
+    getSchoolEntryCalendar(month, classroomId, teacherScope),
   ]);
 
   return (
     <>
       <SchoolEntryControls classrooms={classrooms} classroomId={classroomId} date={date} />
+      {calendar && <AttendanceCalendar mode="school" month={month} selectedDate={date} days={calendar} classroomId={classroomId} />}
       {roster ? (
         <SchoolEntryRoster roster={roster} />
       ) : (

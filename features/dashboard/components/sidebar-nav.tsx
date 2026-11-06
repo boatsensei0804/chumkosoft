@@ -32,7 +32,7 @@ export default function SidebarNav({ items, onNavigate }: SidebarNavProps): Reac
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span
-                      className="flex cursor-not-allowed items-center gap-3 rounded-[10px] px-3 py-2 text-[14px] font-medium text-faint select-none"
+                      className="flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-medium text-faint select-none"
                       aria-disabled="true"
                     >
                       <Icon className="size-5" />
@@ -53,7 +53,7 @@ export default function SidebarNav({ items, onNavigate }: SidebarNavProps): Reac
                 onClick={onNavigate}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "group relative flex items-center gap-3 rounded-[10px] px-3 py-2 text-[14px] font-medium transition-colors",
+                  "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-colors",
                   active ? "bg-brand-soft text-brand-ink" : "text-ink hover:bg-surface-sunken",
                 )}
               >

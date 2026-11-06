@@ -34,6 +34,55 @@ export interface AttendanceRoster {
   students: RosterStudent[];
 }
 
+export type CalendarRecordState = "complete" | "partial" | "empty" | "no-session";
+
+export const DAILY_ROLL_CALL_STATUSES = ["PRESENT", "LATE", "ABSENT", "SICK_LEAVE", "PERSONAL_LEAVE"] as const;
+export type DailyRollCallStatusKey = (typeof DAILY_ROLL_CALL_STATUSES)[number];
+
+export const DAILY_ROLL_CALL_LABELS: Record<DailyRollCallStatusKey, string> = {
+  PRESENT: "มา",
+  LATE: "มาสาย",
+  ABSENT: "ขาดเรียน",
+  SICK_LEAVE: "ลาป่วย",
+  PERSONAL_LEAVE: "ลากิจ",
+};
+
+export interface AttendanceCalendarDay {
+  date: string;
+  total: number;
+  checked: number;
+  unchecked: number;
+  late: number;
+  state: CalendarRecordState;
+}
+
+export interface DailyClassSummary {
+  classroomId: string;
+  classroomCode: string;
+  gradeLevel: string;
+  total: number;
+  present: number;
+  late: number;
+  absent: number;
+  sickLeave: number;
+  personalLeave: number;
+  unchecked: number;
+}
+
+export interface DailyRollCallStudent {
+  studentId: string;
+  code: string;
+  name: string;
+  status: DailyRollCallStatusKey | null;
+}
+
+export interface DailyClassRoster {
+  date: string;
+  classroomId: string;
+  classroomCode: string;
+  students: DailyRollCallStudent[];
+}
+
 export interface ClassroomOption {
   id: string;
   code: string;

@@ -14,6 +14,7 @@ interface ContextBarProps {
   onClassroomChange: (v: string) => void;
   placed: number;
   total: number;
+  showClassroom?: boolean;
 }
 
 export default function ContextBar({
@@ -25,6 +26,7 @@ export default function ContextBar({
   onClassroomChange,
   placed,
   total,
+  showClassroom = true,
 }: ContextBarProps): React.ReactNode {
   const complete = total > 0 && placed >= total;
   return (
@@ -46,7 +48,7 @@ export default function ContextBar({
           ))}
         </NativeSelect>
       </label>
-      <label className="flex items-center gap-2">
+      {showClassroom && <label className="flex items-center gap-2">
         <span className="text-[13px] font-medium text-muted">ชั้นเรียน</span>
         <NativeSelect
           value={classrooms.some((c) => c.id === classroomId) ? classroomId : ""}
@@ -62,7 +64,7 @@ export default function ContextBar({
             </option>
           ))}
         </NativeSelect>
-      </label>
+      </label>}
 
       <div className="ml-auto flex items-center gap-2">
         <span

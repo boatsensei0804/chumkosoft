@@ -5,6 +5,7 @@ import StatStrip from "@/components/ui/stat-strip";
 import CoursesBrowser from "@/features/courses/components/courses-browser";
 import { listCoursesPaginated, getCourseStats } from "@/services/course-service";
 import { parsePage } from "@/types/pagination";
+import { getActiveTermLabel } from "@/services/dashboard-service";
 
 export const metadata: Metadata = {
   title: "รายวิชา · chumkosoft",
@@ -19,21 +20,25 @@ interface CoursesPageProps {
 export default async function CoursesPage({ searchParams }: CoursesPageProps): Promise<React.ReactNode> {
   const params = await searchParams;
   const query = params.q ?? "";
-  const [result, stats] = await Promise.all([listCoursesPaginated({ page: parsePage(params.page), search: query }), getCourseStats()]);
+  const [result, stats, termLabel] = await Promise.all([
+    listCoursesPaginated({ page: parsePage(params.page), search: query }),
+    getCourseStats(),
+    getActiveTermLabel(),
+  ]);
 
   return (
     <>
       <PageHeader
         title="รายวิชา"
-        subtitle={`หลักสูตรทั้งหมด ${stats.total.toLocaleString("th-TH")} วิชา · ปีการศึกษา 2568`}
+        subtitle={`หลักสูตรทั้งหมด ${stats.total.toLocaleString("th-TH")} วิชา · ${termLabel}`}
       />
-      <StatStrip
+      {stats.total > 0 && <StatStrip
         items={[
           { label: "รายวิชาทั้งหมด", value: stats.total, hint: "วิชา", icon: BookOpen, tone: "brand" },
           { label: "เปิดสอนแล้ว", value: stats.open, hint: "วิชา", icon: CircleCheck, tone: "success" },
           { label: "ยังไม่เปิดสอน", value: stats.total - stats.open, hint: "วิชา", icon: CircleDashed, tone: "default" },
         ]}
-      />
+      />}
       <CoursesBrowser page={result} query={query} />
     </>
   );

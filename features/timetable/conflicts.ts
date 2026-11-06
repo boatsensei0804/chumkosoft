@@ -29,12 +29,17 @@ export function checkConflict({
     (s) => s.day === day && s.periodId === periodId && s.id !== ignoreSlotId,
   );
 
-  // This class already has a lesson in this period.
-  if (cellSlots.length > 0) {
+  // This class already has a lesson in this period. In teacher view, other
+  // classes' lessons remain visible but do not count as a class conflict.
+  if (cellSlots.some((slot) => offeringsById.get(slot.offeringId)?.classroomId === offering.classroomId)) {
     return { ok: false, kind: "class", reason: "ชั้นเรียนนี้มีคาบเรียนแล้วในช่องนี้" };
   }
 
   const busy = externalBusy.find((b) => b.day === day && b.periodId === periodId);
+
+  if (busy?.classroomIds?.includes(offering.classroomId ?? "")) {
+    return { ok: false, kind: "class", reason: "ชั้นเรียนนี้มีคาบเรียนแล้วในช่องนี้" };
+  }
 
   // Teacher busy — from this class's other slots or from another class.
   const teacherBusyHere = slots.some(
