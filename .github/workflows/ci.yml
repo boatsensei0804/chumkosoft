@@ -42,52 +42,12 @@ jobs:
     name: Deploy production
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.ENABLE_PRODUCTION_DEPLOY == 'true'
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, chumkosoft-prod]
     timeout-minutes: 45
     permissions: {}
     concurrency:
       group: chumkosoft-production-deploy
       cancel-in-progress: false
     steps:
-      - name: Install pinned Cloudflare client
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl --fail --location --silent --show-error \
-            "https://github.com/cloudflare/cloudflared/releases/download/2026.10.7/cloudflared-linux-amd64" \
-            --output "$RUNNER_TEMP/cloudflared"
-          chmod 0755 "$RUNNER_TEMP/cloudflared"
-          "$RUNNER_TEMP/cloudflared" --version
-
-      - name: Configure restricted SSH connection
-        shell: bash
-        env:
-          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
-          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
-        run: |
-          set -euo pipefail
-          test -n "$DEPLOY_SSH_PRIVATE_KEY"
-          test -n "$DEPLOY_SSH_KNOWN_HOSTS"
-
-          mkdir -p "$HOME/.ssh"
-          chmod 0700 "$HOME/.ssh"
-          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > "$HOME/.ssh/chumkosoft-deploy"
-          printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
-          chmod 0600 "$HOME/.ssh/chumkosoft-deploy" "$HOME/.ssh/known_hosts"
-          cat > "$HOME/.ssh/config" <<EOF
-          Host chumkosoft-production
-            HostName ssh.chumkosoft.com
-            User chumkosoft
-            IdentityFile $HOME/.ssh/chumkosoft-deploy
-            IdentitiesOnly yes
-            StrictHostKeyChecking yes
-            UserKnownHostsFile $HOME/.ssh/known_hosts
-            ProxyCommand "$RUNNER_TEMP/cloudflared" access ssh --hostname %h
-          EOF
-          chmod 0600 "$HOME/.ssh/config"
-
-      - name: Deploy through Cloudflare Access
-        env:
-          TUNNEL_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          TUNNEL_SERVICE_TOKEN_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-        run: ssh -o BatchMode=yes chumkosoft-production
+      - name: Deploy on the Ubuntu server
+        run: sudo -n /usr/local/sbin/chumkosoft-deploy
