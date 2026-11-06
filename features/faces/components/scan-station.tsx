@@ -5,7 +5,7 @@ import { Loader2, ScanFace, Clock, X, CheckCircle2, Info, TriangleAlert, type Lu
 import { Button } from "@/components/ui/button";
 import { loadFaceApi, detectFaceForScan } from "@/features/faces/lib/face-client";
 import { identifyFaceAction, confirmCheckInAction } from "@/features/faces/scan-actions";
-import type { ScanResult, ScanStatus } from "@/features/faces/services/scan-service";
+import type { ScanHistoryEntry, ScanResult, ScanStatus } from "@/features/faces/services/scan-service";
 
 type Phase = "idle" | "starting" | "scanning" | "error";
 
@@ -48,9 +48,10 @@ const RESULT_META: Record<ScanStatus, { title: string; bg: string; fg: string; i
 interface ScanStationProps {
   scanStartTime: string;
   lateAfterTime: string;
+  initialCheckIns: ScanHistoryEntry[];
 }
 
-export default function ScanStation({ scanStartTime, lateAfterTime }: ScanStationProps): React.ReactNode {
+export default function ScanStation({ scanStartTime, lateAfterTime, initialCheckIns }: ScanStationProps): React.ReactNode {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const busyRef = useRef(false);
@@ -60,6 +61,7 @@ export default function ScanStation({ scanStartTime, lateAfterTime }: ScanStatio
   const [phase, setPhase] = useState<Phase>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [result, setResult] = useState<ScanResult | null>(null);
+  const [scanHistory, setScanHistory] = useState<ScanHistoryEntry[]>(initialCheckIns);
   const [beforeWindow, setBeforeWindow] = useState(false);
 
   const stop = useCallback(() => {
@@ -131,6 +133,16 @@ export default function ScanStation({ scanStartTime, lateAfterTime }: ScanStatio
 
         const scan = await confirmCheckInAction(identity.studentId);
         setResult(scan);
+        if ((scan.status === "matched" || scan.status === "already") && scan.studentId && scan.studentName) {
+          const entry: ScanHistoryEntry = {
+            studentId: scan.studentId,
+            studentName: scan.studentName,
+            classroom: scan.classroom ?? "",
+            time: scan.time ?? bangkokNowHM(),
+            late: Boolean(scan.late),
+          };
+          setScanHistory((current) => [entry, ...current.filter((item) => item.studentId !== entry.studentId)]);
+        }
         hitsRef.current = [];
         cooldownUntilRef.current = Date.now() + RESULT_HOLD_MS;
       } catch {
@@ -154,7 +166,8 @@ export default function ScanStation({ scanStartTime, lateAfterTime }: ScanStatio
   }, [result]);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.8fr)]">
+      <div className="flex flex-col gap-3">
       <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-line bg-[oklch(0.2_0.02_260)]">
         <video ref={videoRef} playsInline muted className="h-full w-full -scale-x-100 object-cover" aria-label="ภาพจากกล้องสแกนใบหน้า" />
 
@@ -239,6 +252,58 @@ export default function ScanStation({ scanStartTime, lateAfterTime }: ScanStatio
           </Button>
         )}
       </div>
+      </div>
+
+      <aside className="flex min-h-[340px] flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm lg:min-h-0">
+        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3.5">
+          <div className="flex items-center gap-2.5">
+            <span className="grid size-9 place-items-center rounded-xl bg-success-soft text-[oklch(0.42_0.1_152)]">
+              <CheckCircle2 className="size-[18px]" />
+            </span>
+            <div>
+              <h2 className="text-[14px] font-bold text-ink-strong">สแกนแล้ววันนี้</h2>
+              <p className="text-[11.5px] text-muted">รายชื่อและเวลาเข้าโรงเรียน</p>
+            </div>
+          </div>
+          <span className="rounded-full bg-surface-2 px-2.5 py-1 text-[12px] font-semibold tabular text-ink">
+            {scanHistory.length.toLocaleString("th-TH")} คน
+          </span>
+        </div>
+
+        <div className="max-h-[420px] flex-1 overflow-y-auto lg:max-h-[min(62vh,640px)]">
+          {scanHistory.length > 0 ? (
+            <ul className="divide-y divide-line">
+              {scanHistory.map((entry) => (
+                <li key={entry.studentId} className="flex items-center gap-3 px-4 py-3">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand-soft text-[13px] font-bold text-brand-ink" aria-hidden="true">
+                    {entry.studentName.trim().charAt(0)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-semibold text-ink-strong">{entry.studentName}</p>
+                    <p className="truncate text-[11.5px] text-muted">{entry.classroom || "นักเรียน"}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="inline-flex items-center gap-1 text-[13px] font-bold tabular text-ink">
+                      <Clock className="size-3.5 text-faint" /> {entry.time}
+                    </p>
+                    {entry.late && <p className="text-[10.5px] font-semibold text-[oklch(0.5_0.12_55)]">มาสาย</p>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="grid h-full min-h-[220px] place-items-center px-6 py-8 text-center">
+              <div className="flex max-w-[230px] flex-col items-center gap-2">
+                <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint">
+                  <ScanFace className="size-6" />
+                </span>
+                <p className="text-[13px] font-semibold text-ink">ยังไม่มีรายการสแกนวันนี้</p>
+                <p className="text-[11.5px] leading-relaxed text-muted">เมื่อมีนักเรียนสแกนสำเร็จ ชื่อและเวลาจะปรากฏที่นี่</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </aside>
     </div>
   );
 }

@@ -20,12 +20,21 @@ export type ScanStatus = "matched" | "already" | "no_match" | "not_ready" | "clo
 
 export interface ScanResult {
   status: ScanStatus;
+  studentId?: string;
   studentName?: string;
   classroom?: string;
   /** Bangkok HH:mm of the check-in. */
   time?: string;
   /** True when the check-in was at/after the school's late cutoff. */
   late?: boolean;
+}
+
+export interface ScanHistoryEntry {
+  studentId: string;
+  studentName: string;
+  classroom: string;
+  time: string;
+  late: boolean;
 }
 
 export type IdentifyStatus = "candidate" | "no_match" | "not_ready";
@@ -54,6 +63,22 @@ function bangkokHM(date: Date): string {
 
 function formatName(s: { prefix: string | null; firstName: string; lastName: string }): string {
   return [s.prefix, `${s.firstName} ${s.lastName}`].filter(Boolean).join(" ");
+}
+
+/** Returns face check-ins already recorded for today's kiosk session. */
+export async function getTodayFaceCheckIns(): Promise<ScanHistoryEntry[]> {
+  const { date } = todayBangkok();
+  const rows = await repo.listFaceCheckInsForDate(date);
+  return rows.flatMap((row) => {
+    if (!row.checkInAt) return [];
+    return [{
+      studentId: row.studentId,
+      studentName: formatName(row.student),
+      classroom: row.student.enrollments[0]?.classroom.code ?? "",
+      time: bangkokTime(row.checkInAt),
+      late: row.isLate,
+    }];
+  });
 }
 
 /**
@@ -125,5 +150,5 @@ export async function commitCheckIn(studentId: string, actorId?: string): Promis
     void notifyGuardiansOfCheckIn(studentId, studentName, time, message).catch(() => undefined);
   }
 
-  return { status: entry.alreadyCheckedIn ? "already" : "matched", studentName, classroom, time, late: entry.isLate };
+  return { status: entry.alreadyCheckedIn ? "already" : "matched", studentId, studentName, classroom, time, late: entry.isLate };
 }

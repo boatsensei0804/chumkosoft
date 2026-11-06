@@ -64,6 +64,31 @@ export async function getMatchedStudent(studentId: string, termId: string) {
   });
 }
 
+/** Today's successful face check-ins for the kiosk side panel. */
+export async function listFaceCheckInsForDate(date: Date) {
+  return prisma.schoolEntry.findMany({
+    where: { date, method: "FACE", checkInAt: { not: null }, isDeleted: false },
+    orderBy: { checkInAt: "desc" },
+    select: {
+      studentId: true,
+      checkInAt: true,
+      isLate: true,
+      student: {
+        select: {
+          prefix: true,
+          firstName: true,
+          lastName: true,
+          enrollments: {
+            where: { isDeleted: false, term: { isActive: true, isDeleted: false } },
+            select: { classroom: { select: { code: true } } },
+            take: 1,
+          },
+        },
+      },
+    },
+  });
+}
+
 /**
  * Records a FACE check-in for today, without overwriting an earlier check-in.
  * Returns whether the student was already checked in and the effective time.
