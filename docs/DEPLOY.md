@@ -73,7 +73,68 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm --no-de
 Log in at `https://<your-hostname>/login`, then create teacher/kiosk accounts
 from the UI. Register the LINE webhook at `https://<your-hostname>/api/line/webhook`.
 
-## 6. Operate
+## 6. Automatic checks and deploys
+
+`.github/workflows/ci.yml` runs lint and TypeScript checks on pull requests and
+pushes to `main`, using a GitHub-hosted runner. After checks pass, pushes to
+`main` deploy automatically through Cloudflare Access SSH. The deployment
+workflow does not run on pull requests. It uses a restricted SSH key that can
+only invoke the server-side deploy script.
+
+One-time setup:
+
+1. **Publish SSH through the existing Cloudflare Tunnel.** In Cloudflare Zero
+   Trust → Networks → Tunnels, open the current tunnel and add a Published
+   application route with hostname `ssh.chumkosoft.com` and service
+   `ssh://192.168.1.183:22`. Do not open port 22 on the router or firewall.
+2. **Protect that hostname with Access.** Create a self-hosted Access
+   application for `ssh.chumkosoft.com`. Create a service token, then add a
+   `Service Auth` policy that allows only that token.
+3. **Create a dedicated deploy key on the Mac.** Run
+   `ssh-keygen -t ed25519 -C github-actions-chumkosoft -f ~/.ssh/chumkosoft-deploy`
+   and leave the passphrase empty. Keep the private key on the Mac; only add it
+   to the GitHub Action secret in step 6.
+4. **Install the restricted deploy command on Ubuntu.** After this change is
+   pulled to the server, run:
+   ```bash
+   cd ~/chumkosoft
+   sudo install -o root -g root -m 0755 scripts/deploy-production.sh /usr/local/sbin/chumkosoft-deploy
+   printf '%s\n' 'chumkosoft ALL=(root) NOPASSWD: /usr/local/sbin/chumkosoft-deploy' | sudo tee /etc/sudoers.d/chumkosoft-deploy
+   sudo chmod 0440 /etc/sudoers.d/chumkosoft-deploy
+   sudo visudo -cf /etc/sudoers.d/chumkosoft-deploy
+   mkdir -p ~/.ssh && chmod 0700 ~/.ssh
+   ```
+   Append the public key from `~/.ssh/chumkosoft-deploy.pub` to
+   `/home/chumkosoft/.ssh/authorized_keys` with this prefix, keeping the key on
+   the same line:
+   `command="sudo -n /usr/local/sbin/chumkosoft-deploy",restrict `
+   Then run `chmod 0600 ~/.ssh/authorized_keys`. This key cannot open an
+   interactive shell or forward ports; it can only run the deploy script.
+5. **Add four GitHub Actions secrets.** In the repository, open **Settings →
+   Secrets and variables → Actions → New repository secret**:
+   - `CF_ACCESS_CLIENT_ID` — the Cloudflare service token Client ID.
+   - `CF_ACCESS_CLIENT_SECRET` — the matching Client Secret.
+   - `DEPLOY_SSH_PRIVATE_KEY` — the contents of `~/.ssh/chumkosoft-deploy` on
+     the Mac (never paste it into chat or commit it).
+   - `DEPLOY_SSH_KNOWN_HOSTS` — one line in the form
+     `ssh.chumkosoft.com ssh-ed25519 <server-host-public-key>`. On Ubuntu, read
+     the public host key with
+     `sudo cat /etc/ssh/ssh_host_ed25519_key.pub`.
+6. After the route, key, server script, and four secrets are ready, set the
+   repository variable `ENABLE_PRODUCTION_DEPLOY` to `true` under **Settings →
+   Secrets and variables → Actions → Variables**. Until this variable is set,
+   pushes run validation but cannot start a deployment.
+7. In **Actions → CI**, run the workflow manually on `main` once to deploy the
+   current version. After that, every push to `main` deploys automatically once
+   validation passes. Pull requests run validation only.
+
+The workflow keeps `.env` on Ubuntu and does not copy database or application
+secrets to GitHub. If deployment fails its local `/login` health check, the
+workflow stops and reports failure; inspect `sudo docker compose -f
+docker-compose.yml -f docker-compose.prod.yml -f docker-compose.rustfs.yml
+--profile tunnel logs --tail=80 app` on the server.
+
+## 7. Operate
 
 - **Update**: `git pull` then re-run the step-4 command (rebuilds, re-migrates, no downtime for infra).
 - **Backups**: dump Postgres and the MinIO volume on a schedule, e.g.
