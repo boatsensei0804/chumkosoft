@@ -1,6 +1,7 @@
 "use client";
 
 import { Printer } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
 interface PrintableGuardian {
@@ -57,7 +58,7 @@ export default function LinePrintSheet({ classroom, oaUrl, qrDataUrl, records }:
                       <h3>{[guardian.prefix, guardian.fullName].filter(Boolean).join(" ")}</h3>
                       <p>{guardian.relation}</p>
                     </div>
-                    <div className="line-parent-card__qr-wrap"><img src={qrDataUrl} alt="QR เพิ่มเพื่อน LINE OA โรงเรียน" className="line-parent-card__qr" /><span>สแกนเพื่อเพิ่มเพื่อน</span></div>
+                    <div className="line-parent-card__qr-wrap"><Image src={qrDataUrl} alt="QR เพิ่มเพื่อน LINE OA โรงเรียน" width={280} height={280} unoptimized className="line-parent-card__qr" /><span>สแกนเพื่อเพิ่มเพื่อน</span></div>
                   </div>
                   <div className="line-parent-card__steps"><b>วิธีรับแจ้งเตือน LINE</b><span>1. สแกน QR เพิ่มเพื่อน OA</span><span>2. ส่งรหัสด้านล่างในแชท</span><span>3. รอข้อความยืนยัน</span></div>
                   <div className="line-parent-card__code"><span>{guardian.linked ? "สถานะบัญชี" : "รหัสผูกบัญชี"}</span><strong>{guardian.linked ? "เชื่อม LINE แล้ว" : guardian.linkCode ?? "ยังไม่มีรหัส · ติดต่อโรงเรียน"}</strong></div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowLeft, Check, Save } from "lucide-react";
@@ -23,15 +23,16 @@ const STATUS_STYLE: Record<DailyRollCallStatusKey, { idle: string; active: strin
 };
 
 export default function DailyRollCallRoster({ roster }: { roster: DailyClassRoster }): React.ReactNode {
+  const rosterKey = `${roster.date}:${roster.classroomId}:${roster.students.map((student) => `${student.studentId}:${student.status ?? "unchecked"}`).join(",")}`;
+  return <DailyRollCallRosterEditor key={rosterKey} roster={roster} />;
+}
+
+function DailyRollCallRosterEditor({ roster }: { roster: DailyClassRoster }): React.ReactNode {
   const router = useRouter();
   const [statuses, setStatuses] = useState<Record<string, DailyRollCallStatusKey | null>>(() =>
     Object.fromEntries(roster.students.map((student) => [student.studentId, student.status])),
   );
   const [isSaving, startSaving] = useTransition();
-
-  useEffect(() => {
-    setStatuses(Object.fromEntries(roster.students.map((student) => [student.studentId, student.status])));
-  }, [roster]);
 
   const counts = useMemo(() => {
     const result: Record<DailyRollCallStatusKey, number> = { PRESENT: 0, LATE: 0, ABSENT: 0, SICK_LEAVE: 0, PERSONAL_LEAVE: 0 };
