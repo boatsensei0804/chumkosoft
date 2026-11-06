@@ -1,5 +1,5 @@
 "use server";
-
+import { createHash } from "node:crypto";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { headers } from "next/headers";
 import { createSession, deleteSession } from "@/lib/session";
@@ -20,7 +20,7 @@ async function clientIp(): Promise<string> {
 export interface LoginFormState {
   error?: string;
   /** Echoed back so the field survives a failed submit. */
-  email?: string;
+  identifier?: string;
 }
 
 /**
@@ -33,33 +33,60 @@ export async function loginAction(
   formData: FormData,
 ): Promise<LoginFormState> {
   const parsed = loginSchema.safeParse({
-    email: formData.get("email"),
+    identifier: formData.get("identifier"),
     password: formData.get("password"),
   });
 
   if (!parsed.success) {
-    const email = typeof formData.get("email") === "string" ? String(formData.get("email")) : "";
-    return { error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง", email };
+    const identifier =
+      typeof formData.get("identifier") === "string"
+        ? String(formData.get("identifier"))
+        : "";
+    return {
+      error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง",
+      identifier,
+    };
   }
 
   try {
-    // Blunt brute force: cap attempts per IP+email per minute (fails open if Redis is down).
     const ip = await clientIp();
-    const limited = await rateLimit(`login:${ip}:${parsed.data.email}`, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_SECONDS);
+
+    // Hash เลขบัตรก่อนใช้เป็นส่วนหนึ่งของ key ใน Redis
+    const rateLimitIdentifier = /^\d{13}$/.test(parsed.data.identifier)
+      ? createHash("sha256").update(parsed.data.identifier).digest("hex")
+      : parsed.data.identifier;
+
+    const limited = await rateLimit(
+      `login:${ip}:${rateLimitIdentifier}`,
+      LOGIN_MAX_ATTEMPTS,
+      LOGIN_WINDOW_SECONDS,
+    );
+
     if (!limited.ok) {
-      return { error: "พยายามเข้าสู่ระบบบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่", email: parsed.data.email };
+      return {
+        error: "พยายามเข้าสู่ระบบบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่",
+        identifier: parsed.data.identifier,
+      };
     }
 
     const user = await authenticate(parsed.data);
+
     if (!user) {
-      return { error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง", email: parsed.data.email };
+      return {
+        error: "ข้อมูลเข้าสู่ระบบหรือรหัสผ่านไม่ถูกต้อง",
+        identifier: parsed.data.identifier,
+      };
     }
+
     await createSession(user.id, user.role);
     redirect(homePathForRole(user.role));
   } catch (error) {
-    unstable_rethrow(error); // let the success redirect propagate
+    unstable_rethrow(error);
     console.error("[loginAction]", error);
-    return { error: "ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้ง", email: parsed.data.email };
+    return {
+      error: "ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้ง",
+      identifier: parsed.data.identifier,
+    };
   }
 }
 
