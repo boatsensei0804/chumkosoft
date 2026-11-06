@@ -114,7 +114,13 @@ export default function ScanStation({ scanStartTime, lateAfterTime }: ScanStatio
         if (!detection.ok) return;
 
         const identity = await identifyFaceAction(detection.descriptor);
-        if (identity.status !== "candidate" || !identity.studentId) return;
+        if (identity.status === "no_match" || identity.status === "not_ready") {
+          setResult({ status: identity.status });
+          hitsRef.current = [];
+          cooldownUntilRef.current = Date.now() + RESULT_HOLD_MS;
+          return;
+        }
+        if (!identity.studentId) return;
 
         const now = Date.now();
         const cx = detection.box.x + detection.box.width / 2;
@@ -124,11 +130,9 @@ export default function ScanStation({ scanStartTime, lateAfterTime }: ScanStatio
         if (!passesLiveness(hitsRef.current, identity.studentId, now)) return;
 
         const scan = await confirmCheckInAction(identity.studentId);
-        if (scan.status !== "no_match" && scan.status !== "not_ready") {
-          setResult(scan);
-          hitsRef.current = [];
-          cooldownUntilRef.current = Date.now() + RESULT_HOLD_MS;
-        }
+        setResult(scan);
+        hitsRef.current = [];
+        cooldownUntilRef.current = Date.now() + RESULT_HOLD_MS;
       } catch {
         // transient — keep scanning
       } finally {
@@ -192,7 +196,7 @@ export default function ScanStation({ scanStartTime, lateAfterTime }: ScanStatio
           </div>
         )}
 
-        {result && result.status !== "no_match" && (
+        {result && (
           <div className="absolute inset-x-0 bottom-0 p-3" role="status" aria-live="assertive">
             {(() => {
               const meta = RESULT_META[result.status];

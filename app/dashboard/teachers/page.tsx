@@ -6,6 +6,8 @@ import TeachersBrowser from "@/features/teachers/components/teachers-browser";
 import { listStaffPaginated, getStaffStats } from "@/services/staff-service";
 import type { StaffFilter } from "@/repositories/staff-repository";
 import { parsePage } from "@/types/pagination";
+import { requireRoles } from "@/lib/dal";
+import { STAFF_ROLES } from "@/features/auth/roles";
 
 export const metadata: Metadata = {
   title: "ครูและบุคลากร · chumkosoft",
@@ -20,6 +22,7 @@ interface TeachersPageProps {
 }
 
 export default async function TeachersPage({ searchParams }: TeachersPageProps): Promise<React.ReactNode> {
+  const currentUser = await requireRoles(STAFF_ROLES);
   const params = await searchParams;
   const query = params.q ?? "";
   const filter: StaffFilter = FILTERS.includes(params.filter as StaffFilter) ? (params.filter as StaffFilter) : "all";
@@ -41,7 +44,7 @@ export default async function TeachersPage({ searchParams }: TeachersPageProps):
           { label: "บุคลากร", value: stats.personnel, hint: "คน", icon: Briefcase, tone: "default" },
         ]}
       />
-      <TeachersBrowser page={result} query={query} filter={filter} />
+      <TeachersBrowser page={result} query={query} filter={filter} canManageAccounts={currentUser.role === "ADMIN"} />
     </>
   );
 }

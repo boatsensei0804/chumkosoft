@@ -9,6 +9,8 @@ export interface StaffSummary {
   type: StaffKind;
   position: string | null;
   email: string | null;
+  /** Email on the linked login account, if this staff record can sign in. */
+  loginEmail: string | null;
   phone: string | null;
   subjectsCount: number;
 

@@ -19,15 +19,16 @@ const KIND_OPTIONS: { value: string; label: string }[] = [
 interface StaffFormDialogProps {
   open: boolean;
   staff: StaffSummary | null;
+  canManageAccounts: boolean;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export default function StaffFormDialog({ open, staff, onClose, onSaved }: StaffFormDialogProps): React.ReactNode {
+export default function StaffFormDialog({ open, staff, canManageAccounts, onClose, onSaved }: StaffFormDialogProps): React.ReactNode {
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-2xl">
-        {open && <StaffFormBody key={staff?.id ?? "new"} staff={staff} onClose={onClose} onSaved={onSaved} />}
+        {open && <StaffFormBody key={staff?.id ?? "new"} staff={staff} canManageAccounts={canManageAccounts} onClose={onClose} onSaved={onSaved} />}
       </DialogContent>
     </Dialog>
   );
@@ -39,10 +40,12 @@ function SectionHeading({ children }: { children: React.ReactNode }): React.Reac
 
 function StaffFormBody({
   staff,
+  canManageAccounts,
   onClose,
   onSaved,
 }: {
   staff: StaffSummary | null;
+  canManageAccounts: boolean;
   onClose: () => void;
   onSaved: () => void;
 }): React.ReactNode {
@@ -121,6 +124,31 @@ function StaffFormBody({
           {txt("phone", "เบอร์โทรศัพท์", staff?.phone ?? null)}
           {txt("email", "อีเมล", staff?.email ?? null, { type: "email" })}
         </div>
+
+        {canManageAccounts && (
+          <>
+            <SectionHeading>บัญชีเข้าสู่ระบบ</SectionHeading>
+            {staff?.loginEmail && (
+              <p className="text-xs text-muted-foreground">มีบัญชีเข้าสู่ระบบเชื่อมกับข้อมูลบุคลากรนี้: {staff.loginEmail}</p>
+            )}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="loginPassword">{staff?.loginEmail ? "ตั้งรหัสผ่านใหม่ (เว้นว่างหากไม่เปลี่ยน)" : "รหัสผ่านเริ่มต้น (เว้นว่างหากยังไม่สร้างบัญชี)"}</Label>
+              <Input
+                id="loginPassword"
+                name="loginPassword"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                maxLength={100}
+                disabled={pending}
+                aria-invalid={Boolean(err.loginPassword)}
+              />
+              <p className={err.loginPassword ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
+                {err.loginPassword ?? "เมื่อกำหนดรหัสผ่าน ระบบจะสร้างหรือรีเซ็ตบัญชีที่เชื่อมกับข้อมูลบุคลากรนี้ ใช้เลขบัตรประชาชนหรืออีเมลเข้าสู่ระบบได้"}
+              </p>
+            </div>
+          </>
+        )}
 
         {/* ── ข้อมูลราชการและใบประกอบวิชาชีพ ── */}
         <SectionHeading>ข้อมูลราชการและใบประกอบวิชาชีพ</SectionHeading>

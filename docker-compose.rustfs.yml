@@ -3,6 +3,7 @@ services:
     image: rustfs/rustfs:1.0.4
     command: ["/data"]
     environment:
+      RUSTFS_VOLUMES: "/data"
       RUSTFS_ACCESS_KEY: ${MINIO_ROOT_USER}
       RUSTFS_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       RUSTFS_ADDRESS: ":9000"

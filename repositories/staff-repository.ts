@@ -14,6 +14,7 @@ const staffSelect = {
   type: true,
   position: true,
   email: true,
+  user: { select: { email: true } },
   phone: true,
   birthDate: true,
   nationalId: true,
@@ -106,12 +107,54 @@ export async function nationalIdExists(nationalId: string, excludeId?: string): 
   return existing !== null;
 }
 
-export async function createStaff(data: StaffInput): Promise<{ id: string }> {
-  return prisma.staff.create({ data, select: { id: true } });
+export async function createStaff(data: StaffInput, login?: { passwordHash: string }): Promise<{ id: string }> {
+  return prisma.$transaction(async (tx) => {
+    const staff = await tx.staff.create({ data, select: { id: true } });
+    if (login) {
+      // Staff type describes the person's job. New staff accounts receive the
+      // ordinary staff role; choosing an ADMIN job type must not grant admin access.
+      await tx.user.create({
+        data: { email: data.email!, passwordHash: login.passwordHash, role: "TEACHER", staffId: staff.id },
+      });
+    }
+    return staff;
+  });
 }
 
-export async function updateStaff(id: string, data: StaffInput): Promise<void> {
-  await prisma.staff.update({ where: { id }, data });
+export async function updateStaff(
+  id: string,
+  data: StaffInput,
+  login?: { passwordHash?: string; updateEmail?: boolean },
+): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    await tx.staff.update({ where: { id }, data });
+    const linked = await tx.user.findUnique({ where: { staffId: id }, select: { id: true, email: true } });
+    if (linked) {
+      await tx.user.update({
+        where: { id: linked.id },
+        data: {
+          ...(login?.updateEmail && data.email ? { email: data.email } : {}),
+          ...(login?.passwordHash ? { passwordHash: login.passwordHash, isActive: true, isDeleted: false, deletedAt: null } : {}),
+        },
+      });
+    } else if (login?.passwordHash) {
+      await tx.user.create({
+        data: { email: data.email!, passwordHash: login.passwordHash, role: "TEACHER", staffId: id },
+      });
+    }
+  });
+}
+
+export async function staffLoginAccount(id: string): Promise<{ id: string; email: string } | null> {
+  return prisma.user.findUnique({ where: { staffId: id }, select: { id: true, email: true } });
+}
+
+export async function loginEmailExists(email: string, excludeUserId?: string): Promise<boolean> {
+  const existing = await prisma.user.findFirst({
+    where: { email, isDeleted: false, ...(excludeUserId ? { id: { not: excludeUserId } } : {}) },
+    select: { id: true },
+  });
+  return existing !== null;
 }
 
 /** Soft delete; frees the unique staffCode so it can be reused (see course repo note). */

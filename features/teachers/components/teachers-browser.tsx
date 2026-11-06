@@ -35,9 +35,10 @@ interface TeachersBrowserProps {
   page: Paginated<StaffSummary>;
   query: string;
   filter: StaffFilter;
+  canManageAccounts: boolean;
 }
 
-export default function TeachersBrowser({ page, query, filter }: TeachersBrowserProps): React.ReactNode {
+export default function TeachersBrowser({ page, query, filter, canManageAccounts }: TeachersBrowserProps): React.ReactNode {
   const router = useRouter();
   const { navigate, isPending } = useListParams("/dashboard/teachers", { q: query, page: page.page, filter });
   const [search, setSearch] = useState(query);
@@ -217,7 +218,7 @@ export default function TeachersBrowser({ page, query, filter }: TeachersBrowser
           onPageChange={(p) => navigate({ page: p })}
         />
 
-        <StaffFormDialog open={dialogOpen} staff={editing} onClose={() => setDialogOpen(false)} onSaved={handleSaved} />
+        <StaffFormDialog open={dialogOpen} staff={editing} canManageAccounts={canManageAccounts} onClose={() => setDialogOpen(false)} onSaved={handleSaved} />
 
         <ConfirmDialog
           open={deleting !== null}

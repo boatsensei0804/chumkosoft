@@ -42,9 +42,17 @@ function toNationalId(value: FormDataEntryValue | null): string | null {
 
 export async function saveStaffAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(STAFF_ROLES);
+    const currentUser = await requireRoles(STAFF_ROLES);
 
     const id = toText(formData.get("id"));
+    const rawLoginPassword = formData.get("loginPassword");
+    const loginPassword = typeof rawLoginPassword === "string" && rawLoginPassword.length > 0 ? rawLoginPassword : undefined;
+    if (loginPassword && currentUser.role !== "ADMIN") {
+      return { ok: false, message: "เฉพาะผู้ดูแลระบบเท่านั้นที่สร้างหรือเปลี่ยนรหัสผ่านบัญชีบุคลากรได้" };
+    }
+    if (loginPassword && (loginPassword.length < 8 || loginPassword.length > 100)) {
+      return { ok: false, message: "กรุณาตรวจสอบข้อมูล", fieldErrors: { loginPassword: "รหัสผ่านต้องมี 8–100 ตัวอักษร" } };
+    }
     const parsed = staffSchema.safeParse({
       staffCode: formData.get("staffCode"),
       prefix: nullIfEmpty(formData.get("prefix")),
@@ -52,7 +60,7 @@ export async function saveStaffAction(_prev: ActionResult, formData: FormData): 
       lastName: formData.get("lastName"),
       type: formData.get("type"),
       position: nullIfEmpty(formData.get("position")),
-      email: nullIfEmpty(formData.get("email")),
+      email: nullIfEmpty(formData.get("email"))?.toLowerCase() ?? null,
       phone: nullIfEmpty(formData.get("phone")),
       birthDate: toDateOrNull(formData.get("birthDate")),
       nationalId: toNationalId(formData.get("nationalId")),
@@ -72,7 +80,9 @@ export async function saveStaffAction(_prev: ActionResult, formData: FormData): 
       return { ok: false, message: "กรุณาตรวจสอบข้อมูล", fieldErrors: fieldErrorsFromZod(parsed.error) };
     }
 
-    const result = id ? await updateStaffRecord(id, parsed.data) : await createStaffRecord(parsed.data);
+    const result = id
+      ? await updateStaffRecord(id, parsed.data, loginPassword, currentUser.role === "ADMIN")
+      : await createStaffRecord(parsed.data, loginPassword);
 
     if (result.ok) {
       revalidatePath(TEACHERS_PATH);

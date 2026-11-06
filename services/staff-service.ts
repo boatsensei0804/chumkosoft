@@ -8,12 +8,15 @@ import {
   updateStaff,
   softDeleteStaff,
   staffHasActiveOfferings,
+  staffLoginAccount,
+  loginEmailExists,
   type StaffFilter,
 } from "@/repositories/staff-repository";
 import type { StaffInput } from "@/features/teachers/schemas/staff-schema";
 import type { StaffKind, StaffSummary } from "@/features/teachers/types";
 import type { ActionResult } from "@/types/form";
 import { paginate, DEFAULT_PAGE_SIZE, type Paginated } from "@/types/pagination";
+import { hashPassword } from "@/lib/password";
 
 /** Date → `yyyy-mm-dd` so it can back a native <input type="date"> on the client. */
 function toDateInput(d: Date | null): string | null {
@@ -30,6 +33,7 @@ function toSummary(s: Awaited<ReturnType<typeof findStaff>>[number]): StaffSumma
     type: s.type as StaffKind,
     position: s.position,
     email: s.email,
+    loginEmail: s.user?.email ?? null,
     phone: s.phone,
     subjectsCount: s._count.offerings,
     birthDate: toDateInput(s.birthDate),
@@ -95,26 +99,51 @@ export async function getStaffStats(): Promise<{ total: number; teachers: number
   return { total, teachers, personnel };
 }
 
-export async function createStaffRecord(input: StaffInput): Promise<ActionResult> {
+export async function createStaffRecord(input: StaffInput, loginPassword?: string): Promise<ActionResult> {
   if (await staffCodeExists(input.staffCode)) {
     return { ok: false, fieldErrors: { staffCode: "รหัสบุคลากรนี้ถูกใช้แล้ว" } };
   }
   if (input.nationalId && (await nationalIdExists(input.nationalId))) {
     return { ok: false, fieldErrors: { nationalId: "เลขบัตรประชาชนนี้ถูกใช้แล้ว" } };
   }
-  await createStaff(input);
-  return { ok: true, message: "เพิ่มบุคลากรเรียบร้อย" };
+  if (loginPassword && !input.email) {
+    return { ok: false, fieldErrors: { email: "กรอกอีเมลก่อนสร้างบัญชีเข้าสู่ระบบ" } };
+  }
+  if (loginPassword && (await loginEmailExists(input.email!))) {
+    return { ok: false, fieldErrors: { email: "อีเมลนี้ถูกใช้เป็นบัญชีเข้าสู่ระบบแล้ว" } };
+  }
+  const hash = loginPassword ? await hashPassword(loginPassword) : undefined;
+  await createStaff(input, hash ? { passwordHash: hash } : undefined);
+  return { ok: true, message: loginPassword ? "เพิ่มบุคลากรและสร้างบัญชีเข้าสู่ระบบเรียบร้อย" : "เพิ่มบุคลากรเรียบร้อย" };
 }
 
-export async function updateStaffRecord(id: string, input: StaffInput): Promise<ActionResult> {
+export async function updateStaffRecord(
+  id: string,
+  input: StaffInput,
+  loginPassword?: string,
+  canManageLogin = false,
+): Promise<ActionResult> {
   if (await staffCodeExists(input.staffCode, id)) {
     return { ok: false, fieldErrors: { staffCode: "รหัสบุคลากรนี้ถูกใช้แล้ว" } };
   }
   if (input.nationalId && (await nationalIdExists(input.nationalId, id))) {
     return { ok: false, fieldErrors: { nationalId: "เลขบัตรประชาชนนี้ถูกใช้แล้ว" } };
   }
-  await updateStaff(id, input);
-  return { ok: true, message: "บันทึกการแก้ไขเรียบร้อย" };
+  const account = await staffLoginAccount(id);
+  if (loginPassword && !input.email && !account) {
+    return { ok: false, fieldErrors: { email: "กรอกอีเมลก่อนสร้างบัญชีเข้าสู่ระบบ" } };
+  }
+  const loginEmail = input.email ?? account?.email;
+  if ((loginPassword || (canManageLogin && account && input.email)) && loginEmail && (await loginEmailExists(loginEmail, account?.id))) {
+    return { ok: false, fieldErrors: { email: "อีเมลนี้ถูกใช้เป็นบัญชีเข้าสู่ระบบแล้ว" } };
+  }
+  const hash = loginPassword ? await hashPassword(loginPassword) : undefined;
+  await updateStaff(
+    id,
+    input,
+    hash || canManageLogin ? { ...(hash ? { passwordHash: hash } : {}), updateEmail: canManageLogin } : undefined,
+  );
+  return { ok: true, message: loginPassword ? (account ? "บันทึกข้อมูลและตั้งรหัสผ่านใหม่เรียบร้อย" : "บันทึกข้อมูลและสร้างบัญชีเข้าสู่ระบบเรียบร้อย") : "บันทึกการแก้ไขเรียบร้อย" };
 }
 
 export async function deleteStaffRecord(id: string): Promise<ActionResult> {
