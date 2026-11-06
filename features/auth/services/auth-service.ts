@@ -2,7 +2,7 @@ import "server-only";
 
 import type { Role } from "@prisma/client";
 import { verifyPassword } from "@/lib/password";
-import { findActiveUserByEmail } from "@/features/auth/repositories/user-repository";
+import { findActiveUserByIdentifier } from "@/features/auth/repositories/user-repository";
 import type { LoginInput } from "@/features/auth/schemas/login-schema";
 
 export interface AuthenticatedUser {
@@ -16,7 +16,7 @@ export interface AuthenticatedUser {
  * the two cases are deliberately indistinguishable to prevent enumeration.
  */
 export async function authenticate(input: LoginInput): Promise<AuthenticatedUser | null> {
-  const user = await findActiveUserByEmail(input.email);
+  const user = await findActiveUserByIdentifier(input.identifier);
   if (!user) {
     return null;
   }
