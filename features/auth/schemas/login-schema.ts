@@ -2,7 +2,15 @@ import { z } from "zod";
 
 /** Validates raw login form input before any database or crypto work. */
 export const loginSchema = z.object({
-  email: z.string().trim().min(1, "กรุณากรอกอีเมล").email("รูปแบบอีเมลไม่ถูกต้อง"),
+  identifier: z
+    .string()
+    .trim()
+    .min(1, "กรุณากรอกอีเมลหรือเลขบัตรประชาชน")
+    .transform((value) => (value.includes("@") ? value.toLowerCase() : value))
+    .refine(
+      (value) => z.string().email().safeParse(value).success || /^\d{13}$/.test(value),
+      "กรุณากรอกอีเมลหรือเลขบัตรประชาชน 13 หลัก",
+    ),
   password: z.string().min(1, "กรุณากรอกรหัสผ่าน"),
 });
 

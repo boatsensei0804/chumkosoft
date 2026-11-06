@@ -21,8 +21,8 @@ export default function LoginForm({ t }: { t: Dictionary["login"] }): React.Reac
       )}
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="login-email">{t.email}</Label>
-        <Input id="login-email" name="email" type="email" autoComplete="email" defaultValue={state.email} required autoFocus disabled={isPending} />
+        <Label htmlFor="login-identifier">{t.identifier}</Label>
+        <Input id="login-identifier" name="identifier" type="text" autoComplete="username" defaultValue={state.identifier} required autoFocus disabled={isPending} />
       </div>
 
       <div className="flex flex-col gap-1.5">

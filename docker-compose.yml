@@ -84,6 +84,8 @@ services:
     build:
       context: .
       target: runner
+      args:
+        APP_ALLOWED_ORIGINS: ${APP_ALLOWED_ORIGINS}
     container_name: chumkosoft-app
     restart: unless-stopped
     env_file: .env
@@ -96,8 +98,8 @@ services:
       MINIO_PORT: "9000"
       MINIO_USE_SSL: "false"
       MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-localhost}
-      MINIO_PUBLIC_PORT: "9000"
-      MINIO_PUBLIC_USE_SSL: "false"
+      MINIO_PUBLIC_PORT: "${MINIO_PUBLIC_PORT:-9000}"
+      MINIO_PUBLIC_USE_SSL: "${MINIO_PUBLIC_USE_SSL:-false}"
     ports:
       - "3000:3000"
     depends_on:

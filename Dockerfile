@@ -20,6 +20,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Generate the Prisma client (musl engine, matches this Alpine base) before building.
 RUN npx prisma generate
+ARG APP_ALLOWED_ORIGINS
 RUN npm run build
 
 # ---- Runtime ----

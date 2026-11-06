@@ -22,7 +22,7 @@ const th = {
   login: {
     title: "เข้าสู่ระบบ",
     subtitle: "ลงชื่อเข้าใช้เพื่อจัดการข้อมูลของสถานศึกษา",
-    email: "อีเมล",
+    identifier: "อีเมลหรือเลขบัตรประชาชน",
     password: "รหัสผ่าน",
     submit: "เข้าสู่ระบบ",
     submitting: "กำลังเข้าสู่ระบบ…",
@@ -52,7 +52,7 @@ const en = {
   login: {
     title: "Sign in",
     subtitle: "Sign in to manage your school's records",
-    email: "Email",
+    identifier: "Email or national ID",
     password: "Password",
     submit: "Sign in",
     submitting: "Signing in…",
