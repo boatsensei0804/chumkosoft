@@ -18,6 +18,8 @@ a = Analysis(
     datas=[
         (str(project / "public" / "models" / "scanner"), "bundled_models"),
         (str(project / "public" / "mascot" / "scan.png"), "mascot"),
+        *((str(path), "fonts") for path in (root / "fonts").glob("*.ttf")),
+        (str(root / "fonts" / "OFL.txt"), "fonts"),
         (str(site_packages / "shiboken6" / "__init__.py"), "shiboken6"),
     ],
     hiddenimports=[],

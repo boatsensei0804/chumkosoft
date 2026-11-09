@@ -13,7 +13,7 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from PySide6.QtCore import Qt, QTimer, QUrl
-from PySide6.QtGui import QDesktopServices, QImage, QPixmap
+from PySide6.QtGui import QDesktopServices, QFont, QFontDatabase, QImage, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -45,6 +46,19 @@ from web_client import SITE, KioskWebClient, upload_pending_photos, validate_sit
 THAI_TIME = ZoneInfo("Asia/Bangkok")
 
 
+def font_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS) / "fonts"
+    return Path(__file__).resolve().parent / "fonts"
+
+
+def load_prompt_font() -> None:
+    for name in ("Prompt-Regular.ttf", "Prompt-SemiBold.ttf", "Prompt-Bold.ttf"):
+        path = font_dir() / name
+        if path.is_file():
+            QFontDatabase.addApplicationFont(str(path))
+
+
 def app_data_dir() -> Path:
     override = os.environ.get("CHUMKOSOFT_SCANNER_DATA_DIR")
     if override:
@@ -61,9 +75,16 @@ def mascot_path() -> Path:
 
 
 STYLE = """
-QWidget { font-family: -apple-system, 'Helvetica Neue', 'Noto Sans Thai', sans-serif; color: #183454; font-size: 13px; }
+QWidget { font-family: 'Prompt'; color: #183454; font-size: 13px; }
 QMainWindow, QWidget#root { background: #f3f8fc; }
 QScrollArea { background: #f3f8fc; border: none; }
+QFrame#sidebar { background: #ffffff; border-right: 1px solid #dce9f4; }
+QFrame#scanresult { background: #e9f8ef; border: 1px solid #bde7d0; border-radius: 17px; }
+QFrame#scanresult[mode="warn"] { background: #fff7e7; border-color: #f1dfb8; }
+QLabel#resultname { font-size: 25px; font-weight: 700; color: #126c4b; }
+QLabel#resultmeta { font-size: 16px; color: #267755; }
+QFrame#scanresult[mode="warn"] QLabel#resultname { color: #a26f20; }
+QFrame#scanresult[mode="warn"] QLabel#resultmeta { color: #a26f20; }
 QFrame#card, QFrame#metric { background: white; border: 1px solid #dce9f4; border-radius: 17px; }
 QFrame#metric { min-height: 75px; }
 QFrame#paircard { background: white; border: 1px solid #dce9f4; border-radius: 22px; }
@@ -76,16 +97,18 @@ QLabel#subtle { color: #7389a0; }
 QLabel#section { font-size: 18px; font-weight: 800; }
 QLabel#metriclabel { color: #758ca2; font-size: 11px; }
 QLabel#metricvalue { font-size: 23px; font-weight: 800; }
-QLabel#clock { font-size: 25px; font-weight: 800; }
+QLabel#clock { font-size: 32px; font-weight: 700; }
 QLabel#testbadge { background: #fff3d8; color: #9c6919; border-radius: 12px; padding: 7px 12px; font-weight: 700; }
+QLabel#testbadge[mode="connected"] { background: #e8f7ef; color: #16825a; }
 QLabel#statebadge { background: #e8f7ef; color: #16825a; border-radius: 12px; padding: 7px 12px; font-weight: 700; }
 QLabel#camera { background: #dbeaf6; border: 1px solid #cbdfee; border-radius: 14px; }
 QWidget#placeholder { background: #dbeaf6; border: 1px solid #cbdfee; border-radius: 14px; }
-QLabel#feedback { background: #e9f5ff; color: #275f91; border: 1px solid #d3eafa; border-radius: 11px; padding: 13px; font-weight: 700; }
+QLabel#feedback { background: #e9f5ff; color: #275f91; border: 1px solid #d3eafa; border-radius: 11px; padding: 17px; font-size: 15px; font-weight: 600; }
 QLabel#feedback[mode="success"] { background: #e9f8ef; color: #167c55; border-color: #caebd7; }
 QLabel#feedback[mode="warn"] { background: #fff7e7; color: #a26f20; border-color: #f1dfb8; }
-QPushButton#nav { background: transparent; color: #607d98; text-align: left; padding: 11px 16px; }
+QPushButton#nav { background: transparent; color: #607d98; text-align: left; padding: 13px 14px; font-size: 14px; }
 QPushButton#nav:checked { background: #e1f0fc; color: #1267ad; }
+QPushButton#collapse { background: #f0f7fd; color: #1267ad; text-align: left; padding: 10px 14px; }
 QPushButton { background: #eaf4fc; color: #266da5; border: none; border-radius: 10px; padding: 10px 14px; font-weight: 700; min-height: 20px; }
 QPushButton:hover { background: #dceefa; }
 QPushButton:disabled { color: #9caebb; background: #f0f4f7; }
@@ -96,8 +119,9 @@ QComboBox { background: #fbfdff; border: 1px solid #d7e5ef; border-radius: 9px; 
 QComboBox:focus { border-color: #69afe4; }
 QLineEdit { background: #fbfdff; border: 1px solid #d7e5ef; border-radius: 9px; padding: 9px 10px; min-height: 18px; }
 QLineEdit:focus { border-color: #69afe4; }
-QTableWidget { background: white; border: none; gridline-color: #edf2f6; selection-background-color: #e4f2ff; }
+QTableWidget { background: white; border: none; gridline-color: #edf2f6; selection-background-color: #e4f2ff; font-size: 14px; }
 QHeaderView::section { background: #f7fbfe; color: #7089a0; padding: 9px; border: none; font-weight: 700; }
+QLineEdit#studentsearch { background: white; border: 1px solid #cbdfee; border-radius: 10px; padding: 11px 13px; font-size: 14px; }
 """
 
 
@@ -169,6 +193,8 @@ class ScannerWindow(QMainWindow):
         self.pair_polling = False
         self.pair_generation = 0
         self.roster_loading = False
+        self.roster_students: list[dict[str, str]] = []
+        self.nav_collapsed = False
         self.uploading_photos = False
         self.camera = None
         self.current_frame = None
@@ -213,10 +239,42 @@ class ScannerWindow(QMainWindow):
             QTimer.singleShot(0, self.start_pairing)
 
     def _build_ui(self):
+        shell = QWidget()
+        shell_layout = QHBoxLayout(shell)
+        shell_layout.setContentsMargins(0, 0, 0, 0)
+        shell_layout.setSpacing(0)
+        self.setCentralWidget(shell)
+
+        self.navigation_widget = QFrame()
+        self.navigation_widget.setObjectName("sidebar")
+        self.navigation_widget.setFixedWidth(218)
+        nav_layout = QVBoxLayout(self.navigation_widget)
+        nav_layout.setContentsMargins(11, 20, 11, 16)
+        nav_layout.setSpacing(8)
+        self.collapse_button = QPushButton("☰  ย่อเมนู")
+        self.collapse_button.setObjectName("collapse")
+        self.collapse_button.clicked.connect(self.toggle_navigation)
+        nav_layout.addWidget(self.collapse_button)
+        nav_layout.addSpacing(24)
+        self.nav_buttons = []
+        self.nav_titles = ("สแกนใบหน้า", "ภาพรวม", "ลงทะเบียนใบหน้า", "เชื่อมต่อและซิงก์", "ตั้งค่า")
+        self.nav_symbols = ("◉", "▦", "⊕", "⇄", "⚙")
+        for index, title in enumerate(self.nav_titles):
+            button = QPushButton(f"{self.nav_symbols[index]}   {title}")
+            button.setObjectName("nav")
+            button.setCheckable(True)
+            button.setToolTip(title)
+            button.clicked.connect(lambda checked=False, page=index: self.show_page(page))
+            nav_layout.addWidget(button)
+            self.nav_buttons.append(button)
+        nav_layout.addStretch()
+        shell_layout.addWidget(self.navigation_widget)
+        self.navigation_widget.setVisible(False)
+
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
-        self.setCentralWidget(scroll)
+        shell_layout.addWidget(scroll, stretch=1)
         root = QWidget()
         root.setObjectName("root")
         root.setMinimumHeight(710)
@@ -236,25 +294,10 @@ class ScannerWindow(QMainWindow):
         brand.addWidget(label("FACE SCAN STATION", "brandsub"))
         header.addLayout(brand)
         header.addStretch()
-        header.addWidget(label("โหมดทดสอบ", "testbadge"))
+        self.connection_badge = label("รอเชื่อมเว็บ", "testbadge")
+        header.addWidget(self.connection_badge)
         header.addWidget(label("พร้อมใช้งานออฟไลน์", "statebadge"))
         outer.addLayout(header)
-
-        self.navigation_widget = QWidget()
-        navigation = QHBoxLayout(self.navigation_widget)
-        navigation.setContentsMargins(0, 0, 0, 0)
-        navigation.setSpacing(8)
-        self.nav_buttons = []
-        for index, title in enumerate(("สแกนใบหน้า", "ภาพรวม", "ลงทะเบียนใบหน้า", "เชื่อมต่อและซิงก์", "ตั้งค่า")):
-            button = QPushButton(title)
-            button.setObjectName("nav")
-            button.setCheckable(True)
-            button.clicked.connect(lambda checked=False, page=index: self.show_page(page))
-            navigation.addWidget(button)
-            self.nav_buttons.append(button)
-        navigation.addStretch()
-        outer.addWidget(self.navigation_widget)
-        self.navigation_widget.setVisible(False)
 
         self.pages = CurrentPageStack()
         outer.addWidget(self.pages, stretch=1)
@@ -276,14 +319,14 @@ class ScannerWindow(QMainWindow):
         overview_layout.addLayout(metrics)
 
         scan_card, scan_layout = card()
-        scan_card.setMinimumHeight(600)
+        scan_card.setMinimumHeight(650)
         scan_layout.addWidget(label("01 / สถานีสแกน", "eyebrow"))
         scan_layout.addWidget(label("กล้องสแกนใบหน้า", "section"))
         self.model_status = label(f"โมเดล {self.manifest['model_version']} พร้อมใช้ในเครื่อง · กำลังตรวจอัปเดต", "subtle", True)
         scan_layout.addWidget(self.model_status)
         self.stage = QStackedWidget()
         self.stage.setMinimumHeight(420)
-        self.stage.setMaximumHeight(520)
+        self.stage.setMaximumHeight(680)
         placeholder = QWidget()
         placeholder.setObjectName("placeholder")
         place_layout = QVBoxLayout(placeholder)
@@ -315,12 +358,24 @@ class ScannerWindow(QMainWindow):
         scan_layout.insertLayout(3, controls)
         scan_workspace = QHBoxLayout()
         scan_workspace.setSpacing(14)
-        scan_workspace.addWidget(scan_card, stretch=4)
+        scan_workspace.addWidget(scan_card, stretch=5)
         side_column = QVBoxLayout()
         side_column.setSpacing(14)
+        result_card = QFrame()
+        result_card.setObjectName("scanresult")
+        result_layout = QVBoxLayout(result_card)
+        result_layout.setContentsMargins(20, 18, 20, 18)
+        result_layout.setSpacing(3)
+        result_layout.addWidget(label("ผลสแกนล่าสุด", "eyebrow"))
+        self.result_name = label("พร้อมสแกนใบหน้า", "resultname", True)
+        result_layout.addWidget(self.result_name)
+        self.result_meta = label("เมื่อสแกนสำเร็จ ชื่อและเวลาจะแสดงตรงนี้", "resultmeta", True)
+        result_layout.addWidget(self.result_meta)
+        side_column.addWidget(result_card)
+        self.result_card = result_card
         activity_card, activity_layout = card()
-        activity_card.setMinimumWidth(300)
-        activity_card.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+        activity_card.setMinimumWidth(350)
+        activity_card.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         activity_layout.addWidget(label("รายการสแกนวันนี้", "eyebrow"))
         activity_layout.addWidget(label("เวลาปัจจุบัน · เวลาไทย", "subtle"))
         self.scan_clock = label("--:--:--", "clock")
@@ -329,98 +384,126 @@ class ScannerWindow(QMainWindow):
         activity_layout.addWidget(self.scan_date)
         self.scan_count = label("สแกนแล้ว 0 คน", "section")
         activity_layout.addWidget(self.scan_count)
-        activity_layout.addWidget(label("บันทึกบนเครื่องนี้ · เรียงจากล่าสุด", "subtle"))
+        self.scan_queue_note = label("บันทึกบนเครื่องนี้ · เรียงจากล่าสุด", "subtle")
+        activity_layout.addWidget(self.scan_queue_note)
         self.scan_history = QTableWidget(0, 2)
         self.scan_history.setHorizontalHeaderLabels(["รายชื่อ / รหัส", "เวลาสแกน"])
         self.scan_history.verticalHeader().setVisible(False)
         self.scan_history.setEditTriggers(QTableWidget.NoEditTriggers)
         self.scan_history.setSelectionBehavior(QTableWidget.SelectRows)
         self.scan_history.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        self.scan_history.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        self.scan_history.setMaximumHeight(330)
-        activity_layout.addWidget(self.scan_history)
+        self.scan_history.setColumnWidth(1, 125)
+        self.scan_history.setMinimumHeight(360)
+        activity_layout.addWidget(self.scan_history, stretch=1)
         self.scan_empty = label("ยังไม่มีใครสแกนในวันนี้", "subtle", True)
         self.scan_empty.setAlignment(Qt.AlignCenter)
         activity_layout.addWidget(self.scan_empty)
         side_column.addWidget(activity_card)
-        state_card, state_layout = card()
-        state_layout.addWidget(label("สถานะจุดสแกน", "eyebrow"))
-        self.scan_camera_state = label("กล้องยังไม่เปิด", "section")
-        state_layout.addWidget(self.scan_camera_state)
-        self.scan_pending = label("รอซิงก์ 0 รายการ", "subtle")
-        state_layout.addWidget(self.scan_pending)
-        state_layout.addWidget(label("รายการเช็กชื่อเก็บไว้ในเครื่องระหว่างทดสอบ", "subtle", True))
-        side_column.addWidget(state_card)
-        side_column.addStretch()
-        scan_workspace.addLayout(side_column, stretch=2)
+        scan_workspace.addLayout(side_column, stretch=3)
         scan_page_layout.addLayout(scan_workspace)
         scan_page_layout.addStretch()
 
-        enroll_card, enroll_layout = card()
-        enroll_card.setMinimumHeight(325)
-        enroll_layout.addWidget(label("02 / เตรียมผู้ทดสอบ", "eyebrow"))
-        enroll_layout.addWidget(label("ลงทะเบียนใบหน้าทดสอบ", "section"))
-        enroll_layout.addWidget(label("เก็บรูปชั่วคราวเพื่อส่งขึ้นเว็บและเก็บค่าจดจำไว้สแกนออฟไลน์ ใช้เฉพาะภาพที่ได้รับความยินยอม", "subtle", True))
-        enroll_layout.addWidget(label("เลือกนักเรียนจากเว็บไซต์"))
-        self.student_choice = QComboBox()
-        self.student_choice.setEditable(True)
-        self.student_choice.setInsertPolicy(QComboBox.NoInsert)
-        self.student_choice.addItem("เชื่อมบัญชีจุดสแกนเพื่อโหลดรายชื่อ", None)
-        self.student_choice.setEnabled(False)
-        self.student_choice.setAccessibleName("เลือกนักเรียนจากเว็บไซต์")
-        self.student_choice.completer().setFilterMode(Qt.MatchContains)
-        self.student_choice.completer().setCaseSensitivity(Qt.CaseInsensitive)
-        enroll_layout.addWidget(self.student_choice)
+        enrollment_workspace = QHBoxLayout()
+        enrollment_workspace.setSpacing(14)
+        roster_card, roster_layout = card()
+        roster_layout.addWidget(label("02 / เลือกนักเรียน", "eyebrow"))
+        roster_layout.addWidget(label("ค้นหารายชื่อ", "section"))
+        roster_layout.addWidget(label("กรองตามห้อง แล้วค้นด้วยชื่อ นามสกุล หรือรหัสนักเรียน", "subtle", True))
+        self.room_choice = QComboBox()
+        self.room_choice.addItem("ทุกห้องเรียน", "")
+        self.room_choice.currentIndexChanged.connect(self._filter_roster)
+        roster_layout.addWidget(self.room_choice)
+        self.student_search = QLineEdit()
+        self.student_search.setObjectName("studentsearch")
+        self.student_search.setPlaceholderText("พิมพ์ชื่อ นามสกุล หรือรหัสนักเรียน")
+        self.student_search.setAccessibleName("ค้นหานักเรียน")
+        self.student_search.textChanged.connect(self._filter_roster)
+        roster_layout.addWidget(self.student_search)
         self.roster_info = label("รายชื่อจะโหลดจากเว็บหลังเชื่อมบัญชีจุดสแกน", "subtle", True)
-        enroll_layout.addWidget(self.roster_info)
-        roster_actions = QHBoxLayout()
+        roster_layout.addWidget(self.roster_info)
+        self.student_table = QTableWidget(0, 3)
+        self.student_table.setHorizontalHeaderLabels(["ห้อง", "ชื่อและนามสกุล", "รหัส"])
+        self.student_table.verticalHeader().setVisible(False)
+        self.student_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.student_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.student_table.setSelectionMode(QTableWidget.SingleSelection)
+        self.student_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.student_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.student_table.setColumnWidth(2, 118)
+        self.student_table.setMinimumHeight(430)
+        self.student_table.itemSelectionChanged.connect(self._update_enroll_actions)
+        roster_layout.addWidget(self.student_table, stretch=1)
         self.roster_reload_button = QPushButton("โหลดรายชื่อใหม่")
         self.roster_reload_button.setEnabled(False)
         self.roster_reload_button.clicked.connect(self.load_students)
-        roster_actions.addWidget(self.roster_reload_button)
-        connect_hint = QPushButton("ไปหน้าเชื่อมบัญชี")
-        connect_hint.clicked.connect(lambda: self.show_page(3))
-        roster_actions.addWidget(connect_hint)
-        roster_actions.addStretch()
-        enroll_layout.addLayout(roster_actions)
+        roster_layout.addWidget(self.roster_reload_button)
+        enrollment_workspace.addWidget(roster_card, stretch=3)
+
+        capture_card, capture_layout = card()
+        capture_layout.addWidget(label("03 / ลงทะเบียนใบหน้า", "eyebrow"))
+        capture_layout.addWidget(label("ถ่ายภาพหรือเลือกไฟล์", "section"))
+        self.selected_student_label = label("เลือกนักเรียนจากตารางด้านซ้ายก่อน", "subtle", True)
+        capture_layout.addWidget(self.selected_student_label)
         self.enroll_preview = label("กำลังเตรียมกล้อง หรือเลือกรูปจากไฟล์", "camera", True)
         self.enroll_preview.setAlignment(Qt.AlignCenter)
-        self.enroll_preview.setMinimumHeight(230)
-        enroll_layout.addWidget(self.enroll_preview)
-        enroll_camera_controls = QHBoxLayout()
+        self.enroll_preview.setMinimumHeight(300)
+        capture_layout.addWidget(self.enroll_preview, stretch=1)
         self.enroll_camera_label = label(f"ใช้กล้อง {self.camera_index} · เปลี่ยนได้ในหน้าตั้งค่า", "subtle")
-        enroll_camera_controls.addWidget(self.enroll_camera_label)
-        enroll_camera_controls.addStretch()
-        enroll_layout.addLayout(enroll_camera_controls)
-        self.enroll_button = QPushButton("ลงทะเบียนจากภาพกล้อง")
+        capture_layout.addWidget(self.enroll_camera_label)
+        self.enroll_button = QPushButton("ถ่ายภาพและลงทะเบียน")
+        self.enroll_button.setObjectName("primary")
         self.enroll_button.setEnabled(False)
         self.enroll_button.clicked.connect(self.enroll_camera)
-        enroll_layout.addWidget(self.enroll_button)
-        self.file_button = QPushButton("เลือกรูปทดสอบจากไฟล์")
+        capture_layout.addWidget(self.enroll_button)
+        self.file_button = QPushButton("เลือกรูปจากไฟล์")
         self.file_button.setEnabled(False)
         self.file_button.clicked.connect(self.enroll_file)
-        enroll_layout.addWidget(self.file_button)
-        self.student_choice.currentIndexChanged.connect(self._update_enroll_actions)
-        self.student_choice.editTextChanged.connect(self._update_enroll_actions)
-        self.enroll_feedback = label("พร้อมลงทะเบียน · ภาพจะรอส่งขึ้นเว็บเมื่อเชื่อมบัญชีจุดสแกน", "feedback", True)
-        enroll_layout.addWidget(self.enroll_feedback)
-        enroll_page_layout.addWidget(enroll_card)
+        capture_layout.addWidget(self.file_button)
+        self.enroll_feedback = label("ภาพที่ได้รับความยินยอมจะอัปโหลดไปเว็บ และเก็บค่าจดจำในเครื่องเพื่อสแกนออฟไลน์", "feedback", True)
+        capture_layout.addWidget(self.enroll_feedback)
+        enrollment_workspace.addWidget(capture_card, stretch=2)
+        enroll_page_layout.addLayout(enrollment_workspace, stretch=1)
         enroll_page_layout.addStretch()
 
         self.sync_card, sync_layout = card()
         self.sync_card.setMinimumHeight(125)
+        self.sync_card.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         sync_layout.addWidget(label("03 / การส่งข้อมูล", "eyebrow"))
         sync_layout.addWidget(label("สถานะการซิงก์", "section"))
         self.sync_info = label("รายการจะอยู่ในเครื่องจนกว่าจะเชื่อมเว็บไซต์", "subtle", True)
         sync_layout.addWidget(self.sync_info)
+        self.photo_info = label("ยังไม่ได้เชื่อมเว็บไซต์", "subtle", True)
+        sync_layout.addWidget(self.photo_info)
+        self.sync_queue = QTableWidget(0, 4)
+        self.sync_queue.setHorizontalHeaderLabels(["เวลาสแกน", "นักเรียน", "ผลการส่ง", "รายละเอียด"])
+        self.sync_queue.verticalHeader().setVisible(False)
+        self.sync_queue.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.sync_queue.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.sync_queue.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.sync_queue.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        self.sync_queue.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        self.sync_queue.setFixedHeight(330)
+        sync_layout.addWidget(self.sync_queue)
+        self.sync_empty = label("ยังไม่มีรายการสแกนบนเครื่องนี้", "subtle")
+        self.sync_empty.setAlignment(Qt.AlignCenter)
+        sync_layout.addWidget(self.sync_empty)
+        sync_actions = QHBoxLayout()
         self.sync_button = QPushButton("ลองซิงก์ตอนนี้")
+        self.sync_button.setObjectName("primary")
         self.sync_button.setEnabled(False)
         self.sync_button.clicked.connect(self.try_sync)
-        sync_layout.addWidget(self.sync_button)
+        sync_actions.addWidget(self.sync_button)
+        self.upload_button = QPushButton("อัปโหลดรูปที่รอส่ง")
+        self.upload_button.setEnabled(False)
+        self.upload_button.clicked.connect(self.upload_photos)
+        sync_actions.addWidget(self.upload_button)
+        sync_actions.addStretch()
+        sync_layout.addLayout(sync_actions)
         transfer_page_layout.addWidget(self.sync_card)
         self.sync_card.setVisible(False)
 
         upload_card, upload_layout = card()
+        self.pair_card = upload_card
         upload_card.setObjectName("paircard")
         upload_card.setMaximumWidth(620)
         upload_layout.setContentsMargins(32, 30, 32, 30)
@@ -462,14 +545,6 @@ class ScannerWindow(QMainWindow):
         if self.site_url.startswith("http://"):
             upload_layout.addWidget(label("โหมด dev: QR ของ localhost เปิดบนมือถือไม่ได้ ให้กดเปิดลิงก์บน Mac เครื่องนี้เพื่อทดสอบ", "subtle", True))
 
-        self.photo_info = label("ยังไม่ได้เชื่อมเว็บไซต์", "subtle", True)
-        upload_layout.addWidget(self.photo_info)
-        self.photo_info.setVisible(False)
-        self.upload_button = QPushButton("อัปโหลดรูปที่รอส่ง")
-        self.upload_button.setEnabled(False)
-        self.upload_button.clicked.connect(self.upload_photos)
-        upload_layout.addWidget(self.upload_button)
-        self.upload_button.setVisible(False)
         centered_pair = QHBoxLayout()
         centered_pair.addStretch()
         centered_pair.addWidget(upload_card)
@@ -559,6 +634,13 @@ class ScannerWindow(QMainWindow):
         if index in (0, 2) and self.web_client is not None and self.camera is None:
             self.start_camera()
 
+    def toggle_navigation(self):
+        self.nav_collapsed = not self.nav_collapsed
+        self.navigation_widget.setFixedWidth(66 if self.nav_collapsed else 218)
+        self.collapse_button.setText("☰" if self.nav_collapsed else "☰  ย่อเมนู")
+        for index, button in enumerate(self.nav_buttons):
+            button.setText(self.nav_symbols[index] if self.nav_collapsed else f"{self.nav_symbols[index]}   {self.nav_titles[index]}")
+
     def _metric(self, grid: QGridLayout, column: int, title: str) -> QLabel:
         frame = QFrame()
         frame.setObjectName("metric")
@@ -608,17 +690,44 @@ class ScannerWindow(QMainWindow):
             item.style().polish(item)
 
     def _selected_student(self) -> Optional[tuple[str, str]]:
-        index = self.student_choice.currentIndex()
-        selected = self.student_choice.currentData()
-        if (not self.student_choice.isEnabled() or index <= 0 or not isinstance(selected, tuple) or
-                self.student_choice.currentText() != self.student_choice.itemText(index)):
+        row = self.student_table.currentRow()
+        item = self.student_table.item(row, 1) if row >= 0 else None
+        selected = item.data(Qt.UserRole) if item is not None and item.isSelected() else None
+        if not isinstance(selected, tuple) or len(selected) != 2:
             return None
         return selected
 
+    def _filter_roster(self, *_args):
+        room = self.room_choice.currentData() or ""
+        search = self.student_search.text().strip().casefold()
+        matching = [student for student in self.roster_students if
+                    (not room or student["classroom"] == room) and
+                    (not search or search in f"{student['name']} {student['code']}".casefold())]
+        visible = matching[:200]
+        self.student_table.setUpdatesEnabled(False)
+        self.student_table.setRowCount(len(visible))
+        for index, student in enumerate(visible):
+            room_item = QTableWidgetItem(student["classroom"])
+            name_item = QTableWidgetItem(student["name"])
+            name_item.setData(Qt.UserRole, (student["code"], student["name"]))
+            code_item = QTableWidgetItem(student["code"])
+            for column, item in enumerate((room_item, name_item, code_item)):
+                self.student_table.setItem(index, column, item)
+            self.student_table.setRowHeight(index, 43)
+        self.student_table.clearSelection()
+        self.student_table.setUpdatesEnabled(True)
+        if self.roster_students:
+            suffix = " · แสดง 200 คนแรก กรุณาค้นหาเพิ่ม" if len(matching) > 200 else ""
+            self.roster_info.setText(f"พบ {len(matching)} คน จาก {len(self.roster_students)} คน{suffix}")
+        self._update_enroll_actions()
+
     def _update_enroll_actions(self, *_args):
-        selected = self._selected_student() is not None
-        self.file_button.setEnabled(selected)
-        self.enroll_button.setEnabled(selected and self.camera is not None)
+        selected = self._selected_student()
+        self.file_button.setEnabled(selected is not None)
+        self.enroll_button.setEnabled(selected is not None and self.camera is not None)
+        self.selected_student_label.setText(
+            f"กำลังลงทะเบียน: {selected[1]} ({selected[0]})" if selected else "เลือกนักเรียนจากตารางด้านซ้ายก่อน"
+        )
 
     def refresh(self):
         model_id = self.manifest["embedding_version"]
@@ -626,7 +735,7 @@ class ScannerWindow(QMainWindow):
         pending = self.db.execute("SELECT COUNT(*) FROM events WHERE state='pending'").fetchone()[0]
         synced = self.db.execute("SELECT COUNT(*) FROM events WHERE state='synced'").fetchone()[0]
         self.pending_value.setText(f"{pending} รายการ")
-        self.scan_pending.setText(f"รอซิงก์ {pending} รายการ")
+        self.scan_queue_note.setText(f"บันทึกบนเครื่องนี้ · รอส่ง {pending} รายการ")
         self.synced_value.setText(f"{synced} รายการ")
         self.model_value.setText(self.manifest["model_version"])
         rejected = self.db.execute("SELECT COUNT(*) FROM events WHERE state='rejected'").fetchone()[0]
@@ -637,7 +746,7 @@ class ScannerWindow(QMainWindow):
         if self.web_client is None and not self.uploading_photos:
             self.photo_info.setText(f"รูปที่รอส่ง {photo_count} รูป · กรุณาเชื่อมบัญชีจุดสแกน")
         rows = self.db.execute(
-            "SELECT display_name, student_id, captured_at, state FROM events ORDER BY captured_at DESC LIMIT 12"
+            "SELECT display_name, student_id, captured_at, state, rejection_reason FROM events ORDER BY captured_at DESC LIMIT 12"
         ).fetchall()
         self.history.setRowCount(len(rows))
         for index, row in enumerate(rows):
@@ -646,6 +755,16 @@ class ScannerWindow(QMainWindow):
             values = [row["display_name"], row["student_id"], at, state_text.get(row["state"], "รอตรวจ")]
             for column, value in enumerate(values):
                 self.history.setItem(index, column, QTableWidgetItem(value))
+        self.sync_queue.setRowCount(len(rows))
+        self.sync_queue.setVisible(bool(rows))
+        self.sync_empty.setVisible(not rows)
+        for index, row in enumerate(rows):
+            at = datetime.fromisoformat(row["captured_at"]).astimezone(THAI_TIME).strftime("%d/%m %H:%M")
+            state_text = {"synced": "ส่งแล้ว", "pending": "รอส่ง", "rejected": "เว็บไม่รับ"}
+            detail = row["rejection_reason"] if row["state"] == "rejected" else "—"
+            for column, value in enumerate((at, row["display_name"], state_text.get(row["state"], "รอตรวจ"), detail or "—")):
+                self.sync_queue.setItem(index, column, QTableWidgetItem(value))
+            self.sync_queue.setRowHeight(index, 42)
 
         today = datetime.now(THAI_TIME).date().isoformat()
         today_rows = self.db.execute(
@@ -661,11 +780,7 @@ class ScannerWindow(QMainWindow):
             at = datetime.fromisoformat(row["captured_at"]).astimezone(THAI_TIME).strftime("%H:%M:%S")
             self.scan_history.setItem(index, 0, QTableWidgetItem(f"{row['display_name']}\n{row['student_id']}"))
             self.scan_history.setItem(index, 1, QTableWidgetItem(at))
-            self.scan_history.setRowHeight(index, 48)
-        table_height = self.scan_history.horizontalHeader().height() + 4 + sum(
-            self.scan_history.rowHeight(index) for index in range(len(today_rows))
-        )
-        self.scan_history.setFixedHeight(min(330, table_height))
+            self.scan_history.setRowHeight(index, 62)
 
     def start_camera(self):
         if self.web_client is None or self.pages.currentIndex() not in (0, 2) or self.camera is not None:
@@ -681,7 +796,6 @@ class ScannerWindow(QMainWindow):
         self.camera = camera
         self.stage.setCurrentIndex(1)
         self._update_enroll_actions()
-        self.scan_camera_state.setText(f"กล้อง {index} กำลังทำงาน")
         self._feedback("กล้องพร้อมถ่ายภาพลงทะเบียน" if self.pages.currentIndex() == 2 else "กำลังสแกน · จัดใบหน้าให้อยู่กลางภาพ")
         self.frame_timer.start(55)
 
@@ -696,7 +810,6 @@ class ScannerWindow(QMainWindow):
         self.enroll_preview.clear()
         self.enroll_preview.setText("กำลังเตรียมกล้อง หรือเลือกรูปจากไฟล์")
         self.enroll_button.setEnabled(False)
-        self.scan_camera_state.setText("กล้องยังไม่เปิด")
         self._feedback("กล้องหยุดชั่วคราว · กลับหน้าสแกนเพื่อเปิดอัตโนมัติ")
 
     def _camera_tick(self):
@@ -754,6 +867,13 @@ class ScannerWindow(QMainWindow):
         self._feedback(
             f"{match['display_name']} · {'บันทึกในเครื่องแล้ว รอซิงก์' if added else 'บันทึกแล้ววันนี้'}",
             "success" if added else "warn",
+        )
+        self.result_card.setProperty("mode", "" if added else "warn")
+        self.result_card.style().unpolish(self.result_card)
+        self.result_card.style().polish(self.result_card)
+        self.result_name.setText(match["display_name"])
+        self.result_meta.setText(
+            f"{datetime.now(THAI_TIME).strftime('%H:%M:%S')} น. · {'บันทึกแล้ว รอส่งขึ้นเว็บ' if added else 'สแกนแล้ววันนี้'}"
         )
         self.refresh()
         if added:
@@ -877,21 +997,26 @@ class ScannerWindow(QMainWindow):
                     continue
                 self.roster_loading = False
                 self.roster_reload_button.setEnabled(self.web_client is not None)
-                self.student_choice.clear()
-                self.student_choice.addItem("เลือกนักเรียนจากเว็บไซต์", None)
                 if error:
-                    self.student_choice.setEnabled(False)
+                    self.roster_students = []
+                    self.student_table.setRowCount(0)
+                    self.room_choice.clear()
+                    self.room_choice.addItem("ทุกห้องเรียน", "")
                     self.roster_info.setText(f"โหลดรายชื่อไม่สำเร็จ: {error}")
                 else:
-                    for student in sorted(students, key=lambda item: (item["classroom"], item["name"], item["code"])):
-                        text = f"{student['classroom']} · {student['name']} ({student['code']})"
-                        self.student_choice.addItem(text, (student["code"], student["name"]))
-                    self.student_choice.setCurrentIndex(0)
-                    self.student_choice.setEnabled(bool(students))
-                    self.roster_info.setText(
-                        f"โหลดแล้ว {len(students)} คน · เลือกชื่อก่อนลงทะเบียนใบหน้า"
-                        if students else "ยังไม่มีนักเรียนในภาคเรียนปัจจุบันที่ยินยอมให้เก็บใบหน้า"
-                    )
+                    self.roster_students = sorted(students, key=lambda item: (item["classroom"], item["name"], item["code"]))
+                    previous_room = self.room_choice.currentData()
+                    self.room_choice.blockSignals(True)
+                    self.room_choice.clear()
+                    self.room_choice.addItem("ทุกห้องเรียน", "")
+                    for room in sorted({student["classroom"] for student in students}):
+                        self.room_choice.addItem(room, room)
+                    chosen = self.room_choice.findData(previous_room)
+                    self.room_choice.setCurrentIndex(max(0, chosen))
+                    self.room_choice.blockSignals(False)
+                    self._filter_roster()
+                    if not students:
+                        self.roster_info.setText("ยังไม่มีนักเรียนในภาคเรียนปัจจุบันที่ยินยอมให้เก็บใบหน้า")
                 self._update_enroll_actions()
             elif kind == "photos":
                 sent, remaining, error = values
@@ -899,8 +1024,11 @@ class ScannerWindow(QMainWindow):
                 self.refresh()
                 if error:
                     self.photo_info.setText(f"ส่งแล้ว {sent} รูป · ค้าง {remaining} รูป · {error}")
+                    self.enroll_feedback.setText(f"รูปยังค้างในเครื่อง {remaining} รูป · จะลองส่งใหม่เมื่อเชื่อมต่อได้")
                 else:
                     self.photo_info.setText(f"อัปโหลดแล้ว {sent} รูป · ค้าง {remaining} รูป")
+                    if sent:
+                        self.enroll_feedback.setText(f"อัปโหลดรูปสำเร็จ {sent} รูป · พร้อมสแกนในเครื่องนี้")
             elif kind == "sync":
                 sent, remaining, rejected, error = values
                 self.syncing = False
@@ -953,6 +1081,8 @@ class ScannerWindow(QMainWindow):
         self.pair_timer.stop()
         self.pair_retry_timer.stop()
         self.pair_button.setEnabled(True)
+        self.pair_button.setVisible(True)
+        self.pair_card.setVisible(True)
         self.pair_client = None
         self.pair_device_code = ""
         self.pair_verification_url = ""
@@ -961,6 +1091,10 @@ class ScannerWindow(QMainWindow):
         self.pair_code.setVisible(False)
         self.open_pair_button.setVisible(False)
         self.web_client = None
+        self.connection_badge.setText("รอเชื่อมเว็บ")
+        self.connection_badge.setProperty("mode", "")
+        self.connection_badge.style().unpolish(self.connection_badge)
+        self.connection_badge.style().polish(self.connection_badge)
         self.sync_button.setEnabled(bool(self.sync_url))
         self.navigation_widget.setVisible(False)
         self.sync_card.setVisible(False)
@@ -968,9 +1102,11 @@ class ScannerWindow(QMainWindow):
         self.upload_button.setVisible(False)
         self.show_page(3)
         self.roster_loading = False
-        self.student_choice.clear()
-        self.student_choice.addItem("เชื่อมบัญชีจุดสแกนเพื่อโหลดรายชื่อ", None)
-        self.student_choice.setEnabled(False)
+        self.roster_students = []
+        self.student_table.setRowCount(0)
+        self.room_choice.clear()
+        self.room_choice.addItem("ทุกห้องเรียน", "")
+        self.student_search.clear()
         self.roster_reload_button.setEnabled(False)
         self.roster_info.setText("รอเชื่อมบัญชีจุดสแกน…")
         self._update_enroll_actions()
@@ -978,10 +1114,14 @@ class ScannerWindow(QMainWindow):
     def _connected_to_website(self, client: KioskWebClient):
         self.pair_retry_timer.stop()
         self.web_client = client
+        self.connection_badge.setText("เชื่อมเว็บแล้ว")
+        self.connection_badge.setProperty("mode", "connected")
+        self.connection_badge.style().unpolish(self.connection_badge)
+        self.connection_badge.style().polish(self.connection_badge)
         self.sync_button.setEnabled(True)
         self.navigation_widget.setVisible(True)
         self.sync_card.setVisible(True)
-        self.pair_button.setVisible(False)
+        self.pair_card.setVisible(False)
         self.photo_info.setVisible(True)
         self.upload_button.setVisible(True)
         self.photo_info.setText("เชื่อมบัญชีจุดสแกนแล้ว · กำลังตรวจรูปที่รอส่ง")
@@ -1041,7 +1181,6 @@ class ScannerWindow(QMainWindow):
             return
         self.roster_loading = True
         self.roster_reload_button.setEnabled(False)
-        self.student_choice.setEnabled(False)
         self._update_enroll_actions()
         self.roster_info.setText("กำลังโหลดรายชื่อนักเรียนจากเว็บไซต์…")
         client = self.web_client
@@ -1062,6 +1201,8 @@ class ScannerWindow(QMainWindow):
         self.uploading_photos = True
         self.upload_button.setEnabled(False)
         self.photo_info.setText("กำลังอัปโหลดรูปใบหน้า…")
+        if self.pages.currentIndex() == 2:
+            self.enroll_feedback.setText("บันทึกใบหน้าในเครื่องแล้ว · กำลังส่งรูปไปเว็บไซต์…")
         client = self.web_client
 
         def work():
@@ -1152,6 +1293,8 @@ def main():
         parser.error("camera index must be between zero and nine")
     qt = QApplication(sys.argv[:1])
     qt.setApplicationName("Chumkosoft Scanner")
+    load_prompt_font()
+    qt.setFont(QFont("Prompt", 12))
     try:
         window = ScannerWindow(app_data_dir(), args.sync_url, args.camera, check_updates=not args.smoke,
                                site_url=args.site_url, auto_connect=not args.smoke)
