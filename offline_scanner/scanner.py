@@ -59,6 +59,32 @@ def extract_face(cv, np, detector, recognizer, frame):
     return embedding / norm
 
 
+def scan_face_jpeg(cv, detector, frame):
+    """Crop the single detected face for a short-lived local check-in thumbnail."""
+    height, width = frame.shape[:2]
+    detector.setInputSize((width, height))
+    _, faces = detector.detect(frame)
+    if faces is None or len(faces) != 1:
+        return None
+    x, y, face_width, face_height = (float(value) for value in faces[0][:4])
+    if face_width <= 0 or face_height <= 0:
+        return None
+    padding = 0.18 * max(face_width, face_height)
+    left = max(0, int(x - padding))
+    top = max(0, int(y - padding))
+    right = min(width, int(x + face_width + padding))
+    bottom = min(height, int(y + face_height + padding))
+    if right <= left or bottom <= top:
+        return None
+    cropped = frame[top:bottom, left:right]
+    scale = min(1.0, 256 / max(cropped.shape[:2]))
+    if scale < 1:
+        cropped = cv.resize(cropped, (max(1, round(cropped.shape[1] * scale)),
+                                      max(1, round(cropped.shape[0] * scale))))
+    encoded, jpeg = cv.imencode(".jpg", cropped, [cv.IMWRITE_JPEG_QUALITY, 76])
+    return jpeg.tobytes() if encoded and len(jpeg) <= 200_000 else None
+
+
 def best_match(np, embedding, rows):
     best = None
     score = -1.0

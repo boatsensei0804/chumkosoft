@@ -1,6 +1,7 @@
 import io
 import hashlib
 import json
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -8,6 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from model_update import DEFAULT_MANIFEST_URL, MODEL_NAMES, ModelUpdateError, ensure_models, model_paths
+from scan_snapshots import RETENTION_SECONDS, purge_scan_snapshots, save_scan_snapshot, snapshot_path
 from store import check_in, enroll, open_store, pending, pending_photo_count, pending_photos
 from sync import sync_live, sync_once
 from web_client import KioskWebClient, ScannerWebError, upload_pending_photos
@@ -27,6 +29,26 @@ class OfflineScannerTests(unittest.TestCase):
         self.assertTrue(check_in(self.db, "test-1", "Test Student", when))
         self.assertFalse(check_in(self.db, "test-1", "Test Student", when))
         self.assertEqual(len(pending(self.db)), 1)
+
+    def test_scan_thumbnail_stays_local_and_expires_after_24_hours(self):
+        when = datetime.now(timezone.utc)
+        self.assertTrue(check_in(self.db, "scan-1", "Test Student", when))
+        photo_dir = Path(self.temp.name) / "scan_photos"
+        jpeg = b"\xff\xd8\xff" + b"small-test-image"
+        self.assertTrue(save_scan_snapshot(self.db, photo_dir, "scan-1", when, jpeg))
+        event = pending(self.db)[0]
+        self.assertNotIn("photo_jpeg", event.keys())
+        path = snapshot_path(photo_dir, event["event_id"])
+        self.assertIsNotNone(path)
+        self.assertEqual(path.read_bytes(), jpeg)
+        if os.name == "posix":
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(photo_dir.stat().st_mode & 0o777, 0o700)
+        old = when.timestamp() - RETENTION_SECONDS - 1
+        os.utime(path, (old, old))
+        self.assertIsNone(snapshot_path(photo_dir, event["event_id"], now=when.timestamp()))
+        self.assertEqual(purge_scan_snapshots(photo_dir, now=when.timestamp()), 1)
+        self.assertFalse(path.exists())
 
     def test_photo_upload_acknowledgement_removes_local_photo(self):
         photo = b"\xff\xd8\xff" + b"x" * 1200

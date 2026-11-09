@@ -37,7 +37,8 @@ from PySide6.QtWidgets import (
 )
 
 from model_update import ModelUpdateError, bootstrap_bundled_models, ensure_models
-from scanner import best_match, extract_face, load_cv
+from scanner import best_match, extract_face, load_cv, scan_face_jpeg
+from scan_snapshots import purge_scan_snapshots, save_scan_snapshot, snapshot_path
 from settings import DETECTION_INTERVALS, REPEAT_COOLDOWNS, ScannerSettings, get_or_create_device_id, load_settings, save_settings
 from store import check_in, enroll, open_store, pending_photo_count, pending_photos, templates
 from sync import sync_live, sync_once
@@ -106,6 +107,14 @@ QWidget#placeholder { background: #dbeaf6; border: 1px solid #cbdfee; border-rad
 QLabel#feedback { background: #e9f5ff; color: #275f91; border: 1px solid #d3eafa; border-radius: 11px; padding: 17px; font-size: 15px; font-weight: 600; }
 QLabel#feedback[mode="success"] { background: #e9f8ef; color: #167c55; border-color: #caebd7; }
 QLabel#feedback[mode="warn"] { background: #fff7e7; color: #a26f20; border-color: #f1dfb8; }
+QFrame#scanalert { background: #e9f5ff; border: 1px solid #b9dcf4; border-radius: 14px; }
+QFrame#scanalert[mode="success"] { background: #e6f7ec; border-color: #8ed5a7; }
+QFrame#scanalert[mode="warn"] { background: #fff7e7; border-color: #efcf89; }
+QLabel#alerticon { font-size: 29px; font-weight: 700; color: #1267ad; }
+QLabel#alerttitle { font-size: 18px; font-weight: 700; color: #183454; }
+QLabel#alertbody { font-size: 15px; color: #365b79; }
+QFrame#scanalert[mode="success"] QLabel#alerticon, QFrame#scanalert[mode="success"] QLabel#alerttitle { color: #167c55; }
+QFrame#scanalert[mode="warn"] QLabel#alerticon, QFrame#scanalert[mode="warn"] QLabel#alerttitle { color: #a26f20; }
 QPushButton#nav { background: transparent; color: #607d98; text-align: left; padding: 13px 14px; font-size: 14px; }
 QPushButton#nav:checked { background: #e1f0fc; color: #1267ad; }
 QPushButton#collapse { background: #f0f7fd; color: #1267ad; text-align: left; padding: 10px 14px; }
@@ -164,6 +173,8 @@ class ScannerWindow(QMainWindow):
         self.setStyleSheet(STYLE)
         self.models_dir = data_dir / "models"
         self.db_path = data_dir / "scanner.sqlite3"
+        self.scan_photo_dir = data_dir / "scan_photos"
+        purge_scan_snapshots(self.scan_photo_dir)
         self.settings_path = data_dir / "settings.json"
         self.device_id = get_or_create_device_id(data_dir / "device-id")
         saved = load_settings(self.settings_path)
@@ -194,6 +205,9 @@ class ScannerWindow(QMainWindow):
         self.pair_generation = 0
         self.roster_loading = False
         self.roster_students: list[dict[str, str]] = []
+        self.filtered_students: list[dict[str, str]] = []
+        self.new_roster_codes: set[str] = set()
+        self.roster_page = 0
         self.nav_collapsed = False
         self.uploading_photos = False
         self.camera = None
@@ -203,6 +217,7 @@ class ScannerWindow(QMainWindow):
         self.streak_id = None
         self.streak_count = 0
         self.last_recorded: dict[str, float] = {}
+        self.alert_hold_until = 0.0
         self._build_ui()
         self.refresh()
         self.clock_timer = QTimer(self)
@@ -227,6 +242,9 @@ class ScannerWindow(QMainWindow):
         self.photo_timer = QTimer(self)
         self.photo_timer.timeout.connect(self.upload_photos)
         self.photo_timer.start(30000)
+        self.photo_cleanup_timer = QTimer(self)
+        self.photo_cleanup_timer.timeout.connect(self._purge_scan_photos)
+        self.photo_cleanup_timer.start(60000)
         self.pair_timer = QTimer(self)
         self.pair_timer.timeout.connect(self.poll_pairing)
         self.pair_retry_timer = QTimer(self)
@@ -319,14 +337,14 @@ class ScannerWindow(QMainWindow):
         overview_layout.addLayout(metrics)
 
         scan_card, scan_layout = card()
-        scan_card.setMinimumHeight(650)
+        scan_card.setMinimumHeight(570)
         scan_layout.addWidget(label("01 / สถานีสแกน", "eyebrow"))
         scan_layout.addWidget(label("กล้องสแกนใบหน้า", "section"))
         self.model_status = label(f"โมเดล {self.manifest['model_version']} พร้อมใช้ในเครื่อง · กำลังตรวจอัปเดต", "subtle", True)
         scan_layout.addWidget(self.model_status)
         self.stage = QStackedWidget()
-        self.stage.setMinimumHeight(420)
-        self.stage.setMaximumHeight(680)
+        self.stage.setMinimumHeight(340)
+        self.stage.setMaximumHeight(540)
         placeholder = QWidget()
         placeholder.setObjectName("placeholder")
         place_layout = QVBoxLayout(placeholder)
@@ -345,12 +363,25 @@ class ScannerWindow(QMainWindow):
         place_layout.addWidget(hint)
         self.preview = label("", "camera")
         self.preview.setAlignment(Qt.AlignCenter)
-        self.preview.setMinimumHeight(420)
+        self.preview.setMinimumHeight(340)
         self.stage.addWidget(placeholder)
         self.stage.addWidget(self.preview)
         scan_layout.addWidget(self.stage, stretch=1)
-        self.feedback = label("กำลังเตรียมกล้อง · ภาพกล้องไม่ถูกบันทึกเป็นไฟล์", "feedback", True)
-        scan_layout.addWidget(self.feedback)
+        self.scan_alert = QFrame()
+        self.scan_alert.setObjectName("scanalert")
+        alert_layout = QHBoxLayout(self.scan_alert)
+        alert_layout.setContentsMargins(18, 14, 18, 14)
+        alert_layout.setSpacing(14)
+        self.alert_icon = label("●", "alerticon")
+        alert_layout.addWidget(self.alert_icon)
+        alert_text = QVBoxLayout()
+        alert_text.setSpacing(2)
+        self.alert_title = label("สถานะการสแกน", "alerttitle")
+        alert_text.addWidget(self.alert_title)
+        self.feedback = label("กำลังเตรียมกล้อง · ภาพสแกนเก็บในเครื่องไม่เกิน 24 ชม.", "alertbody", True)
+        alert_text.addWidget(self.feedback)
+        alert_layout.addLayout(alert_text, stretch=1)
+        scan_layout.addWidget(self.scan_alert)
         controls = QHBoxLayout()
         self.scan_camera_label = label(f"ใช้กล้อง {self.camera_index} · เปลี่ยนได้ในหน้าตั้งค่า", "subtle")
         controls.addWidget(self.scan_camera_label)
@@ -386,13 +417,14 @@ class ScannerWindow(QMainWindow):
         activity_layout.addWidget(self.scan_count)
         self.scan_queue_note = label("บันทึกบนเครื่องนี้ · เรียงจากล่าสุด", "subtle")
         activity_layout.addWidget(self.scan_queue_note)
-        self.scan_history = QTableWidget(0, 2)
-        self.scan_history.setHorizontalHeaderLabels(["รายชื่อ / รหัส", "เวลาสแกน"])
+        self.scan_history = QTableWidget(0, 3)
+        self.scan_history.setHorizontalHeaderLabels(["ภาพ", "รายชื่อ / รหัส", "เวลาสแกน"])
         self.scan_history.verticalHeader().setVisible(False)
         self.scan_history.setEditTriggers(QTableWidget.NoEditTriggers)
         self.scan_history.setSelectionBehavior(QTableWidget.SelectRows)
-        self.scan_history.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        self.scan_history.setColumnWidth(1, 125)
+        self.scan_history.setColumnWidth(0, 68)
+        self.scan_history.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.scan_history.setColumnWidth(2, 125)
         self.scan_history.setMinimumHeight(360)
         activity_layout.addWidget(self.scan_history, stretch=1)
         self.scan_empty = label("ยังไม่มีใครสแกนในวันนี้", "subtle", True)
@@ -433,10 +465,23 @@ class ScannerWindow(QMainWindow):
         self.student_table.setMinimumHeight(430)
         self.student_table.itemSelectionChanged.connect(self._update_enroll_actions)
         roster_layout.addWidget(self.student_table, stretch=1)
+        roster_pages = QHBoxLayout()
+        self.roster_prev_button = QPushButton("← ก่อนหน้า")
+        self.roster_prev_button.clicked.connect(lambda: self._change_roster_page(-1))
+        roster_pages.addWidget(self.roster_prev_button)
+        self.roster_page_label = label("หน้า 1", "subtle")
+        self.roster_page_label.setAlignment(Qt.AlignCenter)
+        roster_pages.addWidget(self.roster_page_label, stretch=1)
+        self.roster_next_button = QPushButton("ถัดไป →")
+        self.roster_next_button.clicked.connect(lambda: self._change_roster_page(1))
+        roster_pages.addWidget(self.roster_next_button)
+        roster_layout.addLayout(roster_pages)
         self.roster_reload_button = QPushButton("โหลดรายชื่อใหม่")
         self.roster_reload_button.setEnabled(False)
-        self.roster_reload_button.clicked.connect(self.load_students)
+        self.roster_reload_button.clicked.connect(lambda: self.load_students(manual=True))
         roster_layout.addWidget(self.roster_reload_button)
+        self.roster_reload_note = label("แสดงเฉพาะนักเรียนที่อยู่ในภาคเรียนปัจจุบันและยินยอมให้เก็บข้อมูลใบหน้า", "subtle", True)
+        roster_layout.addWidget(self.roster_reload_note)
         enrollment_workspace.addWidget(roster_card, stretch=3)
 
         capture_card, capture_layout = card()
@@ -682,12 +727,25 @@ class ScannerWindow(QMainWindow):
         self.enroll_camera_label.setText(f"ใช้กล้อง {selected.camera_index} · เปลี่ยนได้ในหน้าตั้งค่า")
         self.settings_feedback.setText("บันทึกแล้ว · ใช้ค่ากล้องและเวลาใหม่ได้ทันที")
 
-    def _feedback(self, text: str, mode: str = ""):
-        for item in (self.feedback, self.enroll_feedback):
-            item.setText(text)
-            item.setProperty("mode", mode)
-            item.style().unpolish(item)
-            item.style().polish(item)
+    def _feedback(self, text: str, mode: str = "", hold_seconds: float = 0, force: bool = False):
+        self.enroll_feedback.setText(text)
+        self.enroll_feedback.setProperty("mode", mode)
+        self.enroll_feedback.style().unpolish(self.enroll_feedback)
+        self.enroll_feedback.style().polish(self.enroll_feedback)
+        if self.pages.currentIndex() == 0 and not force and time.monotonic() < self.alert_hold_until:
+            return
+        self.alert_hold_until = time.monotonic() + hold_seconds
+        self.feedback.setText(text)
+        self.alert_title.setText("บันทึกการสแกนสำเร็จ" if mode == "success" else
+                                 "โปรดตรวจสอบ" if mode == "warn" else "สถานะการสแกน")
+        self.alert_icon.setText("✓" if mode == "success" else "!" if mode == "warn" else "●")
+        self.scan_alert.setProperty("mode", mode)
+        self.scan_alert.style().unpolish(self.scan_alert)
+        self.scan_alert.style().polish(self.scan_alert)
+
+    def _purge_scan_photos(self):
+        if purge_scan_snapshots(self.scan_photo_dir):
+            self.refresh()
 
     def _selected_student(self) -> Optional[tuple[str, str]]:
         row = self.student_table.currentRow()
@@ -700,10 +758,23 @@ class ScannerWindow(QMainWindow):
     def _filter_roster(self, *_args):
         room = self.room_choice.currentData() or ""
         search = self.student_search.text().strip().casefold()
-        matching = [student for student in self.roster_students if
-                    (not room or student["classroom"] == room) and
+        self.filtered_students = [student for student in self.roster_students if
+                    (not room or (student["code"] in self.new_roster_codes if room == "__new__"
+                                  else student["classroom"] == room)) and
                     (not search or search in f"{student['name']} {student['code']}".casefold())]
-        visible = matching[:200]
+        self.roster_page = 0
+        self._render_roster_page()
+
+    def _change_roster_page(self, delta: int):
+        pages = max(1, (len(self.filtered_students) + 199) // 200)
+        self.roster_page = max(0, min(self.roster_page + delta, pages - 1))
+        self._render_roster_page()
+
+    def _render_roster_page(self):
+        total = len(self.filtered_students)
+        pages = max(1, (total + 199) // 200)
+        start = self.roster_page * 200
+        visible = self.filtered_students[start:start + 200]
         self.student_table.setUpdatesEnabled(False)
         self.student_table.setRowCount(len(visible))
         for index, student in enumerate(visible):
@@ -716,9 +787,11 @@ class ScannerWindow(QMainWindow):
             self.student_table.setRowHeight(index, 43)
         self.student_table.clearSelection()
         self.student_table.setUpdatesEnabled(True)
+        self.roster_prev_button.setEnabled(self.roster_page > 0)
+        self.roster_next_button.setEnabled(self.roster_page < pages - 1)
+        self.roster_page_label.setText(f"หน้า {self.roster_page + 1} / {pages}")
         if self.roster_students:
-            suffix = " · แสดง 200 คนแรก กรุณาค้นหาเพิ่ม" if len(matching) > 200 else ""
-            self.roster_info.setText(f"พบ {len(matching)} คน จาก {len(self.roster_students)} คน{suffix}")
+            self.roster_info.setText(f"พบ {total} คน จาก {len(self.roster_students)} คน · แสดง {len(visible)} คน")
         self._update_enroll_actions()
 
     def _update_enroll_actions(self, *_args):
@@ -768,7 +841,7 @@ class ScannerWindow(QMainWindow):
 
         today = datetime.now(THAI_TIME).date().isoformat()
         today_rows = self.db.execute(
-            "SELECT display_name, student_id, captured_at FROM events "
+            "SELECT event_id, display_name, student_id, captured_at FROM events "
             "WHERE local_date=? ORDER BY captured_at DESC LIMIT 50", (today,)
         ).fetchall()
         total_today = self.db.execute("SELECT COUNT(*) FROM events WHERE local_date=?", (today,)).fetchone()[0]
@@ -778,9 +851,18 @@ class ScannerWindow(QMainWindow):
         self.scan_history.setRowCount(len(today_rows))
         for index, row in enumerate(today_rows):
             at = datetime.fromisoformat(row["captured_at"]).astimezone(THAI_TIME).strftime("%H:%M:%S")
-            self.scan_history.setItem(index, 0, QTableWidgetItem(f"{row['display_name']}\n{row['student_id']}"))
-            self.scan_history.setItem(index, 1, QTableWidgetItem(at))
-            self.scan_history.setRowHeight(index, 62)
+            portrait = label("—", "subtle")
+            portrait.setAlignment(Qt.AlignCenter)
+            path = snapshot_path(self.scan_photo_dir, row["event_id"])
+            if path:
+                pixmap = QPixmap(str(path))
+                if not pixmap.isNull():
+                    portrait.setText("")
+                    portrait.setPixmap(pixmap.scaled(52, 52, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            self.scan_history.setCellWidget(index, 0, portrait)
+            self.scan_history.setItem(index, 1, QTableWidgetItem(f"{row['display_name']}\n{row['student_id']}"))
+            self.scan_history.setItem(index, 2, QTableWidgetItem(at))
+            self.scan_history.setRowHeight(index, 72)
 
     def start_camera(self):
         if self.web_client is None or self.pages.currentIndex() not in (0, 2) or self.camera is not None:
@@ -790,7 +872,7 @@ class ScannerWindow(QMainWindow):
         camera = self.cv.VideoCapture(index)
         if not camera.isOpened():
             camera.release()
-            self._feedback(f"เปิดกล้อง {index} ไม่ได้ · ตรวจสิทธิ์กล้องหรือเปลี่ยนที่หน้าตั้งค่า · จะลองใหม่อัตโนมัติ", "warn")
+            self._feedback(f"เปิดกล้อง {index} ไม่ได้ · ตรวจสิทธิ์กล้องหรือเปลี่ยนที่หน้าตั้งค่า · จะลองใหม่อัตโนมัติ", "warn", force=True)
             self.camera_retry_timer.start(10000)
             return
         self.camera = camera
@@ -810,7 +892,7 @@ class ScannerWindow(QMainWindow):
         self.enroll_preview.clear()
         self.enroll_preview.setText("กำลังเตรียมกล้อง หรือเลือกรูปจากไฟล์")
         self.enroll_button.setEnabled(False)
-        self._feedback("กล้องหยุดชั่วคราว · กลับหน้าสแกนเพื่อเปิดอัตโนมัติ")
+        self._feedback("กล้องหยุดชั่วคราว · กลับหน้าสแกนเพื่อเปิดอัตโนมัติ", force=True)
 
     def _camera_tick(self):
         if self.camera is None:
@@ -818,7 +900,7 @@ class ScannerWindow(QMainWindow):
         ok, frame = self.camera.read()
         if not ok:
             self.stop_camera()
-            self._feedback("อ่านภาพจากกล้องไม่ได้ · จะลองเปิดใหม่อัตโนมัติ", "warn")
+            self._feedback("อ่านภาพจากกล้องไม่ได้ · จะลองเปิดใหม่อัตโนมัติ", "warn", force=True)
             self.camera_retry_timer.start(10000)
             return
         self.current_frame = frame
@@ -861,12 +943,22 @@ class ScannerWindow(QMainWindow):
             return
         if time.monotonic() - self.last_recorded.get(student_id, -1e9) < self.settings.repeat_cooldown_seconds:
             return
-        added = check_in(self.db, student_id, match["display_name"], datetime.now(timezone.utc))
+        captured_at = datetime.now(timezone.utc)
+        added = check_in(self.db, student_id, match["display_name"], captured_at)
+        photo_saved = False
+        if added:
+            try:
+                jpeg = scan_face_jpeg(self.cv, self.detector, frame)
+                if jpeg:
+                    photo_saved = save_scan_snapshot(self.db, self.scan_photo_dir, student_id, captured_at, jpeg)
+            except Exception:
+                pass  # Thumbnail failure must not discard the check-in.
         self.last_recorded[student_id] = time.monotonic()
         self.streak_count = 0
         self._feedback(
-            f"{match['display_name']} · {'บันทึกในเครื่องแล้ว รอซิงก์' if added else 'บันทึกแล้ววันนี้'}",
+            f"{match['display_name']} · {'บันทึกแล้ว รอซิงก์' if photo_saved else 'บันทึกแล้ว แต่ไม่มีภาพตัวอย่าง' if added else 'บันทึกแล้ววันนี้'}",
             "success" if added else "warn",
+            hold_seconds=6 if added else 3,
         )
         self.result_card.setProperty("mode", "" if added else "warn")
         self.result_card.style().unpolish(self.result_card)
@@ -992,29 +1084,40 @@ class ScannerWindow(QMainWindow):
                     self.pair_client = None
                     self._connected_to_website(client)
             elif kind == "roster":
-                client, students, error = values
+                client, students, error, manual = values
                 if client is not self.web_client:
                     continue
                 self.roster_loading = False
                 self.roster_reload_button.setEnabled(self.web_client is not None)
                 if error:
                     self.roster_students = []
+                    self.filtered_students = []
                     self.student_table.setRowCount(0)
                     self.room_choice.clear()
                     self.room_choice.addItem("ทุกห้องเรียน", "")
                     self.roster_info.setText(f"โหลดรายชื่อไม่สำเร็จ: {error}")
+                    self.roster_reload_note.setText("กรุณาตรวจการเชื่อมต่อ แล้วลองโหลดใหม่")
                 else:
+                    old_codes = {student["code"] for student in self.roster_students}
+                    self.new_roster_codes = ({student["code"] for student in students} - old_codes) if manual else set()
                     self.roster_students = sorted(students, key=lambda item: (item["classroom"], item["name"], item["code"]))
-                    previous_room = self.room_choice.currentData()
                     self.room_choice.blockSignals(True)
                     self.room_choice.clear()
                     self.room_choice.addItem("ทุกห้องเรียน", "")
+                    if self.new_roster_codes:
+                        self.room_choice.addItem(f"เพิ่งเพิ่ม ({len(self.new_roster_codes)})", "__new__")
                     for room in sorted({student["classroom"] for student in students}):
                         self.room_choice.addItem(room, room)
-                    chosen = self.room_choice.findData(previous_room)
-                    self.room_choice.setCurrentIndex(max(0, chosen))
+                    self.room_choice.setCurrentIndex(1 if self.new_roster_codes else 0)
                     self.room_choice.blockSignals(False)
+                    self.student_search.clear()
                     self._filter_roster()
+                    self.roster_reload_note.setText(
+                        f"พบรายชื่อใหม่ {len(self.new_roster_codes)} คน · แสดงในตัวกรอง ‘เพิ่งเพิ่ม’"
+                        if self.new_roster_codes else
+                        "ไม่พบรายชื่อใหม่ · ตรวจว่าลงทะเบียนในภาคเรียนที่เปิดใช้งานและยินยอมให้เก็บใบหน้าแล้ว"
+                        if manual else "แสดงเฉพาะนักเรียนในภาคเรียนปัจจุบันที่ยินยอมให้เก็บข้อมูลใบหน้า"
+                    )
                     if not students:
                         self.roster_info.setText("ยังไม่มีนักเรียนในภาคเรียนปัจจุบันที่ยินยอมให้เก็บใบหน้า")
                 self._update_enroll_actions()
@@ -1103,6 +1206,8 @@ class ScannerWindow(QMainWindow):
         self.show_page(3)
         self.roster_loading = False
         self.roster_students = []
+        self.filtered_students = []
+        self.new_roster_codes = set()
         self.student_table.setRowCount(0)
         self.room_choice.clear()
         self.room_choice.addItem("ทุกห้องเรียน", "")
@@ -1176,7 +1281,7 @@ class ScannerWindow(QMainWindow):
         if self.pair_verification_url:
             QDesktopServices.openUrl(QUrl(self.pair_verification_url))
 
-    def load_students(self):
+    def load_students(self, manual: bool = False):
         if self.web_client is None or self.roster_loading:
             return
         self.roster_loading = True
@@ -1187,9 +1292,9 @@ class ScannerWindow(QMainWindow):
 
         def work():
             try:
-                self.background_results.put(("roster", client, client.get_students(), ""))
+                self.background_results.put(("roster", client, client.get_students(), "", manual))
             except Exception as error:
-                self.background_results.put(("roster", client, [], str(error)))
+                self.background_results.put(("roster", client, [], str(error), manual))
 
         threading.Thread(target=work, name="scanner-student-roster", daemon=True).start()
 
@@ -1274,6 +1379,7 @@ class ScannerWindow(QMainWindow):
         self.sync_timer.stop()
         self.heartbeat_timer.stop()
         self.photo_timer.stop()
+        self.photo_cleanup_timer.stop()
         self.pair_timer.stop()
         self.pair_retry_timer.stop()
         self.camera_retry_timer.stop()
