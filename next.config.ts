@@ -4,9 +4,10 @@ import type { NextConfig } from "next";
 // (e.g. a Cloudflare Tunnel hostname). Next verifies Server Action requests
 // against the forwarded Host, so the tunnel domain must be allow-listed or
 // actions 403. Set APP_ALLOWED_ORIGINS="school.example.com,foo.trycloudflare.com".
-const allowedOrigins = process.env.APP_ALLOWED_ORIGINS?.split(",")
-  .map((o) => o.trim())
-  .filter(Boolean);
+const allowedOrigins = Array.from(new Set([
+  "chumkosoft.com",
+  ...(process.env.APP_ALLOWED_ORIGINS?.split(",").map((o) => o.trim()).filter(Boolean) ?? []),
+]));
 
 const nextConfig: NextConfig = {
   // Emit a self-contained build at .next/standalone for small Docker images.
@@ -24,7 +25,7 @@ const nextConfig: NextConfig = {
     // the default 1MB limit is too tight once multipart overhead is included.
     serverActions: {
       bodySizeLimit: "4mb",
-      ...(allowedOrigins?.length ? { allowedOrigins } : {}),
+      allowedOrigins,
     },
   },
 };

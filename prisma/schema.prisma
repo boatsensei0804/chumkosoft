@@ -614,6 +614,8 @@ model FaceTemplate {
   student   Student @relation(fields: [studentId], references: [id])
   embedding Float[] // 128-d face descriptor
   imageKey  String // MinIO object key, e.g. "faces/{studentId}/{id}.jpg"
+  modelId   String @default("face-api-v1") // keeps web and desktop embeddings separate
+  uploadId  String? @unique // idempotent desktop photo upload
 
   isDeleted Boolean   @default(false)
   deletedAt DateTime?

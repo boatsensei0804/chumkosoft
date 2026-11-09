@@ -50,7 +50,7 @@ export async function findTemplates(studentId: string) {
   });
 }
 
-export async function createTemplate(args: { studentId: string; embedding: number[]; imageKey: string }): Promise<{ id: string }> {
+export async function createTemplate(args: { studentId: string; embedding: number[]; imageKey: string; modelId?: string; uploadId?: string }): Promise<{ id: string }> {
   return prisma.faceTemplate.create({ data: args, select: { id: true } });
 }
 

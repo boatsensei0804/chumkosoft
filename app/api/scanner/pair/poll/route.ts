@@ -1,0 +1,44 @@
+import { createHash } from "node:crypto";
+import prisma from "@/lib/prisma";
+import { createSession } from "@/lib/session";
+import { rateLimit } from "@/lib/rate-limit";
+import { DEVICE_CODE_PATTERN, pollScannerPairing } from "@/features/faces/services/scanner-pairing";
+
+export async function POST(request: Request): Promise<Response> {
+  const size = Number(request.headers.get("content-length"));
+  if (!Number.isFinite(size) || size < 1 || size > 256) {
+    return Response.json({ ok: false, message: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ ok: false, message: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
+  }
+  const deviceCode = (body as { deviceCode?: unknown } | null)?.deviceCode;
+  if (typeof deviceCode !== "string" || !DEVICE_CODE_PATTERN.test(deviceCode)) {
+    return Response.json({ ok: false, message: "รหัสเชื่อมต่อไม่ถูกต้อง" }, { status: 400 });
+  }
+  const codeHash = createHash("sha256").update(deviceCode).digest("hex");
+  const limited = await rateLimit(`scanner-pair-poll:${codeHash}`, 20, 60);
+  if (!limited.ok) {
+    return Response.json({ ok: false, message: "ตรวจสถานะบ่อยเกินไป" }, { status: 429 });
+  }
+
+  const result = await pollScannerPairing(deviceCode);
+  if (result.state === "expired") {
+    return Response.json({ ok: false, message: "QR หมดอายุแล้ว กรุณาสร้างใหม่" }, { status: 410 });
+  }
+  if (result.state === "pending") {
+    return Response.json({ ok: true, state: "pending" }, { headers: { "Cache-Control": "no-store" } });
+  }
+  const user = await prisma.user.findFirst({
+    where: { id: result.kioskId, role: "KIOSK", isActive: true, isDeleted: false },
+    select: { id: true },
+  });
+  if (!user) {
+    return Response.json({ ok: false, message: "บัญชีจุดสแกนนี้ใช้งานไม่ได้" }, { status: 403 });
+  }
+  await createSession(user.id, "KIOSK");
+  return Response.json({ ok: true, state: "approved" }, { headers: { "Cache-Control": "no-store" } });
+}

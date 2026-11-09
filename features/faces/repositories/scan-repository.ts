@@ -29,6 +29,7 @@ export async function loadMatchableTemplates(termId: string): Promise<ScanTempla
   const rows = await prisma.faceTemplate.findMany({
     where: {
       isDeleted: false,
+      modelId: "face-api-v1",
       student: {
         isDeleted: false,
         faceConsent: true,
