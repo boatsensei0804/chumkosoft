@@ -43,7 +43,7 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
       <div className="flex flex-col gap-5">
         <WelcomeBand
           greeting={greeting}
-          subtitle="ภาพรวมการดำเนินงานของโรงเรียนประจำวันนี้ ตรวจสอบรายการค้างอนุมัติได้ที่ด้านล่าง"
+          subtitle="จัดการงานโรงเรียนในที่เดียว ดูการเช็คชื่อ ทะเบียนนักเรียน และการสื่อสารกับผู้ปกครองได้ทันที"
           term={termLabel}
           date={formatThaiWeekdayLong(now)}
         />

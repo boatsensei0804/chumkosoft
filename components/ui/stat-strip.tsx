@@ -43,13 +43,13 @@ export default function StatStrip({ items, className }: { items: StatItem[]; cla
   return (
     <section
       aria-label="สรุปสถานะข้อมูล"
-      className={cn("mb-5 grid grid-cols-2 overflow-hidden rounded-xl border border-line bg-bg sm:grid-cols-3 lg:grid-cols-4", className)}
+      className={cn("mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4", className)}
     >
       {items.map((item) => {
         const tone = item.tone ?? "default";
         const Icon = item.icon;
         return (
-          <div key={item.label} className="flex min-w-0 flex-col gap-1.5 border-b border-r border-line p-3.5 last:border-r-0 sm:p-4">
+          <div key={item.label} className="flex min-w-0 flex-col gap-2 rounded-[18px] border border-line bg-bg p-3.5 shadow-sm sm:p-4">
             <div className="flex items-center gap-2">
               {Icon && (
                 <span className={cn("grid size-6 shrink-0 place-items-center rounded-md", toneChip[tone])} aria-hidden="true">

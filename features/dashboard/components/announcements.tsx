@@ -1,5 +1,6 @@
 import { Info, TriangleAlert, CheckCircle2, type LucideIcon } from "lucide-react";
 import SectionCard from "./section-card";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 import type { Announcement, AnnouncementKind } from "../types";
 
 const kindStyle: Record<AnnouncementKind, { icon: LucideIcon; bg: string; fg: string }> = {
@@ -12,7 +13,7 @@ export default function Announcements({ items }: { items: Announcement[] }): Rea
   return (
     <SectionCard title="ประกาศและการแจ้งเตือน" caption="อัปเดตล่าสุดจากฝ่ายต่าง ๆ" bodyClassName="p-2">
       {items.length === 0 ? (
-        <p className="px-3 py-8 text-center text-[13.5px] text-muted">ยังไม่มีประกาศ</p>
+        <MascotEmptyState title="ยังไม่มีประกาศ" description="ข่าวสารใหม่จากโรงเรียนจะแสดงที่นี่" pose="notify" compact />
       ) : (
         <ul className="flex flex-col">
           {items.map((a) => {

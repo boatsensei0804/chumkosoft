@@ -37,9 +37,9 @@ from PySide6.QtWidgets import (
 
 from model_update import ModelUpdateError, bootstrap_bundled_models, ensure_models
 from scanner import best_match, extract_face, load_cv
-from settings import DETECTION_INTERVALS, REPEAT_COOLDOWNS, ScannerSettings, load_settings, save_settings
+from settings import DETECTION_INTERVALS, REPEAT_COOLDOWNS, ScannerSettings, get_or_create_device_id, load_settings, save_settings
 from store import check_in, enroll, open_store, pending_photo_count, pending_photos, templates
-from sync import sync_once
+from sync import sync_live, sync_once
 from web_client import SITE, KioskWebClient, upload_pending_photos, validate_site_url
 
 THAI_TIME = ZoneInfo("Asia/Bangkok")
@@ -141,11 +141,14 @@ class ScannerWindow(QMainWindow):
         self.models_dir = data_dir / "models"
         self.db_path = data_dir / "scanner.sqlite3"
         self.settings_path = data_dir / "settings.json"
+        self.device_id = get_or_create_device_id(data_dir / "device-id")
         saved = load_settings(self.settings_path)
         self.settings = ScannerSettings(
             camera_index=saved.camera_index if camera_index is None else camera_index,
             detection_interval_seconds=saved.detection_interval_seconds,
             repeat_cooldown_seconds=saved.repeat_cooldown_seconds,
+            scan_start_time=saved.scan_start_time,
+            late_after_time=saved.late_after_time,
         )
         bootstrap_bundled_models(self.models_dir)
         # The window must open even when the model website is slow or offline.
@@ -156,6 +159,7 @@ class ScannerWindow(QMainWindow):
         self.camera_index = self.settings.camera_index
         self.background_results: queue.Queue[tuple] = queue.Queue()
         self.syncing = False
+        self.heartbeating = False
         self.sync_status_note = ""
         self.web_client: Optional[KioskWebClient] = None
         self.pair_client: Optional[KioskWebClient] = None
@@ -189,9 +193,11 @@ class ScannerWindow(QMainWindow):
         else:
             self.model_status.setText(f"โมเดล {self.manifest['model_version']} พร้อมใช้ในเครื่อง")
         self.sync_timer = QTimer(self)
-        if self.sync_url:
-            self.sync_timer.timeout.connect(self.try_sync)
-            self.sync_timer.start(15000)
+        self.sync_timer.timeout.connect(self.try_sync)
+        self.sync_timer.start(15000)
+        self.heartbeat_timer = QTimer(self)
+        self.heartbeat_timer.timeout.connect(self.send_heartbeat)
+        self.heartbeat_timer.start(30000)
         self.photo_timer = QTimer(self)
         self.photo_timer.timeout.connect(self.upload_photos)
         self.photo_timer.start(30000)
@@ -255,7 +261,7 @@ class ScannerWindow(QMainWindow):
         overview_page, overview_layout = self._page("ภาพรวมสถานี", "ดูจำนวนผู้ลงทะเบียนและประวัติการสแกนในเครื่อง")
         scan_page, scan_page_layout = self._page("สแกนใบหน้า", "กล้องเริ่มทำงานอัตโนมัติหลังเชื่อมบัญชีจุดสแกน")
         enroll_page, enroll_page_layout = self._page("ลงทะเบียนใบหน้า", "ถ่ายภาพหรือเลือกรูปที่ได้รับความยินยอม")
-        transfer_page, transfer_page_layout = self._page("เชื่อมต่อและซิงก์", "จัดการรูปที่รออัปโหลดและรายการเช็กชื่อทดสอบ")
+        transfer_page, transfer_page_layout = self._page("เชื่อมต่อและซิงก์", "จัดการรูปและรายการเช็กชื่อที่รอส่งขึ้นเว็บไซต์")
         settings_page, settings_layout = self._page("ตั้งค่าเครื่องสแกน", "เลือกกล้องและปรับจังหวะการตรวจใบหน้าในเครื่องนี้")
         for page in (scan_page, overview_page, enroll_page, transfer_page, settings_page):
             self.pages.addWidget(page)
@@ -405,10 +411,10 @@ class ScannerWindow(QMainWindow):
         self.sync_card.setMinimumHeight(125)
         sync_layout.addWidget(label("03 / การส่งข้อมูล", "eyebrow"))
         sync_layout.addWidget(label("สถานะการซิงก์", "section"))
-        self.sync_info = label("รายการจะอยู่ในเครื่องจนกว่าจะเชื่อมตัวรับข้อมูลทดสอบ", "subtle", True)
+        self.sync_info = label("รายการจะอยู่ในเครื่องจนกว่าจะเชื่อมเว็บไซต์", "subtle", True)
         sync_layout.addWidget(self.sync_info)
         self.sync_button = QPushButton("ลองซิงก์ตอนนี้")
-        self.sync_button.setEnabled(bool(self.sync_url))
+        self.sync_button.setEnabled(False)
         self.sync_button.clicked.connect(self.try_sync)
         sync_layout.addWidget(self.sync_button)
         transfer_page_layout.addWidget(self.sync_card)
@@ -487,7 +493,7 @@ class ScannerWindow(QMainWindow):
         self.history.setMinimumHeight(260)
         history_layout.addWidget(self.history)
         overview_layout.addWidget(history_card)
-        note = label("ต้นแบบสำหรับทดลองเท่านั้น · ยังไม่เชื่อมเช็กชื่อจริงหรือ LINE · การเห็นหน้าต่อเนื่องไม่ใช่การพิสูจน์ว่ามีชีวิต", "subtle", True)
+        note = label("การเห็นหน้าต่อเนื่องไม่ใช่การพิสูจน์ว่ามีชีวิต · ตรวจสอบความถูกต้องของการสแกนด้วย", "subtle", True)
         note.setAlignment(Qt.AlignCenter)
         overview_layout.addWidget(note)
         overview_layout.addStretch()
@@ -518,7 +524,7 @@ class ScannerWindow(QMainWindow):
         self.settings_save_button.setObjectName("primary")
         self.settings_save_button.clicked.connect(self.save_preferences)
         settings_card_layout.addWidget(self.settings_save_button)
-        self.settings_feedback = label("ค่าที่บันทึกจะใช้กับเครื่องนี้เท่านั้น", "subtle", True)
+        self.settings_feedback = label("ตั้งค่าจากมือถือได้ที่ /scanner-devices · ค่าใหม่จะซิงก์มาที่เครื่องอัตโนมัติ", "subtle", True)
         settings_card_layout.addWidget(self.settings_feedback)
         settings_layout.addWidget(settings_card)
 
@@ -580,6 +586,8 @@ class ScannerWindow(QMainWindow):
             camera_index=self.settings_camera.currentData(),
             detection_interval_seconds=self.settings_interval.currentData(),
             repeat_cooldown_seconds=self.settings_cooldown.currentData(),
+            scan_start_time=self.settings.scan_start_time,
+            late_after_time=self.settings.late_after_time,
         )
         try:
             save_settings(self.settings_path, selected)
@@ -621,8 +629,9 @@ class ScannerWindow(QMainWindow):
         self.scan_pending.setText(f"รอซิงก์ {pending} รายการ")
         self.synced_value.setText(f"{synced} รายการ")
         self.model_value.setText(self.manifest["model_version"])
-        sync_state = self.sync_status_note or ("ซิงก์ไปตัวรับข้อมูลทดสอบในเครื่อง" if self.sync_url else "ยังไม่ได้เชื่อมระบบจริง")
-        self.sync_info.setText(f"รอส่ง {pending} รายการ · {sync_state}")
+        rejected = self.db.execute("SELECT COUNT(*) FROM events WHERE state='rejected'").fetchone()[0]
+        sync_state = self.sync_status_note or ("เชื่อมเว็บไซต์แล้ว" if self.web_client else "รอเชื่อมเว็บไซต์")
+        self.sync_info.setText(f"รอส่ง {pending} รายการ · ส่งไม่ผ่าน {rejected} รายการ · {sync_state}")
         photo_count = pending_photo_count(self.db)
         self.upload_button.setEnabled(self.web_client is not None and not self.uploading_photos and photo_count > 0)
         if self.web_client is None and not self.uploading_photos:
@@ -633,7 +642,8 @@ class ScannerWindow(QMainWindow):
         self.history.setRowCount(len(rows))
         for index, row in enumerate(rows):
             at = datetime.fromisoformat(row["captured_at"]).astimezone(THAI_TIME).strftime("%d/%m %H:%M")
-            values = [row["display_name"], row["student_id"], at, "ส่งแล้ว" if row["state"] == "synced" else "รอซิงก์"]
+            state_text = {"synced": "ส่งแล้ว", "pending": "รอซิงก์", "rejected": "ส่งไม่ผ่าน"}
+            values = [row["display_name"], row["student_id"], at, state_text.get(row["state"], "รอตรวจ")]
             for column, value in enumerate(values):
                 self.history.setItem(index, column, QTableWidgetItem(value))
 
@@ -713,6 +723,9 @@ class ScannerWindow(QMainWindow):
             self._identify(frame)
 
     def _identify(self, frame):
+        if datetime.now(THAI_TIME).strftime("%H:%M") < self.settings.scan_start_time:
+            self._feedback(f"ยังไม่ถึงเวลาเปิดสแกน {self.settings.scan_start_time} น.", "warn")
+            return
         rows = templates(self.db, self.manifest["embedding_version"])
         if not rows:
             self._feedback("ยังไม่มีผู้ทดสอบ · ลงทะเบียนใบหน้าจากกล้องหรือไฟล์ก่อน", "warn")
@@ -743,6 +756,8 @@ class ScannerWindow(QMainWindow):
             "success" if added else "warn",
         )
         self.refresh()
+        if added:
+            self.try_sync()
 
     def _enroll_image(self, image):
         selected = self._selected_student()
@@ -887,11 +902,13 @@ class ScannerWindow(QMainWindow):
                 else:
                     self.photo_info.setText(f"อัปโหลดแล้ว {sent} รูป · ค้าง {remaining} รูป")
             elif kind == "sync":
-                sent, remaining, error = values
+                sent, remaining, rejected, error = values
                 self.syncing = False
-                self.sync_button.setEnabled(bool(self.sync_url))
+                self.sync_button.setEnabled(self.web_client is not None or bool(self.sync_url))
                 if error:
                     self.sync_status_note = "ส่งไม่สำเร็จ · รายการยังเก็บในเครื่อง"
+                elif rejected:
+                    self.sync_status_note = f"ส่งแล้ว {sent} · ส่งไม่ผ่าน {rejected} · ตรวจรายการในภาพรวม"
                 elif sent:
                     self.sync_status_note = f"ส่งแล้ว {sent} รายการ · ค้าง {remaining} รายการ"
                 elif remaining:
@@ -899,6 +916,37 @@ class ScannerWindow(QMainWindow):
                 else:
                     self.sync_status_note = "ไม่มีรายการค้างส่ง"
                 self.refresh()
+            elif kind == "heartbeat":
+                client, settings, error = values
+                if client is not self.web_client:
+                    continue
+                self.heartbeating = False
+                if not error:
+                    self._apply_remote_settings(settings)
+
+    def _apply_remote_settings(self, remote: dict):
+        selected = ScannerSettings(
+            camera_index=remote["cameraIndex"],
+            detection_interval_seconds=remote["detectionIntervalSeconds"],
+            repeat_cooldown_seconds=remote["repeatCooldownSeconds"],
+            scan_start_time=remote["scanStartTime"],
+            late_after_time=remote["lateAfterTime"],
+        )
+        if selected == self.settings:
+            return
+        old_camera = self.settings.camera_index
+        save_settings(self.settings_path, selected)
+        self.settings = selected
+        self.camera_index = selected.camera_index
+        self.settings_camera.setCurrentIndex(self.settings_camera.findData(selected.camera_index))
+        self.settings_interval.setCurrentIndex(self.settings_interval.findData(selected.detection_interval_seconds))
+        self.settings_cooldown.setCurrentIndex(self.settings_cooldown.findData(selected.repeat_cooldown_seconds))
+        self.scan_camera_label.setText(f"ใช้กล้อง {selected.camera_index} · เปลี่ยนได้ในหน้าตั้งค่า")
+        self.enroll_camera_label.setText(f"ใช้กล้อง {selected.camera_index} · เปลี่ยนได้ในหน้าตั้งค่า")
+        self.settings_feedback.setText("ได้รับค่ากล้องและเวลาล่าสุดจากเว็บไซต์แล้ว")
+        if old_camera != selected.camera_index and self.camera is not None:
+            self.stop_camera()
+            self.start_camera()
 
     def _reset_web_connection(self):
         self.pair_generation += 1
@@ -913,6 +961,7 @@ class ScannerWindow(QMainWindow):
         self.pair_code.setVisible(False)
         self.open_pair_button.setVisible(False)
         self.web_client = None
+        self.sync_button.setEnabled(bool(self.sync_url))
         self.navigation_widget.setVisible(False)
         self.sync_card.setVisible(False)
         self.photo_info.setVisible(False)
@@ -929,6 +978,7 @@ class ScannerWindow(QMainWindow):
     def _connected_to_website(self, client: KioskWebClient):
         self.pair_retry_timer.stop()
         self.web_client = client
+        self.sync_button.setEnabled(True)
         self.navigation_widget.setVisible(True)
         self.sync_card.setVisible(True)
         self.pair_button.setVisible(False)
@@ -939,6 +989,8 @@ class ScannerWindow(QMainWindow):
         self.refresh()
         self.upload_photos()
         self.load_students()
+        self.send_heartbeat()
+        self.try_sync()
 
     def start_pairing(self):
         if self.web_client is not None:
@@ -953,7 +1005,7 @@ class ScannerWindow(QMainWindow):
 
         def work():
             try:
-                client = KioskWebClient(self.site_url)
+                client = KioskWebClient(self.site_url, self.device_id)
                 self.background_results.put(("pair_start", generation, client, client.start_pairing(), ""))
             except Exception as error:
                 self.background_results.put(("pair_start", generation, None, None, str(error)))
@@ -1027,7 +1079,7 @@ class ScannerWindow(QMainWindow):
         threading.Thread(target=work, name="scanner-photo-upload", daemon=True).start()
 
     def try_sync(self):
-        if not self.sync_url or self.syncing:
+        if (self.web_client is None and not self.sync_url) or self.syncing:
             return
         pending_count = self.db.execute("SELECT COUNT(*) FROM events WHERE state='pending'").fetchone()[0]
         if pending_count == 0:
@@ -1036,26 +1088,50 @@ class ScannerWindow(QMainWindow):
             return
         self.syncing = True
         self.sync_button.setEnabled(False)
-        self.sync_status_note = "กำลังส่งข้อมูลทดสอบ…"
+        self.sync_status_note = "กำลังส่งรายการเช็กชื่อ…"
         self.refresh()
+        client = self.web_client
 
         def work():
             db = None
             try:
                 db = open_store(self.db_path)
-                sent, remaining = sync_once(db, self.sync_url)
-                self.background_results.put(("sync", sent, remaining, ""))
+                if client is not None:
+                    sent, remaining, rejected = sync_live(db, client)
+                else:
+                    sent, remaining = sync_once(db, self.sync_url)
+                    rejected = 0
+                self.background_results.put(("sync", sent, remaining, rejected, ""))
             except Exception as error:
-                self.background_results.put(("sync", 0, pending_count, str(error)))
+                self.background_results.put(("sync", 0, pending_count, 0, str(error)))
             finally:
                 if db is not None:
                     db.close()
 
-        threading.Thread(target=work, name="scanner-mock-sync", daemon=True).start()
+        threading.Thread(target=work, name="scanner-sync", daemon=True).start()
+
+    def send_heartbeat(self):
+        client = self.web_client
+        if client is None or self.heartbeating:
+            return
+        self.heartbeating = True
+        count = self.db.execute("SELECT COUNT(*) FROM events WHERE state='pending'").fetchone()[0]
+        camera_active = self.camera is not None
+        model_version = self.manifest["model_version"]
+
+        def work():
+            try:
+                settings = client.heartbeat(count, camera_active, model_version)
+                self.background_results.put(("heartbeat", client, settings, ""))
+            except Exception as error:
+                self.background_results.put(("heartbeat", client, None, str(error)))
+
+        threading.Thread(target=work, name="scanner-heartbeat", daemon=True).start()
 
     def closeEvent(self, event):
         self.background_timer.stop()
         self.sync_timer.stop()
+        self.heartbeat_timer.stop()
         self.photo_timer.stop()
         self.pair_timer.stop()
         self.pair_retry_timer.stop()

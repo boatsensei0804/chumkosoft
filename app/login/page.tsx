@@ -5,6 +5,7 @@ import LoginForm from "@/features/auth/components/login-form";
 import LanguageSwitcher from "@/features/i18n/components/language-switcher";
 import { decryptSession, getSessionToken } from "@/lib/session";
 import { getLocale, getDictionary } from "@/lib/i18n/server";
+import Mascot from "@/components/ui/mascot";
 
 export const metadata: Metadata = {
   title: "เข้าสู่ระบบ — chumkosoft",
@@ -27,7 +28,7 @@ export default async function LoginPage(): Promise<React.ReactNode> {
         background: "linear-gradient(180deg, var(--surface) 0%, oklch(0.945 0.024 254) 100%)",
       }}
     >
-      <div className="w-full max-w-[400px]">
+      <div className="w-full max-w-[820px]">
         <div className="mb-6 flex items-center justify-between">
           <BrandMark />
           <LanguageSwitcher current={locale} />
@@ -45,13 +46,20 @@ export default async function LoginPage(): Promise<React.ReactNode> {
             aria-hidden="true"
           />
 
-          <div className="px-7 pb-7 pt-6">
-            <h1 id="login-heading" className="text-[20px] font-bold text-ink-strong">
-              {t.title}
-            </h1>
-            <p className="mb-6 mt-1 text-[14px] text-muted">{t.subtitle}</p>
+          <div className="grid md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div className="hidden flex-col justify-center border-r border-line bg-brand-softer px-8 py-9 md:flex">
+              <Mascot pose="welcome" size={200} decorative priority className="mx-auto" />
+              <p className="mt-3 text-center text-lg font-semibold text-ink-strong">ยินดีต้อนรับกลับ</p>
+              <p className="mt-1 text-center text-sm leading-relaxed text-muted">จัดการงานโรงเรียนได้จากที่เดียว</p>
+            </div>
+            <div className="px-7 pb-7 pt-6 md:px-9 md:py-9">
+              <h1 id="login-heading" className="text-[20px] font-bold text-ink-strong">
+                {t.title}
+              </h1>
+              <p className="mb-6 mt-1 text-[14px] text-muted">{t.subtitle}</p>
 
-            <LoginForm t={t} />
+              <LoginForm t={t} />
+            </div>
           </div>
         </section>
 

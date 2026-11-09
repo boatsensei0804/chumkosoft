@@ -36,7 +36,7 @@ export default function AppShell({ children, user, today }: AppShellProps): Reac
   }, []);
 
   return (
-    <div className="relative min-h-dvh bg-surface">
+    <div className="relative min-h-dvh bg-[#f5f9fd]">
 
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-[var(--z-sticky)] hidden w-[256px] border-r border-line bg-bg lg:block">

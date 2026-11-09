@@ -41,6 +41,7 @@ def open_store(path: Path) -> sqlite3.Connection:
             local_date TEXT NOT NULL,
             captured_at TEXT NOT NULL,
             state TEXT NOT NULL DEFAULT 'pending',
+            rejection_reason TEXT,
             UNIQUE(student_id, local_date)
         );
     """)
@@ -53,6 +54,9 @@ def open_store(path: Path) -> sqlite3.Connection:
         db.execute("ALTER TABLE templates ADD COLUMN upload_id TEXT")
     if "upload_state" not in columns:
         db.execute("ALTER TABLE templates ADD COLUMN upload_state TEXT NOT NULL DEFAULT 'none'")
+    event_columns = {row[1] for row in db.execute("PRAGMA table_info(events)")}
+    if "rejection_reason" not in event_columns:
+        db.execute("ALTER TABLE events ADD COLUMN rejection_reason TEXT")
     db.commit()
     return db
 
@@ -117,10 +121,18 @@ def check_in(db: sqlite3.Connection, student_id: str, name: str, now: datetime) 
 def pending(db: sqlite3.Connection) -> list[sqlite3.Row]:
     return db.execute(
         "SELECT event_id, student_id, display_name, local_date, captured_at FROM events "
-        "WHERE state='pending' ORDER BY captured_at LIMIT 100"
+        "WHERE state='pending' ORDER BY captured_at LIMIT 20"
     ).fetchall()
 
 
 def mark_synced(db: sqlite3.Connection, event_ids: list[str]) -> None:
     with db:
-        db.executemany("UPDATE events SET state='synced' WHERE event_id=?", ((item,) for item in event_ids))
+        db.executemany("UPDATE events SET state='synced' WHERE event_id=? AND state='pending'", ((item,) for item in event_ids))
+
+
+def mark_rejected(db: sqlite3.Connection, rejected: list[tuple[str, str]]) -> None:
+    with db:
+        db.executemany(
+            "UPDATE events SET state='rejected', rejection_reason=? WHERE event_id=? AND state='pending'",
+            ((reason[:160], event_id) for event_id, reason in rejected),
+        )

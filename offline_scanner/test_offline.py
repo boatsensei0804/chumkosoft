@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from model_update import DEFAULT_MANIFEST_URL, MODEL_NAMES, ModelUpdateError, ensure_models, model_paths
 from store import check_in, enroll, open_store, pending, pending_photo_count, pending_photos
-from sync import sync_once
+from sync import sync_live, sync_once
 from web_client import KioskWebClient, ScannerWebError, upload_pending_photos
 
 
@@ -131,6 +131,35 @@ class OfflineScannerTests(unittest.TestCase):
     def test_refuses_remote_sync(self):
         with self.assertRaises(ValueError):
             sync_once(self.db, "https://app.chumkosoft.com/events")
+
+    def test_live_sync_keeps_unacknowledged_and_marks_rejections(self):
+        now = datetime.now(timezone.utc)
+        check_in(self.db, "student-1", "One", now)
+        check_in(self.db, "student-2", "Two", now)
+        check_in(self.db, "student-3", "Three", now)
+        rows = pending(self.db)
+
+        class PartialClient:
+            def sync_events(self, batch):
+                self_rows = {row["event_id"] for row in batch}
+                assert self_rows == {row["event_id"] for row in rows}
+                return [rows[0]["event_id"]], [(rows[1]["event_id"], "not enrolled")]
+
+        self.assertEqual(sync_live(self.db, PartialClient()), (1, 1, 1))
+        self.assertEqual(pending(self.db)[0]["event_id"], rows[2]["event_id"])
+        states = dict(self.db.execute("SELECT student_id, state FROM events").fetchall())
+        self.assertEqual(states, {"student-1": "synced", "student-2": "rejected", "student-3": "pending"})
+
+    def test_live_sync_network_error_keeps_queue(self):
+        check_in(self.db, "student-1", "One", datetime.now(timezone.utc))
+
+        class OfflineClient:
+            def sync_events(self, _rows):
+                raise ScannerWebError("offline")
+
+        with self.assertRaises(ScannerWebError):
+            sync_live(self.db, OfflineClient())
+        self.assertEqual(len(pending(self.db)), 1)
 
     def test_models_download_once_and_work_offline(self):
         cache = Path(self.temp.name) / "models"

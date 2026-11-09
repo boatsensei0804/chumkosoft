@@ -284,6 +284,15 @@ body {
   border-radius: 4px;
 }
 
+@keyframes loading-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+
+.loading-progress-bar {
+  animation: loading-sweep 1.6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

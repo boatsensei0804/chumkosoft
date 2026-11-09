@@ -4,6 +4,8 @@ import WeeklySchedule from "@/features/portal/components/weekly-schedule";
 import { getCurrentUser } from "@/lib/dal";
 import { getPortalOverview } from "@/features/portal/services/portal-service";
 import { thaiGreeting, formatThaiWeekdayLong } from "@/utils/thai-date";
+import Mascot from "@/components/ui/mascot";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 
 export const metadata: Metadata = {
   title: "หน้าของฉัน — chumkosoft",
@@ -23,22 +25,20 @@ export default async function PortalPage(): Promise<React.ReactNode> {
   return (
     <div className="flex flex-col gap-6">
       <section
-        className="relative overflow-hidden rounded-xl px-5 py-5 sm:px-7 sm:py-6"
-        style={{ background: "var(--band-from)" }}
+        className="relative flex items-center justify-between overflow-hidden rounded-2xl border border-brand/15 bg-gradient-to-br from-brand-soft via-bg to-bg px-5 py-5 shadow-sm sm:px-7 sm:py-6"
       >
-        <p className="text-[12.5px]" style={{ color: "var(--band-muted)" }}>
-          {formatThaiWeekdayLong(now)}
-        </p>
-        <h1 className="mt-1 text-[24px] font-bold tracking-tight sm:text-[28px]" style={{ color: "var(--band-ink)" }}>
-          {heading}
-        </h1>
-        {overview.classroomCode && (
-          <p className="mt-2 inline-flex items-center gap-2 text-[13.5px]" style={{ color: "var(--band-muted)" }}>
-            <GraduationCap className="size-4" />
-            ชั้น {overview.classroomCode} · {overview.gradeLevel}
-            {overview.termLabel ? ` · ${overview.termLabel}` : ""}
-          </p>
-        )}
+        <div>
+          <p className="text-[12.5px] text-muted">{formatThaiWeekdayLong(now)}</p>
+          <h1 className="mt-1 text-[24px] font-bold tracking-tight text-ink-strong sm:text-[28px]">{heading}</h1>
+          {overview.classroomCode && (
+            <p className="mt-2 inline-flex items-center gap-2 text-[13.5px] text-muted">
+              <GraduationCap className="size-4" />
+              ชั้น {overview.classroomCode} · {overview.gradeLevel}
+              {overview.termLabel ? ` · ${overview.termLabel}` : ""}
+            </p>
+          )}
+        </div>
+        <Mascot pose="welcome" size={132} decorative priority className="hidden sm:block" />
       </section>
 
       <section className="flex flex-col gap-3">
@@ -59,23 +59,11 @@ export default async function PortalPage(): Promise<React.ReactNode> {
 
 function EmptyState({ studentResolved }: { studentResolved: boolean }): React.ReactNode {
   return (
-    <div
-      className="flex flex-col items-center gap-3 rounded-[16px] px-6 py-16 text-center"
-      style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)" }}
-    >
-      <span
-        className="grid size-12 place-items-center rounded-full"
-        style={{ backgroundColor: "var(--surface-2)", color: "var(--faint)" }}
-        aria-hidden="true"
-      >
-        <CalendarDays className="size-6" />
-      </span>
-      <p className="text-[15px] font-semibold text-ink-strong">ยังไม่มีตารางเรียน</p>
-      <p className="max-w-sm text-[13.5px] text-muted">
-        {studentResolved
-          ? "ยังไม่มีการจัดชั้นเรียนหรือตารางเรียนในภาคเรียนปัจจุบัน กรุณาติดต่อเจ้าหน้าที่ทะเบียน"
-          : "ยังไม่มีข้อมูลนักเรียนที่เชื่อมกับบัญชีนี้ กรุณาติดต่อเจ้าหน้าที่ทะเบียน"}
-      </p>
-    </div>
+    <MascotEmptyState
+      title="ยังไม่มีตารางเรียน"
+      description={studentResolved
+        ? "ยังไม่มีการจัดชั้นเรียนหรือตารางเรียนในภาคเรียนปัจจุบัน กรุณาติดต่อเจ้าหน้าที่ทะเบียน"
+        : "ยังไม่มีข้อมูลนักเรียนที่เชื่อมกับบัญชีนี้ กรุณาติดต่อเจ้าหน้าที่ทะเบียน"}
+    />
   );
 }

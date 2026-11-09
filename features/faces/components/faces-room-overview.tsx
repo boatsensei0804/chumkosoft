@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Users, ChevronDown, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 import type { ClassroomFaceProgress } from "../types";
 
 function percent(enrolled: number, total: number): number {
@@ -35,13 +36,7 @@ export default function FacesRoomOverview({ rooms }: { rooms: ClassroomFaceProgr
 
   if (rooms.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-2xl border border-line bg-card px-6 py-16 text-center">
-        <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint" aria-hidden="true">
-          <Users className="size-6" />
-        </span>
-        <p className="text-[15px] font-semibold text-ink-strong">ยังไม่มีข้อมูลชั้นเรียน</p>
-        <p className="max-w-sm text-[13.5px] text-muted">ยังไม่มีนักเรียนลงทะเบียนในภาคเรียนปัจจุบัน ตั้งค่าปีการศึกษา/ภาคเรียนและลงทะเบียนนักเรียนก่อน</p>
-      </div>
+      <MascotEmptyState title="ยังไม่มีข้อมูลชั้นเรียน" description="ตั้งค่าปีการศึกษาและภาคเรียน แล้วลงทะเบียนนักเรียนก่อนเริ่มเก็บภาพใบหน้า" />
     );
   }
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, Check, Clock3, CircleDashed, Users, type LucideIcon } from "lucide-react";
+import { ArrowRight, Check, Clock3, CircleDashed, type LucideIcon } from "lucide-react";
 import type { DailyClassSummary } from "@/features/attendance/types";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 
 function percent(count: number, total: number): number {
   return total > 0 ? Math.round((count / total) * 100) : 0;
@@ -42,10 +43,7 @@ export default function DailyRollCallOverview({ date, rooms }: { date: string; r
       </div>
 
       {rooms.length === 0 ? (
-        <div className="rounded-xl border border-line bg-bg px-6 py-12 text-center">
-          <Users className="mx-auto size-8 text-faint" aria-hidden="true" />
-          <p className="mt-3 text-sm font-semibold text-ink-strong">ยังไม่มีห้องเรียนที่มีนักเรียนในภาคเรียนนี้</p>
-        </div>
+        <MascotEmptyState title="ยังไม่มีห้องเรียนที่มีนักเรียนในภาคเรียนนี้" description="ลงทะเบียนนักเรียนและจัดห้องเรียนก่อนเริ่มเช็กชื่อ" />
       ) : (
         <div className="overflow-hidden rounded-xl border border-line bg-bg">
           <div className="border-b border-line px-4 py-3 sm:px-5">

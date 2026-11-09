@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, ScanFace, Clock, X, CheckCircle2, Info, TriangleAlert, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Mascot from "@/components/ui/mascot";
 import { loadFaceApi, detectFaceForScan } from "@/features/faces/lib/face-client";
 import { identifyFaceAction, confirmCheckInAction } from "@/features/faces/scan-actions";
 import type { ScanHistoryEntry, ScanResult, ScanStatus } from "@/features/faces/services/scan-service";
@@ -175,14 +176,13 @@ export default function ScanStation({ scanStartTime, lateAfterTime, initialCheck
           <div className="absolute inset-0 grid place-items-center bg-[color-mix(in_oklch,oklch(0.2_0.02_260)_70%,transparent)]">
             {phase === "starting" ? (
               <div className="flex flex-col items-center gap-3 text-center text-[var(--on-primary)]">
-                <Loader2 className="size-9 animate-spin" />
+                <Mascot pose="working" size={100} decorative />
+                <Loader2 className="size-5 animate-spin" />
                 <p className="text-[14px] font-medium">กำลังเปิดกล้องและโหลดโมเดล…</p>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-3 px-6 text-center text-[var(--on-primary)]">
-                <span className="grid size-14 place-items-center rounded-full bg-[color-mix(in_oklch,var(--on-primary)_15%,transparent)]">
-                  <ScanFace className="size-8" />
-                </span>
+                <Mascot pose={phase === "error" ? "error" : "scan"} size={112} decorative />
                 {phase === "error" ? <p className="max-w-sm text-[13.5px]">{errorMsg}</p> : <p className="text-[14px] font-medium">กดปุ่มด้านล่างเพื่อเริ่มสแกน</p>}
                 <Button onClick={() => void start()}>
                   <ScanFace className="size-[18px]" /> {phase === "error" ? "ลองอีกครั้ง" : "เริ่มสแกน"}
@@ -216,7 +216,11 @@ export default function ScanStation({ scanStartTime, lateAfterTime, initialCheck
               const Icon = meta.icon;
               return (
                 <div className="flex items-center gap-3 rounded-[14px] px-4 py-3" style={{ backgroundColor: meta.bg, border: `1px solid ${meta.fg}` }}>
-                  <Icon className="size-7 shrink-0" style={{ color: meta.fg }} />
+                  {result.status === "matched" ? (
+                    <Mascot pose="success" size={52} decorative />
+                  ) : (
+                    <Icon className="size-7 shrink-0" style={{ color: meta.fg }} />
+                  )}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="text-[15px] font-bold" style={{ color: meta.fg }}>
@@ -294,9 +298,7 @@ export default function ScanStation({ scanStartTime, lateAfterTime, initialCheck
           ) : (
             <div className="grid h-full min-h-[220px] place-items-center px-6 py-8 text-center">
               <div className="flex max-w-[230px] flex-col items-center gap-2">
-                <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint">
-                  <ScanFace className="size-6" />
-                </span>
+                <Mascot pose="empty" size={88} decorative />
                 <p className="text-[13px] font-semibold text-ink">ยังไม่มีรายการสแกนวันนี้</p>
                 <p className="text-[11.5px] leading-relaxed text-muted">เมื่อมีนักเรียนสแกนสำเร็จ ชื่อและเวลาจะปรากฏที่นี่</p>
               </div>

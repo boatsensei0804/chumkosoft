@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CalendarDays, Clock3, GraduationCap, Users, type LucideIcon } from "lucide-react";
 import { NativeSelect } from "@/components/ui/native-select";
 import { cn } from "@/lib/utils";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 import TimetableBuilder from "./timetable-builder";
 import { subjectColors } from "../data";
 import type { ContextOption, DayInfo, DayKey, ExternalBusy, Offering, PeriodRow, ScheduleOverviewData, ScheduleOverviewSlot } from "../types";
@@ -248,5 +249,5 @@ function PeriodRowCells({ period, days, byCell, colorByOffering, secondary }: {
 }
 
 function EmptySchedule({ message }: { message: string }): React.ReactNode {
-  return <div className="rounded-xl border border-dashed border-line-strong bg-surface px-6 py-12 text-center text-sm text-muted">{message}</div>;
+  return <MascotEmptyState title={message} description="เลือกภาคเรียน ห้อง หรือครูอื่นเพื่อดูตารางที่มีข้อมูล" compact />;
 }

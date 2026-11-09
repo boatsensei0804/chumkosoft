@@ -23,10 +23,10 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         raise ScannerWebError("เว็บเปลี่ยนที่อยู่ กรุณาตรวจ URL ที่เชื่อมต่อ")
 
 
-def _json_response(opener, request, expected_host):
+def _json_response(opener, request, expected_host, timeout=10):
     request.add_header("User-Agent", "ChumkosoftScanner/1.0")
     try:
-        with opener.open(request, timeout=10) as response:
+        with opener.open(request, timeout=timeout) as response:
             if urlsplit(response.geturl()).netloc != expected_host:
                 raise ScannerWebError("คำตอบมาจากโดเมนที่ไม่ถูกต้อง")
             raw = response.read(1024 * 1024 + 1)
@@ -64,8 +64,14 @@ def validate_site_url(site_url: str) -> str:
 
 
 class KioskWebClient:
-    def __init__(self, site_url: str = SITE):
+    def __init__(self, site_url: str = SITE, device_id: str = ""):
         self.site = validate_site_url(site_url)
+        if device_id:
+            try:
+                device_id = str(uuid.UUID(device_id))
+            except ValueError as error:
+                raise ValueError("รหัสเครื่องสแกนไม่ถูกต้อง") from error
+        self.device_id = device_id
         self.host = urlsplit(self.site).netloc
         self.cookies = http.cookiejar.CookieJar()
         self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(self.cookies), NoRedirect())
@@ -94,7 +100,7 @@ class KioskWebClient:
     def poll_pairing(self, device_code: str) -> str:
         request = urllib.request.Request(
             self.site + "/api/scanner/pair/poll",
-            data=json.dumps({"deviceCode": device_code}).encode("utf-8"),
+            data=json.dumps({"deviceCode": device_code, **({"deviceId": self.device_id} if self.device_id else {})}).encode("utf-8"),
             headers={"Content-Type": "application/json", "Accept": "application/json"},
             method="POST",
         )
@@ -104,7 +110,59 @@ class KioskWebClient:
             raise ScannerWebError("สถานะการเชื่อม QR ไม่ถูกต้อง")
         if state == "approved" and not any(cookie.name == "session" for cookie in self.cookies):
             raise ScannerWebError("เว็บไม่ได้ส่งเซสชันจุดสแกนกลับมา")
+        if state == "approved" and self.device_id and data.get("deviceId") != self.device_id:
+            raise ScannerWebError("เว็บไซต์ตอบรหัสเครื่องสแกนไม่ตรงกัน")
         return state
+
+    def heartbeat(self, pending_count: int, camera_active: bool, model_version: str) -> dict:
+        if not self.device_id:
+            raise ScannerWebError("เครื่องสแกนยังไม่มีรหัสประจำเครื่อง")
+        body = {"deviceId": self.device_id, "pendingCount": pending_count,
+                "cameraActive": camera_active, "modelVersion": model_version}
+        request = urllib.request.Request(
+            self.site + "/api/scanner/device/heartbeat",
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Accept": "application/json"}, method="POST",
+        )
+        data = _json_response(self.opener, request, self.host)
+        settings = data.get("settings")
+        if (not isinstance(settings, dict) or
+                type(settings.get("cameraIndex")) is not int or not 0 <= settings["cameraIndex"] <= 9 or
+                settings.get("detectionIntervalSeconds") not in (0.5, 0.85, 1.5) or
+                type(settings.get("repeatCooldownSeconds")) is not int or
+                settings["repeatCooldownSeconds"] not in (10, 30, 60) or
+                not isinstance(settings.get("scanStartTime"), str) or
+                not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", settings["scanStartTime"]) or
+                not isinstance(settings.get("lateAfterTime"), str) or
+                not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", settings["lateAfterTime"])):
+            raise ScannerWebError("การตั้งค่าจากเว็บไซต์ไม่ถูกต้อง")
+        return settings
+
+    def sync_events(self, rows: list[sqlite3.Row]) -> tuple[list[str], list[tuple[str, str]]]:
+        if not self.device_id:
+            raise ScannerWebError("เครื่องสแกนยังไม่มีรหัสประจำเครื่อง")
+        events = [{"eventId": row["event_id"], "studentCode": row["student_id"],
+                   "localDate": row["local_date"], "capturedAt": row["captured_at"]} for row in rows]
+        request = urllib.request.Request(
+            self.site + "/api/scanner/events",
+            data=json.dumps({"deviceId": self.device_id, "events": events}).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Accept": "application/json"}, method="POST",
+        )
+        data = _json_response(self.opener, request, self.host, timeout=30)
+        accepted = data.get("accepted")
+        rejected = data.get("rejected")
+        known = {row["event_id"] for row in rows}
+        if (not isinstance(accepted, list) or not isinstance(rejected, list) or
+                any(not isinstance(item, str) or item not in known for item in accepted) or
+                any(not isinstance(item, dict) or item.get("eventId") not in known or
+                    not isinstance(item.get("reason"), str) or len(item["reason"]) > 160
+                    for item in rejected)):
+            raise ScannerWebError("คำตอบการซิงก์จากเว็บไซต์ไม่ถูกต้อง")
+        rejected_pairs = [(item["eventId"], item["reason"]) for item in rejected]
+        ids = accepted + [item[0] for item in rejected_pairs]
+        if len(ids) != len(set(ids)):
+            raise ScannerWebError("คำตอบการซิงก์มีรายการซ้ำ")
+        return accepted, rejected_pairs
 
     def get_students(self) -> list[dict[str, str]]:
         students = []

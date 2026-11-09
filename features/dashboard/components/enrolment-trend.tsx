@@ -1,4 +1,5 @@
 import SectionCard from "./section-card";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 import type { EnrolmentPoint } from "../types";
 
 const W = 640;
@@ -41,7 +42,7 @@ export default function EnrolmentTrend({ data }: { data: EnrolmentPoint[] }): Re
   if (data.length === 0 || total === 0) {
     return (
       <SectionCard title="แนวโน้มการลงทะเบียน" caption="การลงทะเบียนใหม่รายเดือน · 6 เดือนล่าสุด" bodyClassName="p-6">
-        <p className="py-8 text-center text-[13.5px] text-muted">ยังไม่มีข้อมูลการลงทะเบียนในช่วง 6 เดือนที่ผ่านมา</p>
+        <MascotEmptyState title="ยังไม่มีข้อมูลการลงทะเบียน" description="กราฟจะปรากฏเมื่อมีการลงทะเบียนนักเรียนในช่วง 6 เดือนที่ผ่านมา" compact />
       </SectionCard>
     );
   }

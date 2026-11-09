@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { TriangleAlert, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BrandMark from "@/features/dashboard/components/brand-mark";
+import Mascot from "@/components/ui/mascot";
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }): React.ReactNode {
   useEffect(() => {
@@ -20,9 +21,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
 
         <section className="overflow-hidden rounded-2xl border border-line bg-card shadow-[0_8px_30px_oklch(0.45_0.15_254_/_0.08)]">
           <div className="flex flex-col items-center px-7 pb-7 pt-8">
-            <span className="grid size-12 place-items-center rounded-full bg-danger-soft text-danger" aria-hidden="true">
-              <TriangleAlert className="size-6" />
-            </span>
+            <Mascot pose="error" size={128} decorative />
             <h1 className="mt-4 text-[18px] font-bold text-ink-strong">เกิดข้อผิดพลาดบางอย่าง</h1>
             <p className="mt-2 max-w-sm text-[14px] leading-relaxed text-muted">
               ระบบไม่สามารถแสดงหน้านี้ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง หากยังพบปัญหาโปรดติดต่อผู้ดูแลระบบ

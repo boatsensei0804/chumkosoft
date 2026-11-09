@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from settings import ScannerSettings, load_settings, save_settings
+from settings import ScannerSettings, get_or_create_device_id, load_settings, save_settings
 
 
 class ScannerSettingsTests(unittest.TestCase):
@@ -18,6 +18,13 @@ class ScannerSettingsTests(unittest.TestCase):
             path = Path(directory) / "settings.json"
             path.write_text('{"camera_index": -1, "detection_interval_seconds": 0, "repeat_cooldown_seconds": 0}')
             self.assertEqual(load_settings(path), ScannerSettings())
+
+    def test_device_id_stays_stable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "device-id"
+            first = get_or_create_device_id(path)
+            self.assertEqual(get_or_create_device_id(path), first)
+            self.assertEqual(path.read_text(), first)
 
 
 if __name__ == "__main__":

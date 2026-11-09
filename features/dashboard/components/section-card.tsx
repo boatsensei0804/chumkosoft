@@ -19,10 +19,10 @@ export default function SectionCard({
 }: SectionCardProps): React.ReactNode {
   return (
     <section
-      className={`flex flex-col overflow-hidden rounded-[16px] ${className}`}
-      style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)" }}
+      className={`flex flex-col overflow-hidden rounded-[20px] ${className}`}
+      style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)", boxShadow: "var(--shadow-md)" }}
     >
-      <div className="flex items-start justify-between gap-4 px-5 pt-4 pb-3">
+      <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-4">
         <div>
           <h2 className="text-[15px] font-bold tracking-tight text-ink-strong">{title}</h2>
           {caption && <p className="mt-0.5 text-[12.5px] text-muted">{caption}</p>}

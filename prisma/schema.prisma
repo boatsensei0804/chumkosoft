@@ -99,6 +99,7 @@ model User {
 
   // Parent accounts link to students they are guardians of.
   guardianLinks Guardian[]
+  scannerDevices ScannerDevice[]
 
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
@@ -649,6 +650,40 @@ model SchoolEntry {
 
   @@unique([studentId, date]) // one gate record per student per day
   @@index([termId, date])
+}
+
+// A paired desktop scanner. Its public UUID is stored on the scanner; access
+// still requires a valid KIOSK session bound to kioskUserId.
+model ScannerDevice {
+  id                       String   @id @db.Uuid
+  kioskUserId              String
+  kioskUser                User     @relation(fields: [kioskUserId], references: [id])
+  name                     String   @default("เครื่องสแกน")
+  cameraIndex              Int      @default(0)
+  detectionIntervalSeconds Float    @default(0.85)
+  repeatCooldownSeconds    Int      @default(10)
+  lastSeenAt               DateTime?
+  lastSyncAt               DateTime?
+  pendingCount             Int      @default(0)
+  cameraActive             Boolean  @default(false)
+  modelVersion             String?
+  syncEvents               ScannerSyncEvent[]
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@index([kioskUserId])
+}
+
+model ScannerSyncEvent {
+  eventId    String        @id @db.Uuid
+  deviceId   String        @db.Uuid
+  device     ScannerDevice @relation(fields: [deviceId], references: [id])
+  studentId  String
+  capturedAt DateTime
+  result     String
+  createdAt  DateTime      @default(now())
+
+  @@index([deviceId, capturedAt])
 }
 
 // ---------------------------------------------------------------------------

@@ -19,6 +19,7 @@ import type { LineLinkStatus } from "@/features/line/types";
 import type { Paginated } from "@/types/pagination";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Mascot from "@/components/ui/mascot";
 
 const STATUS_META: Record<LineLinkStatus, { label: string; className: string }> = {
   linked: { label: "เชื่อม LINE แล้ว", className: "bg-success-soft text-[oklch(0.42_0.1_152)] border-success/30" },
@@ -132,9 +133,12 @@ export default function LineManager({ page, query, configured, classrooms, class
             </div>
           </div>
         </div>
-        <Button onClick={() => { setExportClassroomId(classroomId || classrooms[0]?.id || ""); setExportOpen(true); }} disabled={classrooms.length === 0} className="shrink-0">
-          <Printer className="size-4" /> สร้างชุดเอกสาร A4
-        </Button>
+        <div className="flex shrink-0 items-center gap-2 sm:flex-col">
+          <Mascot pose="notify" size={88} decorative className="hidden sm:block" />
+          <Button onClick={() => { setExportClassroomId(classroomId || classrooms[0]?.id || ""); setExportOpen(true); }} disabled={classrooms.length === 0} className="shrink-0">
+            <Printer className="size-4" /> สร้างชุดเอกสาร A4
+          </Button>
+        </div>
       </section>
 
       <div className="flex flex-wrap items-center gap-3">

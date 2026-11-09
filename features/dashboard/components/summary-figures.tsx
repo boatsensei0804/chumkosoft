@@ -31,7 +31,7 @@ interface SummaryFiguresProps {
 
 export default function SummaryFigures({ figures }: SummaryFiguresProps): React.ReactNode {
   return (
-    <section aria-label="สรุปภาพรวม" className="grid grid-cols-1 overflow-hidden rounded-xl border border-line bg-bg sm:grid-cols-2 lg:grid-cols-4">
+    <section aria-label="สรุปภาพรวม" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {figures.map((figure) => {
         const style = figureStyles[figure.key] ?? fallbackStyle;
         const FigureIcon = style.icon;
@@ -42,7 +42,7 @@ export default function SummaryFigures({ figures }: SummaryFiguresProps): React.
         return (
           <div
             key={figure.key}
-            className="flex min-w-0 items-start gap-3 border-b border-r border-line p-4 sm:p-4"
+            className="flex min-w-0 items-start gap-3 rounded-[18px] border border-line p-4 shadow-sm sm:p-5"
             style={{ backgroundColor: needsAttention ? "var(--warning-soft)" : "var(--bg)" }}
           >
             <span

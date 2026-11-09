@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Info, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BrandMark from "@/features/dashboard/components/brand-mark";
 import { logoutAction } from "@/features/auth/actions";
 import { getCurrentUser } from "@/lib/dal";
 import { ROLE_LABELS } from "@/features/auth/roles";
+import Mascot from "@/components/ui/mascot";
 
 export const metadata: Metadata = {
   title: "ไม่มีสิทธิ์เข้าถึง — chumkosoft",
@@ -22,9 +23,7 @@ export default async function UnauthorizedPage(): Promise<React.ReactNode> {
 
         <section className="overflow-hidden rounded-2xl border border-line bg-card shadow-[0_8px_30px_oklch(0.45_0.15_254_/_0.08)]" aria-labelledby="unauthorized-heading">
           <div className="flex flex-col items-center px-7 pb-7 pt-8 text-center">
-            <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-muted" aria-hidden="true">
-              <Info className="size-6" />
-            </span>
+            <Mascot pose="access" size={128} decorative />
 
             <h1 id="unauthorized-heading" className="mt-4 text-[20px] font-bold text-ink-strong">
               ไม่มีสิทธิ์เข้าถึงส่วนนี้

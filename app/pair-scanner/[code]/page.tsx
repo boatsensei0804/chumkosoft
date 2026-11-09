@@ -73,6 +73,7 @@ export default async function PairScannerPage({ params, searchParams }: PageProp
             </p>
           </>
         )}
+        {connected && <a href="/scanner-devices" className="mt-4 block rounded-lg bg-sky-700 px-4 py-3 text-center font-semibold text-white">ดูสถานะและตั้งค่าเครื่องสแกน</a>}
       </section>
     </main>
   );

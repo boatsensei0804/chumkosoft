@@ -20,6 +20,7 @@ function isProtected(pathname: string): boolean {
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/portal") ||
     pathname.startsWith("/scan")
+    || pathname.startsWith("/scanner-devices")
   );
 }
 
