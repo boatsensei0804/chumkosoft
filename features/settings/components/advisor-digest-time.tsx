@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { saveAdvisorDigestTime } from "@/features/settings/advisor-digest-actions";
+import { saveAdvisorDigestTime, saveLineOaFriendUrl } from "@/features/settings/advisor-digest-actions";
 
-export default function AdvisorDigestTime({ initialTime }: { initialTime: string }): React.ReactNode {
+export default function AdvisorDigestTime({ initialTime, initialFriendUrl }: { initialTime: string; initialFriendUrl: string }): React.ReactNode {
   const [time, setTime] = useState(initialTime);
+  const [friendUrl, setFriendUrl] = useState(initialFriendUrl);
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
   return <section className="rounded-2xl border border-line bg-card p-5">
@@ -18,6 +19,17 @@ export default function AdvisorDigestTime({ initialTime }: { initialTime: string
         const result = await saveAdvisorDigestTime(time);
         setMessage(result.message);
       })}>{pending ? "กำลังบันทึก…" : "บันทึกเวลา"}</button>
+    </div>
+    <div className="mt-5 border-t border-line pt-5">
+      <label className="block text-sm font-semibold text-ink" htmlFor="line-oa-friend-url">ลิงก์เพิ่มเพื่อน LINE OA สำหรับครู</label>
+      <p className="mt-1 text-xs text-muted">คัดลอกจาก LINE Official Account Manager เพื่อให้ครูกดเพิ่มเพื่อนจากหน้า LINE ของฉัน</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <input id="line-oa-friend-url" type="url" value={friendUrl} onChange={(event) => setFriendUrl(event.target.value)} placeholder="https://lin.ee/..." className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
+        <button type="button" disabled={pending} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" onClick={() => startTransition(async () => {
+          const result = await saveLineOaFriendUrl(friendUrl);
+          setMessage(result.message);
+        })}>{pending ? "กำลังบันทึก…" : "บันทึกลิงก์"}</button>
+      </div>
     </div>
     {message && <p className="mt-3 text-sm text-ink" role="status">{message}</p>}
   </section>;

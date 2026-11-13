@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { MessageSquare, CircleCheck, Clock } from "lucide-react";
 import PageHeader from "@/features/dashboard/components/page-header";
 import StatStrip from "@/components/ui/stat-strip";
@@ -20,7 +21,7 @@ interface LinePageProps {
 }
 
 export default async function LinePage({ searchParams }: LinePageProps): Promise<React.ReactNode> {
-  await requireRoles(STAFF_ROLES);
+  const user = await requireRoles(STAFF_ROLES);
   const params = await searchParams;
   const query = params.q ?? "";
   const classroomId = params.classroom ?? "";
@@ -35,6 +36,7 @@ export default async function LinePage({ searchParams }: LinePageProps): Promise
       <PageHeader
         title="LINE / แจ้งเตือนผู้ปกครอง"
         subtitle="ผูกบัญชี LINE ของผู้ปกครองเข้ากับนักเรียน เพื่อส่งแจ้งเตือนอัตโนมัติเมื่อนักเรียนเข้าโรงเรียน"
+        actions={user.role === "ADMIN" ? <Link href="/dashboard/line/teachers" className="rounded-lg border border-line bg-card px-4 py-2 text-sm font-semibold text-brand-ink">ดูสถานะ LINE ครู</Link> : undefined}
       />
       <StatStrip
         items={[

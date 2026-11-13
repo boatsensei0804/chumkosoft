@@ -20,7 +20,7 @@ export default async function SettingsPage(): Promise<React.ReactNode> {
   const [years, periods, digestSetting] = await Promise.all([
     getAcademicSettings(),
     getPeriodSettings(),
-    prisma.advisorDigestSetting.findUnique({ where: { id: 1 }, select: { sendTime: true } }),
+    prisma.advisorDigestSetting.findUnique({ where: { id: 1 }, select: { sendTime: true, oaAddFriendUrl: true } }),
   ]);
   const termCount = years.reduce((sum, y) => sum + y.terms.length, 0);
   const classPeriods = periods.filter((p) => !p.isBreak).length;
@@ -40,7 +40,7 @@ export default async function SettingsPage(): Promise<React.ReactNode> {
       />
       <SettingsTabs years={years} periods={periods} />
       <div className="mt-6">
-        <AdvisorDigestTime initialTime={digestSetting?.sendTime ?? "09:00"} />
+        <AdvisorDigestTime initialTime={digestSetting?.sendTime ?? "09:00"} initialFriendUrl={digestSetting?.oaAddFriendUrl ?? ""} />
       </div>
     </>
   );

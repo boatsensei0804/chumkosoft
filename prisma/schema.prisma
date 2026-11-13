@@ -714,6 +714,7 @@ model SchoolEntry {
 model AdvisorDigestSetting {
   id        Int      @id @default(1)
   sendTime  String   @default("09:00")
+  oaAddFriendUrl String?
   updatedAt DateTime @updatedAt
 }
 

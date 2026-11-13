@@ -75,9 +75,14 @@ from the UI. Register the LINE webhook at `https://<your-hostname>/api/line/webh
 
 ### Daily LINE summary for homeroom advisors
 
-Each teacher opens **Attendance → School entry** and generates a six-digit LINE
-link code. They add the school's LINE OA and send the code in its chat. Their
-staff account must be assigned as a classroom advisor.
+The admin saves the LINE OA add-friend link under **System settings**. Each
+teacher opens **LINE ของฉัน**, adds the school's LINE OA, generates a six-digit
+link code, and sends it in the private chat with that OA. The teacher page
+updates its status automatically; the admin can see all staff statuses under
+**LINE / แจ้งเตือน → ดูสถานะ LINE ครู**. Adding the OA as a friend alone does not
+identify the teacher: the code must be sent and processed by the webhook.
+Their staff account must be assigned as a classroom advisor to receive a daily
+room summary.
 
 An admin sets the delivery time in **System settings → LINE advisor summary**
 in half-hour increments (Bangkok time). The GitHub workflow

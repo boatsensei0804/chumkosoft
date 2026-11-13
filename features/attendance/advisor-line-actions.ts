@@ -8,6 +8,6 @@ export async function createMyAdvisorLineCode(): Promise<{ ok: boolean; code?: s
   const user = await getCurrentUser();
   if (user.role !== "TEACHER" || !user.staffId) return { ok: false, message: "ต้องใช้บัญชีครูที่ผูกกับข้อมูลบุคลากร" };
   const result = await generateAdvisorLinkCode(user.staffId);
-  if (result.ok) revalidatePath("/dashboard/attendance");
+  if (result.ok) revalidatePath("/dashboard/my-line");
   return result;
 }
