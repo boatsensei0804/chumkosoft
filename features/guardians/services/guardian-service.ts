@@ -57,6 +57,7 @@ export async function listStudentGuardians(params: { page: number; search: strin
     code: s.studentCode,
     name: personName(s),
     classroom: s.enrollments[0]?.classroom.code ?? "—",
+    lineAccounts: s.lineAccounts.map((account) => ({ id: account.id, linked: account.lineUserId !== null, linkCode: account.lineLinkCode })),
     guardians: s.guardians.map(
       (g): GuardianRow => ({
         id: g.id,
@@ -84,6 +85,7 @@ export async function getClassroomGuardianPrintData(classroomId: string) {
     studentCode: student.studentCode,
     studentName: personName(student),
     classroom: student.enrollments[0]?.classroom.code ?? "—",
+    lineAccounts: student.lineAccounts.map((account) => ({ id: account.id, linked: account.lineUserId !== null, linkCode: account.lineLinkCode })),
     guardians: student.guardians.map((guardian) => ({
       id: guardian.id,
       prefix: guardian.prefix,

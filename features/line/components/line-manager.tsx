@@ -126,7 +126,7 @@ export default function LineManager({ page, query, configured, classrooms, class
       <div className="flex items-start gap-2.5 rounded-[12px] border border-brand-soft bg-brand-softer px-4 py-3">
         <Info className="mt-0.5 size-[18px] shrink-0 text-brand-ink" />
         <p className="text-[13px] leading-relaxed text-ink">
-          กด “สร้างรหัส” ให้ผู้ปกครอง → ผู้ปกครองเพิ่ม LINE OA ของโรงเรียนเป็นเพื่อนและพิมพ์รหัส 6 หลักในแชท เพื่อรับแจ้งเตือนเมื่อนักเรียนเข้าโรงเรียน · เพิ่ม/แก้ไขข้อมูลผู้ปกครองได้ที่เมนู{" "}
+          สร้างรหัสจากรายชื่อนักเรียนได้ แม้ยังไม่มีข้อมูลผู้ปกครอง → แจก QR และรหัส 6 หลักให้ผู้ปกครองส่งในแชท LINE OA เพื่อรับแจ้งเตือน · เพิ่ม/แก้ไขข้อมูลผู้ปกครองได้ที่เมนู{" "}
           <Link href="/dashboard/guardians" className="font-semibold text-brand-ink underline">
             ผู้ปกครอง
           </Link>
@@ -138,7 +138,7 @@ export default function LineManager({ page, query, configured, classrooms, class
           <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-bg text-brand-ink shadow-sm"><UsersRound className="size-5" /></span>
           <div>
             <h2 className="text-[15px] font-bold text-ink-strong">เตรียม LINE ให้ผู้ปกครองเป็นชุด</h2>
-            <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-muted">เลือกระดับชั้น ระบบสร้างรหัสที่ยังไม่มีให้ครั้งเดียว แล้วจัดเอกสารแจกผู้ปกครองพร้อม QR เพิ่มเพื่อน LINE OA ได้เลย ไม่ต้องกดสร้างรหัสทีละคน</p>
+            <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-muted">เลือกห้องเรียน ระบบสร้างรหัสให้นักเรียนทั้งห้องที่ยังไม่มีรหัส แล้วจัดเอกสารแจกผู้ปกครองพร้อม QR เพิ่มเพื่อน LINE OA</p>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-[11.5px] font-medium text-brand-ink">
               <span className="rounded-full bg-bg px-2.5 py-1">1 · เลือกชั้น</span><ArrowRight className="size-3.5" />
               <span className="rounded-full bg-bg px-2.5 py-1">2 · เตรียมรหัส</span><ArrowRight className="size-3.5" />
@@ -185,7 +185,7 @@ export default function LineManager({ page, query, configured, classrooms, class
                   </td>
                   <td className="px-4 py-3">
                     {student.guardians.length === 0 ? (
-                      <div className="flex flex-wrap items-center gap-2 py-1"><p className="text-[13px] text-faint">ยังไม่มีข้อมูลผู้ปกครอง</p><Button variant="outline" size="sm" disabled={pendingId === student.studentId} onClick={() => generateStudentCode(student.studentId)}>สร้างรหัสให้ผู้ปกครอง</Button></div>
+                      <p className="py-1 text-[13px] text-faint">ยังไม่มีข้อมูลผู้ปกครอง</p>
                     ) : (
                       <div className="flex flex-col divide-y divide-line">
                         {student.guardians.map((g) => {
@@ -199,6 +199,7 @@ export default function LineManager({ page, query, configured, classrooms, class
                         })}
                       </div>
                     )}
+                    {student.lineAccounts.length > 0 && <div className="mt-2 flex flex-wrap gap-2 text-xs">{student.lineAccounts.map((account) => <span key={account.id} className="rounded bg-brand-softer px-2 py-1 font-semibold text-brand-ink">{account.linked ? "เชื่อม LINE แล้ว" : `รหัส ${account.linkCode}`}</span>)}</div>}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex flex-col items-end gap-1.5">
@@ -208,6 +209,7 @@ export default function LineManager({ page, query, configured, classrooms, class
                         <Button key={g.id} variant="outline" size="sm" className="h-7 text-[11px]" disabled={pendingId === g.id} onClick={() => generateCode(g.id)}>{g.lineStatus === "pending" ? "สร้างรหัสใหม่" : "สร้างรหัส"}</Button>
                       ))}
                       {student.guardians.length === 0 && <span className="text-xs text-faint">ใช้รหัสกับ LINE OA ของโรงเรียน</span>}
+                      <Button variant="outline" size="sm" className="h-7 text-[11px]" disabled={pendingId === student.studentId} onClick={() => generateStudentCode(student.studentId)}>สร้างรหัสเพิ่ม</Button>
                     </div>
                   </td>
                 </tr>

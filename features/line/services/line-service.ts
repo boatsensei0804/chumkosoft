@@ -39,17 +39,15 @@ export async function generateStudentLinkCode(studentId: string): Promise<Action
 /** Generate missing link codes for every not-yet-linked guardian in a classroom. */
 export async function prepareClassroomLinkCodes(classroomId: string): Promise<ActionResult & { created?: number }> {
   const rows = await guardianRepo.findClassroomGuardiansForPrint(classroomId);
-  const needsCode = rows.flatMap((student) => student.guardians)
-    .filter((guardian) => !guardian.lineUserId && !guardian.lineLinkCode);
-  const used = new Set<string>();
-  const updates = needsCode.map((guardian) => {
+  let created = 0;
+  for (const student of rows) {
+    if (student.lineAccounts.length > 0) continue;
     let code = String(randomInt(100000, 1000000));
-    while (used.has(code)) code = String(randomInt(100000, 1000000));
-    used.add(code);
-    return { id: guardian.id, code };
-  });
-  const created = await guardianRepo.updateMissingGuardianLinkCodes(updates);
-  return { ok: true, created, message: `เตรียมรหัสใหม่ ${created} ราย · คงรหัสเดิมที่ยังไม่ถูกใช้ไว้แล้ว` };
+    while (await repo.lineCodeExists(code)) code = String(randomInt(100000, 1000000));
+    await repo.createStudentLinkCode(student.id, code);
+    created += 1;
+  }
+  return { ok: true, created, message: `เตรียมรหัสให้นักเรียนใหม่ ${created} คน · คงรหัสเดิมไว้` };
 }
 
 export async function unlinkGuardianLine(guardianId: string): Promise<ActionResult> {

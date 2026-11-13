@@ -22,4 +22,5 @@ export interface StudentGuardians {
   /** Active-term classroom code, or "—" when not enrolled. */
   classroom: string;
   guardians: GuardianRow[];
+  lineAccounts: { id: string; linked: boolean; linkCode: string | null }[];
 }

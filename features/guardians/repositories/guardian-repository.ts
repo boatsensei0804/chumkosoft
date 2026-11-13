@@ -74,6 +74,7 @@ export async function findStudentsWithGuardians(params: { skip: number; take: nu
           lineLinkCode: true,
         },
       },
+      lineAccounts: { orderBy: { createdAt: "asc" }, select: { id: true, lineUserId: true, lineLinkCode: true } },
     },
   });
 }
@@ -108,7 +109,6 @@ export async function findClassroomGuardiansForPrint(classroomId: string) {
     where: {
       isDeleted: false,
       enrollments: { some: { classroomId, termId, isDeleted: false } },
-      guardians: { some: { isDeleted: false } },
     },
     orderBy: { studentCode: "asc" },
     select: {
@@ -127,6 +127,7 @@ export async function findClassroomGuardiansForPrint(classroomId: string) {
         orderBy: { createdAt: "asc" },
         select: { id: true, prefix: true, fullName: true, relation: true, lineUserId: true, lineLinkCode: true },
       },
+      lineAccounts: { orderBy: { createdAt: "asc" }, select: { id: true, lineUserId: true, lineLinkCode: true } },
     },
   });
 }

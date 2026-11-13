@@ -19,6 +19,7 @@ interface PrintableStudent {
   studentName: string;
   classroom: string;
   guardians: PrintableGuardian[];
+  lineAccounts: { id: string; linked: boolean; linkCode: string | null }[];
 }
 
 interface LinePrintSheetProps {
@@ -29,7 +30,10 @@ interface LinePrintSheetProps {
 }
 
 export default function LinePrintSheet({ classroom, oaUrl, qrDataUrl, records }: LinePrintSheetProps): React.ReactNode {
-  const cards = records.flatMap((student) => student.guardians.map((guardian) => ({ student, guardian })));
+  const cards = records.flatMap((student) => [
+    ...student.lineAccounts.filter((account) => account.linkCode).map((account) => ({ student, guardian: { id: account.id, prefix: null, fullName: "ผู้ปกครองของนักเรียน", relation: "", linked: false, linkCode: account.linkCode } })),
+    ...student.guardians.filter((guardian) => guardian.linkCode).map((guardian) => ({ student, guardian })),
+  ]);
   const pages: typeof cards[] = [];
   for (let i = 0; i < cards.length; i += 6) pages.push(cards.slice(i, i + 6));
 
@@ -40,7 +44,7 @@ export default function LinePrintSheet({ classroom, oaUrl, qrDataUrl, records }:
         <div className="flex gap-2"><Button variant="outline" onClick={() => window.close()}>ปิด</Button><Button onClick={() => window.print()}><Printer className="size-4" /> พิมพ์ / บันทึก PDF</Button></div>
       </header>
       {cards.length === 0 ? (
-        <div className="mx-auto max-w-xl rounded-2xl border border-line bg-bg p-10 text-center text-sm text-muted">ชั้นเรียนนี้ยังไม่มีข้อมูลผู้ปกครองสำหรับทำเอกสาร</div>
+        <div className="mx-auto max-w-xl rounded-2xl border border-line bg-bg p-10 text-center text-sm text-muted">ชั้นเรียนนี้ยังไม่มีรหัสที่รอผูก LINE</div>
       ) : (
         <div className="line-print-pages mx-auto flex max-w-5xl flex-col gap-5">
           {pages.map((page, pageIndex) => (
