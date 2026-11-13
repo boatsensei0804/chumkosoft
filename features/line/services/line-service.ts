@@ -36,6 +36,16 @@ export async function generateStudentLinkCode(studentId: string): Promise<Action
   return { ok: true, message: `สร้างรหัสสำหรับผู้ปกครองของ ${student.firstName} ${student.lastName} แล้ว`, code };
 }
 
+export async function generateAdvisorLinkCode(staffId: string): Promise<ActionResult & { code?: string }> {
+  const advisor = await repo.getAdvisorLine(staffId);
+  if (!advisor) return { ok: false, message: "ไม่พบบัญชีครู" };
+  if (advisor.lineUserId) return { ok: false, message: "บัญชี LINE นี้เชื่อมแล้ว" };
+  let code = String(randomInt(100000, 1000000));
+  while (await repo.lineCodeExists(code)) code = String(randomInt(100000, 1000000));
+  await repo.setAdvisorLinkCode(staffId, code);
+  return { ok: true, code };
+}
+
 /** Generate missing link codes for every not-yet-linked guardian in a classroom. */
 export async function prepareClassroomLinkCodes(classroomId: string): Promise<ActionResult & { created?: number }> {
   const rows = await guardianRepo.findClassroomGuardiansForPrint(classroomId);
@@ -77,6 +87,13 @@ export async function handleLinkMessage(lineUserId: string, text: string, replyT
 
   const studentAccount = await repo.findStudentByLinkCode(code);
   if (!studentAccount || studentAccount.student.isDeleted) {
+    const advisor = await repo.findAdvisorByLinkCode(code);
+    if (advisor) {
+      await repo.linkAdvisor(advisor.id, lineUserId);
+      await logAudit({ action: "line.link", targetType: "staff", targetId: advisor.id, detail: "advisor LINE account" });
+      await replyText(replyToken, `เชื่อม LINE ครูที่ปรึกษาสำเร็จ ✅\nคุณจะได้รับสรุปการเข้าโรงเรียนของห้องที่รับผิดชอบ`);
+      return;
+    }
     await replyText(replyToken, "ไม่พบรหัสผูกบัญชีนี้ กรุณาตรวจสอบรหัสกับทางโรงเรียนอีกครั้ง");
     return;
   }

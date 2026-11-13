@@ -73,6 +73,20 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm --no-de
 Log in at `https://<your-hostname>/login`, then create teacher/kiosk accounts
 from the UI. Register the LINE webhook at `https://<your-hostname>/api/line/webhook`.
 
+### Daily LINE summary for homeroom advisors
+
+Each teacher opens **Attendance → School entry** and generates a six-digit LINE
+link code. They add the school's LINE OA and send the code in its chat. Their
+staff account must be assigned as a classroom advisor.
+
+The GitHub workflow `advisor-line-digest.yml` calls the app at 09:00 Bangkok
+time on weekdays. Generate one random secret (for example with
+`openssl rand -hex 32`), put the same value in `ADVISOR_LINE_DIGEST_SECRET`
+in the server's `.env` and in the repository's GitHub Actions secret of the
+same name. Recreate the app container so it reads the new environment value.
+Keep the secret out of Git and chat. The endpoint returns 401 until configured;
+Redis records which teachers have already received that day's summary.
+
 ## 6. Automatic checks and deploys
 
 `.github/workflows/ci.yml` runs lint and TypeScript checks on pull requests and

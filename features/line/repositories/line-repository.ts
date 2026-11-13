@@ -16,11 +16,28 @@ export async function createStudentLinkCode(studentId: string, code: string): Pr
 }
 
 export async function lineCodeExists(code: string): Promise<boolean> {
-  const [guardian, studentAccount] = await Promise.all([
+  const [guardian, studentAccount, staff] = await Promise.all([
     prisma.guardian.findFirst({ where: { lineLinkCode: code }, select: { id: true } }),
     prisma.studentLineAccount.findFirst({ where: { lineLinkCode: code }, select: { id: true } }),
+    prisma.staff.findFirst({ where: { lineLinkCode: code }, select: { id: true } }),
   ]);
-  return Boolean(guardian || studentAccount);
+  return Boolean(guardian || studentAccount || staff);
+}
+
+export async function getAdvisorLine(staffId: string) {
+  return prisma.staff.findFirst({ where: { id: staffId, isDeleted: false }, select: { id: true, lineUserId: true, lineLinkCode: true } });
+}
+
+export async function setAdvisorLinkCode(staffId: string, code: string): Promise<void> {
+  await prisma.staff.update({ where: { id: staffId }, data: { lineLinkCode: code } });
+}
+
+export async function findAdvisorByLinkCode(code: string) {
+  return prisma.staff.findFirst({ where: { lineLinkCode: code, isDeleted: false }, select: { id: true, firstName: true, lastName: true } });
+}
+
+export async function linkAdvisor(staffId: string, lineUserId: string): Promise<void> {
+  await prisma.staff.update({ where: { id: staffId }, data: { lineUserId, lineLinkCode: null } });
 }
 
 export async function findStudentByLinkCode(code: string) {

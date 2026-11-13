@@ -7,6 +7,8 @@ import AttendanceRoster from "@/features/attendance/components/attendance-roster
 import SchoolEntryControls from "@/features/attendance/components/school-entry-controls";
 import SchoolEntryRoster from "@/features/attendance/components/school-entry-roster";
 import SchoolEntrySummary from "@/features/attendance/components/school-entry-summary";
+import AdvisorLineConnect from "@/features/attendance/components/advisor-line-connect";
+import { getAdvisorLine } from "@/features/line/repositories/line-repository";
 import AttendanceCalendar from "@/features/attendance/components/attendance-calendar";
 import DailyRollCallOverview from "@/features/attendance/components/daily-roll-call-overview";
 import DailyRollCallRoster from "@/features/attendance/components/daily-roll-call-roster";
@@ -35,6 +37,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   // scoped to their own teaching offerings and advisory classrooms.
   const user = await requireRoles(STAFF_ROLES);
   const teacherScope = user.role === "ADMIN" ? null : user.staffId ?? "__no_staff__";
+  const advisorLine = user.role === "TEACHER" && user.staffId ? await getAdvisorLine(user.staffId) : null;
 
   const params = await searchParams;
   const mode = params.mode === "school" ? "school" : params.mode === "homeroom" ? "homeroom" : "class";
@@ -58,6 +61,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             {scopeNote}
           </span>
         </div>
+        {mode === "school" && advisorLine && <AdvisorLineConnect linked={Boolean(advisorLine.lineUserId)} currentCode={advisorLine.lineLinkCode} />}
         {mode === "class" ? (
           <ClassMode selectedOfferingId={params.offering ?? ""} date={date} month={month} teacherScope={teacherScope} />
         ) : mode === "school" ? (

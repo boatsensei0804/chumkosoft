@@ -339,6 +339,8 @@ model Staff {
   position  String? // "หัวหน้ากลุ่มสาระคณิตศาสตร์"
   email     String?
   phone     String?
+  lineUserId String?
+  lineLinkCode String? @unique
 
   // Government education-personnel record (from the HR intake form). All optional
   // so existing rows and non-teaching staff stay valid; age is derived from

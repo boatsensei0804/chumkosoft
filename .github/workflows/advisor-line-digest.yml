@@ -1,0 +1,26 @@
+name: Advisor LINE digest
+
+on:
+  schedule:
+    - cron: '0 2 * * 1-5' # 09:00 Asia/Bangkok, Monday to Friday
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    if: vars.ENABLE_PRODUCTION_DEPLOY == 'true'
+    steps:
+      - name: Send daily advisor summaries
+        env:
+          DIGEST_SECRET: ${{ secrets.ADVISOR_LINE_DIGEST_SECRET }}
+        run: |
+          if [ -z "$DIGEST_SECRET" ]; then
+            echo 'ADVISOR_LINE_DIGEST_SECRET is not configured'
+            exit 1
+          fi
+          curl --fail --show-error --silent --retry 2 --retry-delay 10 \
+            --request POST \
+            --header "Authorization: Bearer $DIGEST_SECRET" \
+            https://chumkosoft.com/api/internal/advisor-digest
