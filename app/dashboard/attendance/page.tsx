@@ -6,6 +6,7 @@ import AttendanceControls from "@/features/attendance/components/attendance-cont
 import AttendanceRoster from "@/features/attendance/components/attendance-roster";
 import SchoolEntryControls from "@/features/attendance/components/school-entry-controls";
 import SchoolEntryRoster from "@/features/attendance/components/school-entry-roster";
+import SchoolEntrySummary from "@/features/attendance/components/school-entry-summary";
 import AttendanceCalendar from "@/features/attendance/components/attendance-calendar";
 import DailyRollCallOverview from "@/features/attendance/components/daily-roll-call-overview";
 import DailyRollCallRoster from "@/features/attendance/components/daily-roll-call-roster";
@@ -150,6 +151,7 @@ async function SchoolMode({
   return (
     <>
       <SchoolEntryControls classrooms={classrooms} classroomId={classroomId} date={date} />
+      {roster && <SchoolEntrySummary roster={roster} classrooms={classrooms.filter((room) => !classroomId || room.id === classroomId)} />}
       {calendar && <AttendanceCalendar mode="school" month={month} selectedDate={date} days={calendar} classroomId={classroomId} />}
       {roster ? (
         <SchoolEntryRoster roster={roster} />
