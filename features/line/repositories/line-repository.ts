@@ -25,7 +25,7 @@ export async function lineCodeExists(code: string): Promise<boolean> {
 }
 
 export async function getAdvisorLine(staffId: string) {
-  return prisma.staff.findFirst({ where: { id: staffId, isDeleted: false }, select: { id: true, lineUserId: true, lineLinkCode: true } });
+  return prisma.staff.findFirst({ where: { id: staffId, isDeleted: false }, select: { id: true, lineUserId: true, lineLinkCode: true, user: { select: { role: true, isActive: true, isDeleted: true } } } });
 }
 
 export async function setAdvisorLinkCode(staffId: string, code: string): Promise<void> {

@@ -11,7 +11,7 @@ function parseCalendarDate(iso: string): Date | null {
   if (!match) return null;
   const [, y, m, d] = match;
   const date = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)));
-  return Number.isNaN(date.getTime()) ? null : date;
+  return date.toISOString().slice(0, 10) === iso ? date : null;
 }
 
 function bangkokTime(date: Date | null): string | null {
@@ -128,29 +128,30 @@ export async function getSchoolEntryRoster(dateISO: string, classroomId: string,
   return { date: dateISO, classroomId, students: roster };
 }
 
-async function resolveContext(studentId: string, dateISO: string): Promise<{ termId: string; date: Date } | ActionResult> {
+async function resolveContext(studentId: string, dateISO: string, advisorStaffId?: string | null): Promise<{ termId: string; date: Date } | ActionResult> {
   const date = parseCalendarDate(dateISO);
   if (!date) return { ok: false, message: "วันที่ไม่ถูกต้อง" };
   const term = await repo.getActiveTerm();
   if (!term) return { ok: false, message: "ยังไม่ได้ตั้งค่าภาคเรียนที่ใช้งาน" };
-  const enrolled = await repo.getStudentTermRef(studentId, term.id);
-  if (!enrolled) return { ok: false, message: "นักเรียนคนนี้ไม่ได้ลงทะเบียนในภาคเรียนปัจจุบัน" };
+  const enrolled = await repo.getStudentTermRef(studentId, term.id, advisorStaffId);
+  if (!enrolled) return { ok: false, message: "นักเรียนคนนี้ไม่ได้ลงทะเบียนในภาคเรียนปัจจุบัน หรือไม่อยู่ในห้องที่คุณดูแล" };
   return { termId: term.id, date };
 }
 
-export async function checkInStudent(studentId: string, dateISO: string): Promise<ActionResult> {
-  const ctx = await resolveContext(studentId, dateISO);
+export async function checkInStudent(studentId: string, dateISO: string, advisorStaffId?: string | null, actorUserId?: string): Promise<ActionResult> {
+  const ctx = await resolveContext(studentId, dateISO, advisorStaffId);
   if ("ok" in ctx) return ctx;
   // Same late criterion as the face-scan gate: check-in time-of-day ≥ late cutoff.
   const now = new Date();
   const setting = await getScanSetting();
   const isLate = (bangkokTime(now) ?? "") >= setting.lateAfterTime;
-  await repo.upsertCheckIn(ctx.termId, studentId, ctx.date, now, isLate);
+  const todayBangkok = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  await repo.upsertCheckIn(ctx.termId, studentId, ctx.date, now, isLate, actorUserId, dateISO === todayBangkok);
   return { ok: true, message: isLate ? "บันทึกเวลาเข้า (มาสาย) เรียบร้อย" : "บันทึกเวลาเข้าเรียบร้อย" };
 }
 
-export async function checkOutStudent(studentId: string, dateISO: string): Promise<ActionResult> {
-  const ctx = await resolveContext(studentId, dateISO);
+export async function checkOutStudent(studentId: string, dateISO: string, advisorStaffId?: string | null): Promise<ActionResult> {
+  const ctx = await resolveContext(studentId, dateISO, advisorStaffId);
   if ("ok" in ctx) return ctx;
   await repo.upsertCheckOut(ctx.termId, studentId, ctx.date, new Date());
   return { ok: true, message: "บันทึกเวลาออกเรียบร้อย" };

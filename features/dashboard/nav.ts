@@ -12,6 +12,8 @@ import {
   MessageSquare,
   Megaphone,
   Link2,
+  CalendarX2,
+  Award,
   ScanLine,
   Settings,
 } from "lucide-react";
@@ -46,6 +48,8 @@ export const navGroups: NavGroup[] = [
     items: [
       { key: "timetable", label: "จัดตารางสอน", href: "/dashboard/timetable", icon: CalendarDays, available: true },
       { key: "attendance", label: "เช็คชื่อ", href: "/dashboard/attendance", icon: ClipboardCheck, available: true },
+      { key: "leave-requests", label: "คำขอลา", href: "/dashboard/leave-requests", icon: CalendarX2, available: true },
+      { key: "behavior", label: "คะแนนความประพฤติ", href: "/dashboard/behavior", icon: Award, available: true },
     ],
   },
   {

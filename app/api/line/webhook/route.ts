@@ -1,24 +1,25 @@
 import { NextResponse } from "next/server";
 import { verifyLineSignature } from "@/lib/line";
 import { handleLinkMessage } from "@/features/line/services/line-service";
+import { handleLeaveLineMessage } from "@/features/leave/services/line-leave-service";
 
 /**
  * LINE Messaging API webhook — the one REST endpoint in the app, because LINE is
  * an external consumer that must POST here. Verifies the request signature, then
- * routes text messages to the account-linking handler. Always returns 200 on
- * valid signatures so LINE does not retry on our internal errors.
+ * routes text messages to leave requests or the account-linking handler.
+ * Leave processing failures return 503 so LINE may redeliver the event.
  */
 
 interface LineTextMessageEvent {
   type: string;
   replyToken?: string;
   source?: { userId?: string };
-  message?: { type?: string; text?: string };
+  message?: { id?: string; type?: string; text?: string };
 }
 
 function isTextMessage(event: unknown): event is Required<Pick<LineTextMessageEvent, "replyToken">> & {
   source: { userId: string };
-  message: { text: string };
+  message: { id: string; text: string };
 } {
   if (typeof event !== "object" || event === null) return false;
   const e = event as LineTextMessageEvent;
@@ -26,6 +27,7 @@ function isTextMessage(event: unknown): event is Required<Pick<LineTextMessageEv
     e.type === "message" &&
     e.message?.type === "text" &&
     typeof e.message.text === "string" &&
+    typeof e.message.id === "string" &&
     typeof e.source?.userId === "string" &&
     typeof e.replyToken === "string"
   );
@@ -50,17 +52,22 @@ export async function POST(request: Request): Promise<Response> {
       ? (payload as { events: unknown[] }).events
       : [];
 
+  let leaveProcessingFailed = false;
   await Promise.all(
     events.map(async (event) => {
       if (isTextMessage(event)) {
         try {
-          await handleLinkMessage(event.source.userId, event.message.text, event.replyToken);
-        } catch {
-          // Never let one event fail the whole webhook.
+          if (!await handleLeaveLineMessage(event.source.userId, event.message.text, event.replyToken, event.message.id)) {
+            await handleLinkMessage(event.source.userId, event.message.text, event.replyToken);
+          }
+        } catch (error) {
+          console.error("[line webhook] message processing failed", error);
+          if (/^ลา(?:\s|$)/u.test(event.message.text.trim())) leaveProcessingFailed = true;
         }
       }
     }),
   );
 
-  return NextResponse.json({ ok: true });
+  // LINE can redeliver failed leave events; lineMessageId prevents duplicates.
+  return leaveProcessingFailed ? new NextResponse("retry leave event", { status: 503 }) : NextResponse.json({ ok: true });
 }

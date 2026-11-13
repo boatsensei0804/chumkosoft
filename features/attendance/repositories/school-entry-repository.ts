@@ -1,6 +1,7 @@
 import "server-only";
 
 import prisma from "@/lib/prisma";
+import { syncLateBehaviorPoints } from "@/features/behavior/services/late-points";
 
 export async function getActiveTerm(): Promise<{ id: string } | null> {
   return prisma.term.findFirst({ where: { isActive: true, isDeleted: false }, select: { id: true } });
@@ -63,20 +64,25 @@ export async function findEntriesInRange(termId: string, start: Date, endExclusi
   });
 }
 
-export async function getStudentTermRef(studentId: string, termId: string): Promise<boolean> {
+export async function getStudentTermRef(studentId: string, termId: string, advisorStaffId?: string | null): Promise<boolean> {
   const enrollment = await prisma.enrollment.findFirst({
-    where: { studentId, termId, isDeleted: false },
+    where: { studentId, termId, isDeleted: false,
+      ...(advisorStaffId ? { classroom: { advisors: { some: { staffId: advisorStaffId } } } } : {}),
+    },
     select: { id: true },
   });
   return enrollment !== null;
 }
 
 /** Records a check-in (creates or reactivates the day's gate record). */
-export async function upsertCheckIn(termId: string, studentId: string, date: Date, at: Date, isLate: boolean): Promise<void> {
-  await prisma.schoolEntry.upsert({
-    where: { studentId_date: { studentId, date } },
-    update: { checkInAt: at, isLate, isDeleted: false, deletedAt: null },
-    create: { termId, studentId, date, checkInAt: at, isLate, method: "MANUAL" },
+export async function upsertCheckIn(termId: string, studentId: string, date: Date, at: Date, isLate: boolean, actorUserId?: string, syncPoints = true): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    await tx.schoolEntry.upsert({
+      where: { studentId_date: { studentId, date } },
+      update: { checkInAt: at, isLate, isDeleted: false, deletedAt: null },
+      create: { termId, studentId, date, checkInAt: at, isLate, method: "MANUAL" },
+    });
+    if (syncPoints) await syncLateBehaviorPoints(tx, termId, studentId, date, isLate, actorUserId);
   });
 }
 

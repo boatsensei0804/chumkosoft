@@ -1,6 +1,7 @@
 import "server-only";
 
 import prisma from "@/lib/prisma";
+import { syncLateBehaviorPoints } from "@/features/behavior/services/late-points";
 
 export interface ScanTemplate {
   studentId: string;
@@ -110,10 +111,13 @@ export async function recordFaceCheckIn(
     return { alreadyCheckedIn: true, at: existing.checkInAt, isLate: existing.isLate };
   }
 
-  await prisma.schoolEntry.upsert({
-    where: { studentId_date: { studentId, date } },
-    update: { checkInAt: now, method: "FACE", isLate, isDeleted: false, deletedAt: null },
-    create: { termId, studentId, date, checkInAt: now, method: "FACE", isLate },
+  await prisma.$transaction(async (tx) => {
+    await tx.schoolEntry.upsert({
+      where: { studentId_date: { studentId, date } },
+      update: { checkInAt: now, method: "FACE", isLate, isDeleted: false, deletedAt: null },
+      create: { termId, studentId, date, checkInAt: now, method: "FACE", isLate },
+    });
+    await syncLateBehaviorPoints(tx, termId, studentId, date, isLate);
   });
   return { alreadyCheckedIn: false, at: now, isLate };
 }

@@ -11,8 +11,8 @@ const ATTENDANCE_PATH = "/dashboard/attendance";
 
 export async function checkInAction(studentId: string, date: string): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(STAFF_ROLES);
-    const result = await checkInStudent(studentId, date);
+    const user = await requireRoles(STAFF_ROLES);
+    const result = await checkInStudent(studentId, date, user.role === "ADMIN" ? null : user.staffId ?? "__no_staff__", user.id);
     if (result.ok) revalidatePath(ATTENDANCE_PATH);
     return result;
   });
@@ -20,8 +20,8 @@ export async function checkInAction(studentId: string, date: string): Promise<Ac
 
 export async function checkOutAction(studentId: string, date: string): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(STAFF_ROLES);
-    const result = await checkOutStudent(studentId, date);
+    const user = await requireRoles(STAFF_ROLES);
+    const result = await checkOutStudent(studentId, date, user.role === "ADMIN" ? null : user.staffId ?? "__no_staff__");
     if (result.ok) revalidatePath(ATTENDANCE_PATH);
     return result;
   });

@@ -1,10 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Copy, ExternalLink, RefreshCw } from "lucide-react";
-import { createMyAdvisorLineCode } from "@/features/attendance/advisor-line-actions";
 
 interface Props {
   linked: boolean;
@@ -17,24 +16,15 @@ interface Props {
 
 export default function AdvisorLineConnect({ linked, currentCode, friendUrl, friendQr, advisoryRooms, sendTime }: Props): React.ReactNode {
   const router = useRouter();
-  const [code, setCode] = useState(currentCode);
+  const code = currentCode;
   const [message, setMessage] = useState("");
-  const [pending, startTransition] = useTransition();
 
   // The teacher can leave this page open while sending the code in LINE.
   useEffect(() => {
-    if (linked || !code) return;
+    if (linked) return;
     const timer = window.setInterval(() => router.refresh(), 10_000);
     return () => window.clearInterval(timer);
-  }, [linked, code, router]);
-
-  function generateCode(): void {
-    startTransition(async () => {
-      const result = await createMyAdvisorLineCode();
-      if (result.ok) { setCode(result.code ?? null); setMessage("สร้างรหัสใหม่แล้ว ส่งรหัสนี้ในแชท LINE OA ของโรงเรียน"); }
-      else setMessage(result.message ?? "สร้างรหัสไม่ได้");
-    });
-  }
+  }, [linked, router]);
 
   async function copyCode(): Promise<void> {
     if (!code) return;
@@ -54,7 +44,7 @@ export default function AdvisorLineConnect({ linked, currentCode, friendUrl, fri
         <h2 className="mt-5 text-xl font-bold text-ink-strong">เชื่อมบัญชี LINE ของคุณ</h2>
         <ol className="mt-4 space-y-3 text-sm leading-relaxed text-ink">
           <li><span className="mr-2 font-bold text-brand-ink">1.</span>เพิ่มเพื่อน LINE Official Account ของโรงเรียน</li>
-          <li><span className="mr-2 font-bold text-brand-ink">2.</span>กดสร้างรหัสด้านล่าง แล้วส่งรหัส 6 หลักในแชทส่วนตัวกับ LINE OA</li>
+          <li><span className="mr-2 font-bold text-brand-ink">2.</span>รับรหัส 6 หลักที่แอดมินออกให้ แล้วส่งรหัสในแชทส่วนตัวกับ LINE OA</li>
           <li><span className="mr-2 font-bold text-brand-ink">3.</span>รอข้อความยืนยัน หน้านี้จะเปลี่ยนเป็น “เชื่อม LINE แล้ว” โดยอัตโนมัติ</li>
         </ol>
         {friendUrl ? <div className="mt-5 flex flex-wrap items-center gap-5 rounded-xl border border-line bg-surface p-4">
@@ -63,9 +53,7 @@ export default function AdvisorLineConnect({ linked, currentCode, friendUrl, fri
         </div> : <p className="mt-5 rounded-xl bg-warning-soft p-4 text-sm text-ink">ยังไม่ได้ตั้งลิงก์เพิ่มเพื่อน LINE OA กรุณาขอลิงก์หรือ QR จากผู้ดูแลระบบ</p>}
         <div className="mt-6 border-t border-line pt-5">
           <p className="text-sm font-semibold text-ink">รหัสเชื่อม LINE ของฉัน</p>
-          {code ? <div className="mt-2 flex flex-wrap items-center gap-3"><span className="rounded-xl border border-brand/30 bg-brand-soft px-5 py-3 font-mono text-3xl font-bold tracking-[0.22em] text-brand-ink select-all">{code}</span><button type="button" onClick={copyCode} className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink"><Copy className="size-4" /> คัดลอก</button></div> : <p className="mt-2 text-sm text-muted">ยังไม่มีรหัส กดปุ่มด้านล่างเพื่อสร้างรหัส 6 หลัก</p>}
-          <button type="button" disabled={pending} onClick={generateCode} className="mt-4 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{pending ? "กำลังสร้าง…" : code ? "สร้างรหัสใหม่" : "สร้างรหัสเชื่อม LINE"}</button>
-          {code && <p className="mt-2 text-xs text-muted">หากสร้างรหัสใหม่ รหัสเดิมจะใช้ไม่ได้</p>}
+          {code ? <div className="mt-2 flex flex-wrap items-center gap-3"><span className="rounded-xl border border-brand/30 bg-brand-soft px-5 py-3 font-mono text-3xl font-bold tracking-[0.22em] text-brand-ink select-all">{code}</span><button type="button" onClick={copyCode} className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink"><Copy className="size-4" /> คัดลอก</button></div> : <p className="mt-2 text-sm text-muted">แอดมินยังไม่ออกรหัสให้คุณ กรุณาติดต่อผู้ดูแลระบบ</p>}
         </div>
       </>}
       {message && <p role="status" className="mt-4 rounded-lg bg-brand-soft px-3 py-2 text-sm text-ink">{message}</p>}

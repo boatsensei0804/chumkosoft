@@ -49,6 +49,7 @@ export async function pushText(to: string, text: string): Promise<boolean> {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ to, messages: [{ type: "text", text }] }),
+      signal: AbortSignal.timeout(15_000),
     });
     return res.ok;
   } catch {
@@ -64,6 +65,7 @@ export async function replyText(replyToken: string, text: string): Promise<boole
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ replyToken, messages: [{ type: "text", text }] }),
+      signal: AbortSignal.timeout(15_000),
     });
     return res.ok;
   } catch {

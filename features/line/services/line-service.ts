@@ -39,6 +39,7 @@ export async function generateStudentLinkCode(studentId: string): Promise<Action
 export async function generateAdvisorLinkCode(staffId: string): Promise<ActionResult & { code?: string }> {
   const advisor = await repo.getAdvisorLine(staffId);
   if (!advisor) return { ok: false, message: "ไม่พบบัญชีครู" };
+  if (!advisor.user || advisor.user.role !== "TEACHER" || !advisor.user.isActive || advisor.user.isDeleted) return { ok: false, message: "ครูคนนี้ยังไม่มีบัญชีผู้ใช้ที่ใช้งานได้" };
   if (advisor.lineUserId) return { ok: false, message: "บัญชี LINE นี้เชื่อมแล้ว" };
   let code = String(randomInt(100000, 1000000));
   while (await repo.lineCodeExists(code)) code = String(randomInt(100000, 1000000));
@@ -81,7 +82,7 @@ export async function handleLinkMessage(lineUserId: string, text: string, replyT
     await repo.linkGuardian(guardian.id, lineUserId);
     await logAudit({ action: "line.link", targetType: "guardian", targetId: guardian.id, detail: guardian.fullName });
     const childName = `${guardian.student.firstName} ${guardian.student.lastName}`;
-    await replyText(replyToken, `ผูกบัญชีสำเร็จ ✅\nคุณจะได้รับแจ้งเตือนเมื่อ ${childName} เข้าโรงเรียน`);
+    await replyText(replyToken, `ผูกบัญชีสำเร็จ ✅\nคุณจะได้รับแจ้งเตือนเมื่อ ${childName} เข้าโรงเรียน\nหากต้องการแจ้งลา พิมพ์ ลา เพื่อดูวิธีใช้`);
     return;
   }
 
@@ -100,6 +101,6 @@ export async function handleLinkMessage(lineUserId: string, text: string, replyT
   await repo.linkStudentAccount(studentAccount.id, lineUserId);
   await logAudit({ action: "line.link", targetType: "student", targetId: studentAccount.studentId, detail: "guardian LINE account" });
   const childName = `${studentAccount.student.firstName} ${studentAccount.student.lastName}`;
-  await replyText(replyToken, `ผูกบัญชีสำเร็จ ✅\nคุณจะได้รับแจ้งเตือนเมื่อ ${childName} เข้าโรงเรียน`);
+  await replyText(replyToken, `ผูกบัญชีสำเร็จ ✅\nคุณจะได้รับแจ้งเตือนเมื่อ ${childName} เข้าโรงเรียน\nหากต้องการแจ้งลา พิมพ์ ลา เพื่อดูวิธีใช้`);
 }
 

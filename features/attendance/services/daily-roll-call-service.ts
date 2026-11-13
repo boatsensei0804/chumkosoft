@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { DailyRollCallStatus } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import * as repo from "@/features/attendance/repositories/daily-roll-call-repository";
 import type { AttendanceCalendarDay, DailyClassRoster, DailyClassSummary, DailyRollCallStatusKey } from "@/features/attendance/types";
 import type { ActionResult } from "@/types/form";
@@ -156,6 +157,11 @@ export async function saveDailyRollCall(
   if (entries.some((entry) => !enrolledIds.has(entry.studentId))) {
     return { ok: false, message: "รายชื่อนักเรียนไม่ตรงกับห้องที่เลือก กรุณาโหลดหน้าใหม่" };
   }
+  const approvedLeave = await prisma.leaveRequest.findFirst({ where: {
+    termId: term.id, classroomId, status: "APPROVED", startDate: { lte: date }, endDate: { gte: date },
+    studentId: { in: entries.filter((entry) => entry.status !== "SICK_LEAVE" && entry.status !== "PERSONAL_LEAVE").map((entry) => entry.studentId) },
+  }, select: { id: true } });
+  if (approvedLeave) return { ok: false, message: "มีคำขอลาที่อนุมัติแล้วในวันที่เลือก กรุณาตรวจสอบสถานะก่อนบันทึก" };
   const recordedById = await repo.findRecorderStaffId(userId);
   await repo.upsertRecords({
     termId: term.id,

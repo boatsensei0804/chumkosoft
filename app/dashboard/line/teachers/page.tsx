@@ -27,6 +27,7 @@ export default async function TeacherLineStatusPage(): Promise<React.ReactNode> 
     id: person.id,
     name: `${person.prefix ?? ""}${person.firstName} ${person.lastName}`,
     staffCode: person.staffCode,
+    code: person.lineLinkCode,
     type: person.type,
     classrooms: person.advisories.map((entry) => entry.classroom.code),
     status: person.lineUserId ? "CONNECTED" as const :

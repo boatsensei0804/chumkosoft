@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import prisma from "@/lib/prisma";
 import { getScanSetting } from "@/features/kiosk/repositories/kiosk-repository";
+import { syncLateBehaviorPoints } from "@/features/behavior/services/late-points";
 import { notifyGuardiansOfCheckIn } from "@/features/line/services/line-service";
 
 export const scannerEventSchema = z.object({
@@ -102,6 +103,7 @@ async function processOne(deviceId: string, event: ScannerEvent): Promise<Scanne
         const status = changed.count ? "checked_in" : "already";
         await tx.scannerSyncEvent.update({ where: { eventId: event.eventId }, data: { result: status } });
         if (changed.count) {
+          await syncLateBehaviorPoints(tx, term.id, student.id, date, isLate);
           await tx.auditLog.create({
             data: { action: "scanner.offline.checkin", targetType: "student", targetId: student.id,
               detail: `สแกนเมื่อ ${event.localDate} ${localTime} · เครื่อง ${deviceId}` },

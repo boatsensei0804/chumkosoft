@@ -75,14 +75,33 @@ from the UI. Register the LINE webhook at `https://<your-hostname>/api/line/webh
 
 ### Daily LINE summary for homeroom advisors
 
-The admin saves the LINE OA add-friend link under **System settings**. Each
-teacher opens **LINE ของฉัน**, adds the school's LINE OA, generates a six-digit
-link code, and sends it in the private chat with that OA. The teacher page
+The admin saves the LINE OA add-friend link under **System settings**. The
+admin opens **LINE / แจ้งเตือน → ดูสถานะ LINE ครู**, generates a six-digit
+code for each teacher, and gives that code to the teacher. Each teacher opens
+**LINE ของฉัน**, adds the school's LINE OA, and sends the code in the private
+chat with that OA. The teacher page
 updates its status automatically; the admin can see all staff statuses under
 **LINE / แจ้งเตือน → ดูสถานะ LINE ครู**. Adding the OA as a friend alone does not
 identify the teacher: the code must be sent and processed by the webhook.
 Their staff account must be assigned as a classroom advisor to receive a daily
 room summary.
+
+### Parent leave requests and conduct points
+
+After linking LINE to a student, a parent sends a private message such as
+`ลา 68-0421 ป่วย 14/11/2569 ถึง 15/11/2569 มีไข้` to the OA. For one day,
+omit `ถึง <last date>`. The active term must contain every requested day.
+The website shows pending requests under **คำขอลา**; classroom advisors or
+admins review them. Approval records sick or personal leave in daily attendance
+and sends the result to the requesting LINE account. A teacher's LINE message
+is sent only when that teacher has linked LINE and is assigned to the classroom.
+The admin can retry an unsent advisor notification on the requests page. The
+app reports if a parent result message fails to send.
+
+Under **คะแนนความประพฤติ**, each active-term student starts at 100 points.
+New school gate late check-ins deduct 10 points per student per day, while
+teachers and admins can add or deduct points with a reason. The ledger is
+separate for each term. Existing historical late check-ins are not backfilled.
 
 An admin sets the delivery time in **System settings → LINE advisor summary**
 in half-hour increments (Bangkok time). The GitHub workflow

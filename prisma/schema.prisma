@@ -91,6 +91,22 @@ enum LineAnnouncementBatchStatus {
   FAILED
 }
 
+enum LeaveKind {
+  SICK
+  PERSONAL
+}
+
+enum LeaveRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BehaviorPointSource {
+  MANUAL
+  LATE_ENTRY
+}
+
 // ---------------------------------------------------------------------------
 // Identity & access
 // ---------------------------------------------------------------------------
@@ -162,6 +178,8 @@ model Term {
   classAttendances ClassAttendance[]
   dailyAttendances DailyAttendance[]
   schoolEntries    SchoolEntry[]
+  leaveRequests    LeaveRequest[]
+  behaviorPoints   BehaviorPointEntry[]
 
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
@@ -220,6 +238,7 @@ model Classroom {
   offerings      CourseOffering[]
   timetableSlots TimetableSlot[]
   dailyAttendances DailyAttendance[]
+  leaveRequests    LeaveRequest[]
 
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
@@ -329,6 +348,8 @@ model Student {
   classAttendances ClassAttendance[]
   dailyAttendances DailyAttendance[]
   schoolEntries    SchoolEntry[]
+  leaveRequests    LeaveRequest[]
+  behaviorPoints   BehaviorPointEntry[]
   guardians        Guardian[]
   lineAccounts     StudentLineAccount[]
   faceTemplates    FaceTemplate[]
@@ -709,6 +730,53 @@ model SchoolEntry {
 
   @@unique([studentId, date]) // one gate record per student per day
   @@index([termId, date])
+}
+
+model LeaveRequest {
+  id                   String             @id @default(cuid())
+  studentId            String
+  student              Student            @relation(fields: [studentId], references: [id])
+  termId               String
+  term                 Term               @relation(fields: [termId], references: [id])
+  classroomId          String
+  classroom            Classroom          @relation(fields: [classroomId], references: [id])
+  parentLineUserId     String
+  lineMessageId        String             @unique
+  kind                 LeaveKind
+  startDate            DateTime
+  endDate              DateTime
+  reason               String             @db.Text
+  status               LeaveRequestStatus @default(PENDING)
+  reviewedByUserId     String?
+  reviewedAt           DateTime?
+  reviewNote           String?
+  advisorLineTargets   String[]           @default([])
+  advisorNotifyRetryKey String             @unique
+  advisorNotifiedCount Int                @default(0)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([status, createdAt])
+  @@index([studentId, startDate])
+  @@index([classroomId, status])
+}
+
+model BehaviorPointEntry {
+  id          String              @id @default(cuid())
+  studentId   String
+  student     Student             @relation(fields: [studentId], references: [id])
+  termId      String
+  term        Term                @relation(fields: [termId], references: [id])
+  delta       Int
+  source      BehaviorPointSource
+  sourceKey   String?             @unique
+  title       String
+  note        String?
+  actorUserId String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([termId, studentId, createdAt])
 }
 
 model AdvisorDigestSetting {
