@@ -3,9 +3,10 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import type { LineAnnouncementKind } from "@prisma/client";
 import prisma from "@/lib/prisma";
-import { isLineConfigured, sendLineTextToUsers } from "@/lib/line";
+import { isLineConfigured, sendLineMessageToUsers } from "@/lib/line";
 import { logAudit } from "@/lib/audit";
 import { announcementText } from "@/features/line/announcement-text";
+import { announcementCard } from "@/features/line/announcement-card";
 
 const BATCH_SIZE = 500;
 
@@ -99,11 +100,11 @@ export async function deliverLineAnnouncement(id: string, actorId: string): Prom
     include: { batches: { orderBy: { batchNumber: "asc" } } },
   });
   if (!announcement) return { ok: false, message: "ไม่พบประกาศนี้" };
-  const text = announcementText(announcement.kind, announcement.title, announcement.body);
+  const card = announcementCard(announcement.kind, announcement.title, announcement.body);
   for (const batch of announcement.batches) {
     if (batch.status === "ACCEPTED") continue;
     const recipients = Array.isArray(batch.recipients) ? batch.recipients.filter((value): value is string => typeof value === "string") : [];
-    const result = await sendLineTextToUsers(recipients, text, batch.retryKey);
+    const result = await sendLineMessageToUsers(recipients, card, batch.retryKey);
     await prisma.lineAnnouncementBatch.update({
       where: { id: batch.id },
       data: { status: result.accepted ? "ACCEPTED" : "FAILED", errorCode: result.accepted ? null : result.code },

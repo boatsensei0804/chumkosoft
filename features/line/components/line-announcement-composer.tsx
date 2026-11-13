@@ -146,7 +146,13 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
           <DialogTitle>ตรวจประกาศก่อนส่ง</DialogTitle>
           <DialogDescription>LINE จะได้รับคำขอส่งข้อความนี้ถึง {recipientCount.toLocaleString("th-TH")} บัญชี</DialogDescription>
         </DialogHeader>
-        <div className="max-h-72 overflow-y-auto whitespace-pre-wrap rounded-xl border border-line bg-surface p-4 text-sm leading-relaxed text-ink">{preview}</div>
+        <div className="max-h-80 overflow-y-auto rounded-xl bg-surface p-3">
+          <div className="overflow-hidden rounded-xl border border-line bg-card shadow-sm">
+            <div className={`px-4 py-3 text-sm font-bold text-white ${kind === "EMERGENCY" ? "bg-danger" : "bg-brand"}`}>{kind === "EMERGENCY" ? "แจ้งเหตุฉุกเฉิน" : "ข่าวสารจากโรงเรียน"}</div>
+            <div className="space-y-3 px-4 py-4"><p className="text-base font-bold text-ink-strong">{title.trim()}</p><div className="border-t border-line" /><p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">{body.trim()}</p></div>
+            <p className="px-4 pb-3 text-right text-[11px] font-semibold tracking-wide text-muted">CHUMKOSOFT SCHOOL</p>
+          </div>
+        </div>
         <label className="flex items-start gap-2 text-sm text-ink">
           <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} className="mt-1" />
           <span>ฉันตรวจข้อความและจำนวนผู้รับแล้ว</span>

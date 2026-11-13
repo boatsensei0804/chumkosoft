@@ -5,6 +5,7 @@ import * as repo from "@/features/line/repositories/line-repository";
 import * as guardianRepo from "@/features/guardians/repositories/guardian-repository";
 import { pushText, replyText } from "@/lib/line";
 import { logAudit } from "@/lib/audit";
+import { linkTeacherRichMenu } from "@/features/line/services/teacher-rich-menu";
 import type { ActionResult } from "@/types/form";
 
 /** Pushes a gate check-in notification to every linked guardian of the student. */
@@ -93,6 +94,11 @@ export async function handleLinkMessage(lineUserId: string, text: string, replyT
       await repo.linkAdvisor(advisor.id, lineUserId);
       await logAudit({ action: "line.link", targetType: "staff", targetId: advisor.id, detail: "advisor LINE account" });
       await replyText(replyToken, `เชื่อม LINE ครูที่ปรึกษาสำเร็จ ✅\nคุณจะได้รับสรุปการเข้าโรงเรียนของห้องที่รับผิดชอบ`);
+      try {
+        if (!(await linkTeacherRichMenu(lineUserId))) console.warn("[line] teacher rich menu pending sync");
+      } catch (error) {
+        console.error("[line] teacher rich menu link failed", error);
+      }
       return;
     }
     await replyText(replyToken, "ไม่พบรหัสผูกบัญชีนี้ กรุณาตรวจสอบรหัสกับทางโรงเรียนอีกครั้ง");

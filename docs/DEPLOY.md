@@ -190,18 +190,26 @@ One-time setup:
 
 ### Publish the LINE leave rich menu through GitHub Actions
 
-The `Publish LINE rich menu` job runs on a GitHub-hosted runner, so the Mac does
+The `Publish LINE rich menus` job runs on a GitHub-hosted runner, so the Mac does
 not need access to the Ubuntu server. In repository **Settings → Secrets and
 variables → Actions → Repository secrets**, create the secret
 `LINE_CHANNEL_ACCESS_TOKEN` with the long-lived token from the Chumkosoft School
 Messaging API channel. Keep the token out of Git, screenshots, and chat.
 
 Then open **Actions → CI → Run workflow** on `main`. The job validates the OA's
-basic ID, validates the menu, uploads the image, and sets it as the default.
-It is safe to rerun: an existing menu is reused. If the secret is absent, the
-job prints that publication was skipped. Once configured, future pushes to
-`main` keep the rich menu published. The menu appears in the LINE mobile chat
-after reopening it; LINE may take up to a minute to apply a default-menu change.
+basic ID, uploads the parent and teacher menu images, and keeps the parent menu
+as the default. After the app deploy, `Assign teacher LINE menus` links the
+teacher menu to active teacher accounts that already connected LINE; new
+teachers receive it when they connect. Accounts that no longer have an active
+teacher role return to the parent default menu. These operations are safe to
+rerun. If the secret is absent, publication and assignment are skipped. The
+default menu appears in the LINE mobile chat after reopening it; LINE may take
+up to a minute to apply a default-menu change.
+
+Announcements sent from **LINE announcements** use a Flex Message card with
+the existing recipient snapshot and retry key. They still count toward the
+LINE OA message quota. The card's notification fallback contains the same
+heading and body, shortened to LINE's alternative-text limit.
 
 Staff can use **LINE → สร้างชุดเอกสาร A4 → ดาวน์โหลด PDF ทุกห้อง** to prepare
 missing link codes and download one PDF. The PDF starts a fresh page for each

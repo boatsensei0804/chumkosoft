@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
+import type { announcementCard } from "@/features/line/announcement-card";
 
 /**
  * LINE Messaging API client. Every function degrades gracefully when the channel
@@ -23,13 +24,15 @@ export interface LineTextMessage {
   quickReply?: { items: { type: "action"; action: LineQuickReplyAction }[] };
 }
 
+type LineAnnouncementCard = ReturnType<typeof announcementCard>;
+
 export function isLineConfigured(): boolean {
   return Boolean(process.env.LINE_CHANNEL_ACCESS_TOKEN);
 }
 
 /** LINE accepts up to 500 IDs per multicast request. A stable retry key keeps
  * a retried request from sending the same announcement twice. */
-export async function sendLineTextToUsers(to: string[], text: string, retryKey: string): Promise<{ accepted: boolean; code: string }> {
+export async function sendLineMessageToUsers(to: string[], message: LineTextMessage | LineAnnouncementCard, retryKey: string): Promise<{ accepted: boolean; code: string }> {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!token) return { accepted: false, code: "NOT_CONFIGURED" };
   if (to.length < 1 || to.length > 500) return { accepted: false, code: "INVALID_RECIPIENT_COUNT" };
@@ -41,7 +44,7 @@ export async function sendLineTextToUsers(to: string[], text: string, retryKey: 
         Authorization: `Bearer ${token}`,
         "X-Line-Retry-Key": retryKey,
       },
-      body: JSON.stringify({ ...(to.length === 1 ? { to: to[0] } : { to }), messages: [{ type: "text", text }] }),
+      body: JSON.stringify({ ...(to.length === 1 ? { to: to[0] } : { to }), messages: [message] }),
       signal: AbortSignal.timeout(15_000),
     });
     // LINE returns 409 when this retry key was already accepted.
@@ -49,6 +52,10 @@ export async function sendLineTextToUsers(to: string[], text: string, retryKey: 
   } catch {
     return { accepted: false, code: "NETWORK_ERROR" };
   }
+}
+
+export async function sendLineTextToUsers(to: string[], text: string, retryKey: string): Promise<{ accepted: boolean; code: string }> {
+  return sendLineMessageToUsers(to, { type: "text", text }, retryKey);
 }
 
 export async function pushText(to: string, text: string): Promise<boolean> {

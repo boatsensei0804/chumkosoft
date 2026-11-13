@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHmac } from "node:crypto";
-import { pushText, replyLineMessage, replyText, sendLineTextToUsers, verifyLineSignature } from "@/lib/line";
+import { pushText, replyLineMessage, replyText, sendLineMessageToUsers, sendLineTextToUsers, verifyLineSignature } from "@/lib/line";
+import { announcementCard } from "@/features/line/announcement-card";
+import { teacherMenuSyncSignature, verifyTeacherMenuSync } from "@/features/line/teacher-menu-sync-auth";
 
 describe("LINE message delivery", () => {
   beforeEach(() => {
@@ -59,5 +61,28 @@ describe("LINE message delivery", () => {
     const [, options] = fetchMock.mock.calls[0];
     const body = JSON.parse(options.body);
     expect(body.messages[0].quickReply.items[0].action.data).toBe("leave|kind|student|SICK");
+  });
+
+  it("sends a complete long announcement as one Flex card", async () => {
+    const body = "ประกาศจากโรงเรียน".repeat(190);
+    const card = announcementCard("EMERGENCY", "แจ้งเปลี่ยนเวลาเลิกเรียน", body);
+    expect(card.altText.length).toBeLessThanOrEqual(400);
+    expect(card.contents.body.contents.filter((item) => item.type === "text").slice(1).map((item) => "text" in item ? item.text : "").join("")).toBe(body);
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+    expect((await sendLineMessageToUsers(["Uparent"], card, "retry-card")).accepted).toBe(true);
+    const [, options] = fetchMock.mock.calls[0];
+    const payload = JSON.parse(options.body);
+    expect(payload.messages[0].type).toBe("flex");
+    expect(payload.messages[0].contents.header.backgroundColor).toBe("#B42332");
+  });
+
+  it("authenticates teacher menu sync only within five minutes", () => {
+    const now = 1_700_000_000_000;
+    const timestamp = Math.floor(now / 1000);
+    const signature = teacherMenuSyncSignature("test-token", timestamp);
+    expect(verifyTeacherMenuSync("test-token", String(timestamp), signature, now)).toBe(true);
+    expect(verifyTeacherMenuSync("wrong-token", String(timestamp), signature, now)).toBe(false);
+    expect(verifyTeacherMenuSync("test-token", String(timestamp - 301), signature, now)).toBe(false);
   });
 });
