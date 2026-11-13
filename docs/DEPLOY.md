@@ -25,6 +25,9 @@ git clone <your-repo-url> chumkosoft && cd chumkosoft
 Then edit `.env.production` and fill the deployment-specific blanks:
 
 - `LINE_CHANNEL_ACCESS_TOKEN`, `LINE_CHANNEL_SECRET` — from the LINE console.
+  `LINE_CHANNEL_ACCESS_TOKEN` must contain the issued token from the Messaging
+  API channel, not its numeric Channel ID. After changing `.env`, recreate the
+  app container so it loads the new value. Never paste the token in chat or Git.
 - `CLOUDFLARE_TUNNEL_TOKEN` — see step 3.
 - `APP_ALLOWED_ORIGINS` — your public hostname, e.g. `school.example.com` (no scheme).
 - `MINIO_PUBLIC_ENDPOINT` — the host browsers use to load face images (step 3).
