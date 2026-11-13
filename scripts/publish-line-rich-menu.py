@@ -36,7 +36,7 @@ def read_token():
     return ""
 
 
-def request(url, token, method="GET", data=None, content_type=None):
+def request(url, token, method="GET", data=None, content_type=None, binary=False, allow_404=False):
     headers = {"Authorization": f"Bearer {token}"}
     if content_type:
         headers["Content-Type"] = content_type
@@ -44,8 +44,12 @@ def request(url, token, method="GET", data=None, content_type=None):
     try:
         with urllib.request.urlopen(req, timeout=20) as response:
             body = response.read()
+            if binary:
+                return body
             return json.loads(body) if body else {}
     except urllib.error.HTTPError as error:
+        if allow_404 and error.code == 404:
+            return None
         message = error.read().decode("utf-8", errors="replace")[:400]
         raise RuntimeError(f"LINE API {method} {url}: HTTP {error.code}: {message}") from error
 
@@ -75,8 +79,11 @@ def main():
         created = request(f"{api}/richmenu", token, "POST", payload, "application/json")
         menu_id = created["richMenuId"]
         print(f"สร้างเมนู {menu_id}")
+
+    image_url = f"https://api-data.line.me/v2/bot/richmenu/{menu_id}/content"
+    if request(image_url, token, binary=True, allow_404=True) is None:
         request(
-            f"https://api-data.line.me/v2/bot/richmenu/{menu_id}/content",
+            image_url,
             token,
             "POST",
             IMAGE.read_bytes(),
