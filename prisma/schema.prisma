@@ -669,6 +669,12 @@ model SchoolEntry {
   @@index([termId, date])
 }
 
+model AdvisorDigestSetting {
+  id        Int      @id @default(1)
+  sendTime  String   @default("09:00")
+  updatedAt DateTime @updatedAt
+}
+
 // A paired desktop scanner. Its public UUID is stored on the scanner; access
 // still requires a valid KIOSK session bound to kioskUserId.
 model ScannerDevice {

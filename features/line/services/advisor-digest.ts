@@ -9,6 +9,9 @@ export async function sendAdvisorDigests(): Promise<{ sent: number; failed: numb
   const redis = getRedis();
   if (!redis) throw new Error("Redis is required for daily delivery control");
   const date = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
+  const nowTime = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date());
+  const setting = await prisma.advisorDigestSetting.findUnique({ where: { id: 1 }, select: { sendTime: true } });
+  if (nowTime < (setting?.sendTime ?? "09:00")) return { sent: 0, failed: 0 };
   const day = new Date(`${date}T00:00:00Z`).getUTCDay();
   if (day === 0 || day === 6) return { sent: 0, failed: 0 };
 

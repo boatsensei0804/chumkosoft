@@ -7,7 +7,7 @@ export default function AdvisorLineConnect({ linked, currentCode }: { linked: bo
   const [code, setCode] = useState(currentCode);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
-  if (linked) return <p className="rounded-xl bg-success-soft px-4 py-3 text-sm font-semibold text-ink">LINE ครูที่ปรึกษาเชื่อมแล้ว · รับสรุปเวลา 09:00 น.</p>;
+  if (linked) return <p className="rounded-xl bg-success-soft px-4 py-3 text-sm font-semibold text-ink">LINE ครูที่ปรึกษาเชื่อมแล้ว · รับสรุปตามเวลาที่โรงเรียนตั้งค่า</p>;
   return <div className="rounded-xl border border-line bg-card px-4 py-3 text-sm text-ink">
     <p className="font-semibold">รับสรุปการเข้าโรงเรียนทาง LINE</p>
     <p className="mt-1 text-muted">เพิ่มเพื่อน LINE OA ของโรงเรียน แล้วส่งรหัส 6 หลักในแชท</p>

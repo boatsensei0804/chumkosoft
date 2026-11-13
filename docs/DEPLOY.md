@@ -79,8 +79,11 @@ Each teacher opens **Attendance → School entry** and generates a six-digit LIN
 link code. They add the school's LINE OA and send the code in its chat. Their
 staff account must be assigned as a classroom advisor.
 
-The GitHub workflow `advisor-line-digest.yml` calls the app at 09:00 Bangkok
-time on weekdays. Generate one random secret (for example with
+An admin sets the delivery time in **System settings → LINE advisor summary**
+in half-hour increments (Bangkok time). The GitHub workflow
+`advisor-line-digest.yml` checks every 30 minutes using the production
+self-hosted runner; the app sends once per advisor on weekdays at or after the
+configured time. Generate one random secret (for example with
 `openssl rand -hex 32`), put the same value in `ADVISOR_LINE_DIGEST_SECRET`
 in the server's `.env` and in the repository's GitHub Actions secret of the
 same name. Recreate the app container so it reads the new environment value.

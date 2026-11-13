@@ -2,14 +2,14 @@ name: Advisor LINE digest
 
 on:
   schedule:
-    - cron: '0 2 * * 1-5' # 09:00 Asia/Bangkok, Monday to Friday
+    - cron: '0,30 * * * *' # Check configurable Bangkok time every 30 minutes
   workflow_dispatch:
 
 permissions: {}
 
 jobs:
   send:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, chumkosoft-prod]
     if: vars.ENABLE_PRODUCTION_DEPLOY == 'true'
     steps:
       - name: Send daily advisor summaries
