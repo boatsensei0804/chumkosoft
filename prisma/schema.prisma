@@ -319,6 +319,7 @@ model Student {
   dailyAttendances DailyAttendance[]
   schoolEntries    SchoolEntry[]
   guardians        Guardian[]
+  lineAccounts     StudentLineAccount[]
   faceTemplates    FaceTemplate[]
   user             User?
 
@@ -396,6 +397,20 @@ model Guardian {
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+}
+
+/// LINE accounts linked to a student when guardian records are unavailable.
+model StudentLineAccount {
+  id           String   @id @default(cuid())
+  studentId    String
+  student      Student  @relation(fields: [studentId], references: [id])
+  lineUserId   String?
+  lineLinkCode String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([lineUserId])
 }
 
 // ---------------------------------------------------------------------------

@@ -145,6 +145,10 @@ export async function studentExists(id: string): Promise<boolean> {
   return (await prisma.student.findFirst({ where: { id, isDeleted: false }, select: { id: true } })) !== null;
 }
 
+export async function getStudentIdentity(id: string) {
+  return prisma.student.findFirst({ where: { id, isDeleted: false }, select: { id: true, firstName: true, lastName: true } });
+}
+
 export async function createGuardian(studentId: string, data: GuardianInput): Promise<{ id: string }> {
   return prisma.guardian.create({
     data: {

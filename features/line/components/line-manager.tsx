@@ -12,7 +12,7 @@ import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PaginationBar from "@/components/ui/pagination-bar";
 import ClassroomFilter from "@/features/guardians/components/classroom-filter";
 import { useListParams } from "@/features/dashboard/hooks/use-list-params";
-import { generateLinkCodeAction, prepareClassroomLinkCodesAction, unlinkGuardianAction } from "@/features/line/actions";
+import { generateLinkCodeAction, generateStudentLinkCodeAction, prepareClassroomLinkCodesAction, unlinkGuardianAction } from "@/features/line/actions";
 import type { GuardianRow, StudentGuardians } from "@/features/guardians/types";
 import type { GuardianClassroomOption } from "@/features/guardians/services/guardian-service";
 import type { LineLinkStatus } from "@/features/line/types";
@@ -59,6 +59,19 @@ export default function LineManager({ page, query, configured, classrooms, class
       const result = await generateLinkCodeAction(guardianId);
       if (result.ok) toast.success(`รหัสผูกบัญชี: ${result.code}`);
       else toast.error(result.message ?? "ไม่สำเร็จ");
+      setPendingId(null);
+      if (result.ok) router.refresh();
+    });
+  }
+
+  function generateStudentCode(studentId: string): void {
+    setPendingId(studentId);
+    startAction(async () => {
+      const result = await generateStudentLinkCodeAction(studentId);
+      if (result.ok && result.code) {
+        try { await navigator.clipboard.writeText(result.code); } catch { /* code remains in toast */ }
+        toast.success(`รหัส LINE: ${result.code} · คัดลอกแล้ว`);
+      } else toast.error(result.message ?? "ไม่สำเร็จ");
       setPendingId(null);
       if (result.ok) router.refresh();
     });
@@ -172,7 +185,7 @@ export default function LineManager({ page, query, configured, classrooms, class
                   </td>
                   <td className="px-4 py-3">
                     {student.guardians.length === 0 ? (
-                      <p className="py-1 text-[13px] text-faint">ยังไม่มีผู้ปกครอง — <Link href="/dashboard/guardians" className="font-semibold text-brand-ink underline">เพิ่มข้อมูลผู้ปกครอง</Link></p>
+                      <div className="flex flex-wrap items-center gap-2 py-1"><p className="text-[13px] text-faint">ยังไม่มีข้อมูลผู้ปกครอง</p><Button variant="outline" size="sm" disabled={pendingId === student.studentId} onClick={() => generateStudentCode(student.studentId)}>สร้างรหัสให้ผู้ปกครอง</Button></div>
                     ) : (
                       <div className="flex flex-col divide-y divide-line">
                         {student.guardians.map((g) => {
@@ -194,7 +207,7 @@ export default function LineManager({ page, query, configured, classrooms, class
                       ) : (
                         <Button key={g.id} variant="outline" size="sm" className="h-7 text-[11px]" disabled={pendingId === g.id} onClick={() => generateCode(g.id)}>{g.lineStatus === "pending" ? "สร้างรหัสใหม่" : "สร้างรหัส"}</Button>
                       ))}
-                      {student.guardians.length === 0 && <span className="text-xs text-faint">—</span>}
+                      {student.guardians.length === 0 && <span className="text-xs text-faint">ใช้รหัสกับ LINE OA ของโรงเรียน</span>}
                     </div>
                   </td>
                 </tr>
