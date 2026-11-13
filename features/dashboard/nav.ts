@@ -10,6 +10,7 @@ import {
   ScanFace,
   UserCheck,
   MessageSquare,
+  Megaphone,
   ScanLine,
   Settings,
 } from "lucide-react";
@@ -52,6 +53,7 @@ export const navGroups: NavGroup[] = [
       { key: "faces", label: "ชุดข้อมูลใบหน้า", href: "/dashboard/faces", icon: ScanFace, available: true },
       { key: "guardians", label: "ผู้ปกครอง", href: "/dashboard/guardians", icon: UserCheck, available: true },
       { key: "line", label: "LINE / แจ้งเตือน", href: "/dashboard/line", icon: MessageSquare, available: true },
+      { key: "line-announcements", label: "ส่งประกาศ LINE", href: "/dashboard/line-announcements", icon: Megaphone, available: true, roles: ["ADMIN"] },
     ],
   },
   {

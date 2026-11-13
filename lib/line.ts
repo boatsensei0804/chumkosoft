@@ -11,9 +11,34 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 const PUSH_URL = "https://api.line.me/v2/bot/message/push";
 const REPLY_URL = "https://api.line.me/v2/bot/message/reply";
+const MULTICAST_URL = "https://api.line.me/v2/bot/message/multicast";
 
 export function isLineConfigured(): boolean {
   return Boolean(process.env.LINE_CHANNEL_ACCESS_TOKEN);
+}
+
+/** LINE accepts up to 500 IDs per multicast request. A stable retry key keeps
+ * a retried request from sending the same announcement twice. */
+export async function sendLineTextToUsers(to: string[], text: string, retryKey: string): Promise<{ accepted: boolean; code: string }> {
+  const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!token) return { accepted: false, code: "NOT_CONFIGURED" };
+  if (to.length < 1 || to.length > 500) return { accepted: false, code: "INVALID_RECIPIENT_COUNT" };
+  try {
+    const response = await fetch(to.length === 1 ? PUSH_URL : MULTICAST_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        "X-Line-Retry-Key": retryKey,
+      },
+      body: JSON.stringify({ ...(to.length === 1 ? { to: to[0] } : { to }), messages: [{ type: "text", text }] }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    // LINE returns 409 when this retry key was already accepted.
+    return { accepted: response.ok || response.status === 409, code: `HTTP_${response.status}` };
+  } catch {
+    return { accepted: false, code: "NETWORK_ERROR" };
+  }
 }
 
 export async function pushText(to: string, text: string): Promise<boolean> {

@@ -90,6 +90,18 @@ same name. Recreate the app container so it reads the new environment value.
 Keep the secret out of Git and chat. The endpoint returns 401 until configured;
 Redis records which teachers have already received that day's summary.
 
+### School-wide LINE announcements
+
+An admin can open **Send LINE announcement** in the dashboard to send news or
+emergency notices. The recipient list is a snapshot of unique LINE user IDs
+linked to non-deleted students (through guardian or student LINE records) and
+non-deleted staff. It does not include every friend of the LINE Official Account.
+The page shows the recipient count and requires a final review before sending.
+LINE's monthly message quota still applies. A history entry records how many
+recipients LINE accepted; acceptance is not proof that a person read the message.
+If a batch fails, the admin can retry it from the history without changing the
+recipients or message. LINE retry keys prevent duplicates after uncertain errors.
+
 ## 6. Automatic checks and deploys
 
 `.github/workflows/ci.yml` runs lint and TypeScript checks on pull requests and

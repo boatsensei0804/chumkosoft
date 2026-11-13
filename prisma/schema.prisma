@@ -80,6 +80,17 @@ enum DayOfWeek {
   SUN
 }
 
+enum LineAnnouncementKind {
+  NEWS
+  EMERGENCY
+}
+
+enum LineAnnouncementBatchStatus {
+  PENDING
+  ACCEPTED
+  FAILED
+}
+
 // ---------------------------------------------------------------------------
 // Identity & access
 // ---------------------------------------------------------------------------
@@ -597,6 +608,37 @@ model Announcement {
   updatedAt DateTime  @updatedAt
 
   @@index([isDeleted, createdAt])
+}
+
+// A snapshot of the linked LINE recipients is kept with each announcement so
+// retries always use the same people, text, and LINE retry keys.
+model LineAnnouncement {
+  id             String               @id @default(cuid())
+  requestKey     String               @unique
+  kind           LineAnnouncementKind
+  title          String
+  body           String               @db.Text
+  recipientCount Int
+  createdById    String
+  createdAt      DateTime             @default(now())
+  batches        LineAnnouncementBatch[]
+
+  @@index([createdAt])
+}
+
+model LineAnnouncementBatch {
+  id             String                      @id @default(cuid())
+  announcementId String
+  announcement   LineAnnouncement            @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  batchNumber    Int
+  recipients     Json
+  recipientCount Int
+  retryKey       String                      @unique
+  status         LineAnnouncementBatchStatus @default(PENDING)
+  errorCode      String?
+  updatedAt      DateTime                    @updatedAt
+
+  @@unique([announcementId, batchNumber])
 }
 
 // ---------------------------------------------------------------------------
