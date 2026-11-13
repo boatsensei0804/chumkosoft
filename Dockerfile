@@ -36,6 +36,8 @@ RUN addgroup --system --gid 1001 nodejs \
 
 # Copy the standalone server, static assets, and public files only.
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/offline_scanner/fonts/Prompt-Regular.ttf ./offline_scanner/fonts/Prompt-Regular.ttf
+COPY --from=builder /app/offline_scanner/fonts/Prompt-Bold.ttf ./offline_scanner/fonts/Prompt-Bold.ttf
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 

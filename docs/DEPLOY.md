@@ -188,6 +188,25 @@ One-time setup:
    current version. After that, every push to `main` deploys automatically once
    validation passes. Pull requests run validation only.
 
+### Publish the LINE leave rich menu through GitHub Actions
+
+The `Publish LINE rich menu` job runs on a GitHub-hosted runner, so the Mac does
+not need access to the Ubuntu server. In repository **Settings → Secrets and
+variables → Actions → Repository secrets**, create the secret
+`LINE_CHANNEL_ACCESS_TOKEN` with the long-lived token from the Chumkosoft School
+Messaging API channel. Keep the token out of Git, screenshots, and chat.
+
+Then open **Actions → CI → Run workflow** on `main`. The job validates the OA's
+basic ID, validates the menu, uploads the image, and sets it as the default.
+It is safe to rerun: an existing menu is reused. If the secret is absent, the
+job prints that publication was skipped. Once configured, future pushes to
+`main` keep the rich menu published. The menu appears in the LINE mobile chat
+after reopening it; LINE may take up to a minute to apply a default-menu change.
+
+Staff can use **LINE → สร้างชุดเอกสาร A4 → ดาวน์โหลด PDF ทุกห้อง** to prepare
+missing link codes and download one PDF. The PDF starts a fresh page for each
+classroom and includes the LINE OA QR code and pending link codes.
+
 The runner works on the production server, so only trusted maintainers should
 be able to change or run workflows on `main`. The runner account must not have
 general Docker access; only the root-owned deploy script gets elevated

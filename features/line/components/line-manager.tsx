@@ -12,7 +12,7 @@ import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PaginationBar from "@/components/ui/pagination-bar";
 import ClassroomFilter from "@/features/guardians/components/classroom-filter";
 import { useListParams } from "@/features/dashboard/hooks/use-list-params";
-import { generateLinkCodeAction, generateStudentLinkCodeAction, prepareClassroomLinkCodesAction, unlinkGuardianAction } from "@/features/line/actions";
+import { generateLinkCodeAction, generateStudentLinkCodeAction, prepareClassroomLinkCodesAction, prepareAllClassroomLinkCodesAction, unlinkGuardianAction } from "@/features/line/actions";
 import type { GuardianRow, StudentGuardians } from "@/features/guardians/types";
 import type { GuardianClassroomOption } from "@/features/guardians/services/guardian-service";
 import type { LineLinkStatus } from "@/features/line/types";
@@ -109,6 +109,28 @@ export default function LineManager({ page, query, configured, classrooms, class
       toast.success(result.message ?? "เตรียมรหัสเรียบร้อย");
       const params = new URLSearchParams({ classroom: exportClassroomId, oa: parsed.toString() });
       router.push(`/dashboard/line/print?${params.toString()}`);
+      setExportOpen(false);
+      router.refresh();
+    });
+  }
+
+  function prepareAndDownloadAll(): void {
+    const parsed = safeLineOaUrl(oaUrl);
+    if (!parsed) {
+      toast.error("ใส่ลิงก์เพิ่มเพื่อน LINE OA ที่ขึ้นต้นด้วย https://line.me หรือ https://lin.ee");
+      return;
+    }
+    setPreparing(true);
+    startAction(async () => {
+      const result = await prepareAllClassroomLinkCodesAction();
+      setPreparing(false);
+      if (!result.ok) {
+        toast.error(result.message ?? "เตรียมรหัสทุกห้องไม่สำเร็จ");
+        return;
+      }
+      toast.success(result.message ?? "เตรียมรหัสทุกห้องเรียบร้อย");
+      const params = new URLSearchParams({ oa: parsed.toString() });
+      window.location.assign(`/dashboard/line/export/pdf?${params.toString()}`);
       setExportOpen(false);
       router.refresh();
     });
@@ -252,8 +274,8 @@ export default function LineManager({ page, query, configured, classrooms, class
                 <p className="font-bold text-brand-ink">ผู้ปกครองทำตาม 3 ขั้นตอน</p>
                 <ol className="mt-1 list-inside list-decimal space-y-0.5"><li>สแกน QR เพื่อเพิ่มเพื่อน LINE OA ของโรงเรียน</li><li>พิมพ์รหัส 6 หลักบนเอกสารในแชท</li><li>รอข้อความยืนยันการเชื่อมบัญชี</li></ol>
               </div>
-              <p className="text-[11.5px] leading-relaxed text-muted">ระบบจะสร้างเฉพาะรหัสที่ยังไม่มี และเก็บรหัสที่เตรียมไว้แล้วไว้เหมือนเดิม · พิมพ์ได้ทั้งชุดของชั้นเรียน</p>
-              <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setExportOpen(false)}>ยกเลิก</Button><Button type="button" onClick={prepareAndPrint} disabled={preparing || !exportClassroomId}>{preparing ? "กำลังเตรียม…" : "เตรียมรหัสและเปิดเอกสาร"}</Button></div>
+              <p className="text-[11.5px] leading-relaxed text-muted">ระบบจะสร้างเฉพาะรหัสที่ยังไม่มี และเก็บรหัสเดิมไว้ · PDF ทุกห้องเป็นไฟล์เดียว โดยเริ่มหน้าใหม่เมื่อเปลี่ยนห้อง</p>
+              <div className="flex flex-wrap justify-end gap-2"><Button type="button" variant="outline" onClick={() => setExportOpen(false)}>ยกเลิก</Button><Button type="button" variant="outline" onClick={prepareAndPrint} disabled={preparing || !exportClassroomId}>{preparing ? "กำลังเตรียม…" : "เปิดเอกสารห้องที่เลือก"}</Button><Button type="button" onClick={prepareAndDownloadAll} disabled={preparing || classrooms.length === 0}>{preparing ? "กำลังเตรียม…" : "ดาวน์โหลด PDF ทุกห้อง"}</Button></div>
             </div>
         </DialogContent>
       </Dialog>

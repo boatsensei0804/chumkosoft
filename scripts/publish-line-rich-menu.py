@@ -6,6 +6,7 @@ The token is read locally and is never printed.
 """
 
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
@@ -30,6 +31,11 @@ MENU = {
 
 
 def read_token():
+    token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "").strip()
+    if token:
+        return token
+    if not ENV.is_file():
+        return ""
     for line in ENV.read_text(encoding="utf-8").splitlines():
         if line.startswith("LINE_CHANNEL_ACCESS_TOKEN="):
             return line.partition("=")[2].strip().strip('"\'')
@@ -55,13 +61,13 @@ def request(url, token, method="GET", data=None, content_type=None, binary=False
 
 
 def main():
-    if not ENV.is_file() or not IMAGE.is_file():
-        raise RuntimeError("ต้องมี .env และ public/line/rich-menu-leave.png ในโปรเจกต์")
+    if not IMAGE.is_file():
+        raise RuntimeError("ไม่พบ public/line/rich-menu-leave.png ในโปรเจกต์")
     if IMAGE.stat().st_size > 1_000_000:
         raise RuntimeError("ภาพริชเมนูต้องมีขนาดไม่เกิน 1 MB")
     token = read_token()
     if not token:
-        raise RuntimeError("LINE_CHANNEL_ACCESS_TOKEN ใน .env ยังว่าง")
+        raise RuntimeError("ยังไม่มี LINE_CHANNEL_ACCESS_TOKEN ใน environment หรือ .env")
 
     api = "https://api.line.me/v2/bot"
     account = request(f"{api}/info", token)
