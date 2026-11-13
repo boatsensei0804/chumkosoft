@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyLineSignature } from "@/lib/line";
 import { handleLinkMessage } from "@/features/line/services/line-service";
 import { handleLeaveLineMessage } from "@/features/leave/services/line-leave-service";
+import { handleLeavePostback, startLineLeaveChoices } from "@/features/leave/services/line-leave-quick-reply";
 
 /**
  * LINE Messaging API webhook — the one REST endpoint in the app, because LINE is
@@ -12,9 +13,20 @@ import { handleLeaveLineMessage } from "@/features/leave/services/line-leave-ser
 
 interface LineTextMessageEvent {
   type: string;
+  webhookEventId?: string;
   replyToken?: string;
   source?: { userId?: string };
   message?: { id?: string; type?: string; text?: string };
+  postback?: { data?: string; params?: { date?: string } };
+}
+
+function isLeavePostback(event: unknown): event is LineTextMessageEvent & {
+  webhookEventId: string; replyToken: string; source: { userId: string }; postback: { data: string; params?: { date?: string } };
+} {
+  if (typeof event !== "object" || event === null) return false;
+  const e = event as LineTextMessageEvent;
+  return e.type === "postback" && typeof e.webhookEventId === "string" &&
+    typeof e.replyToken === "string" && typeof e.source?.userId === "string" && typeof e.postback?.data === "string";
 }
 
 function isTextMessage(event: unknown): event is Required<Pick<LineTextMessageEvent, "replyToken">> & {
@@ -57,12 +69,21 @@ export async function POST(request: Request): Promise<Response> {
     events.map(async (event) => {
       if (isTextMessage(event)) {
         try {
-          if (!await handleLeaveLineMessage(event.source.userId, event.message.text, event.replyToken, event.message.id)) {
+          if (["แจ้งลา", "ลา"].includes(event.message.text.trim())) {
+            await startLineLeaveChoices(event.source.userId, event.replyToken);
+          } else if (!await handleLeaveLineMessage(event.source.userId, event.message.text, event.replyToken, event.message.id)) {
             await handleLinkMessage(event.source.userId, event.message.text, event.replyToken);
           }
         } catch (error) {
           console.error("[line webhook] message processing failed", error);
-          if (/^ลา(?:\s|$)/u.test(event.message.text.trim())) leaveProcessingFailed = true;
+          if (/^(?:แจ้งลา|ลา)(?:\s|$)/u.test(event.message.text.trim())) leaveProcessingFailed = true;
+        }
+      } else if (isLeavePostback(event)) {
+        try {
+          await handleLeavePostback(event.source.userId, event.postback.data, event.postback.params?.date, event.replyToken, event.webhookEventId);
+        } catch (error) {
+          console.error("[line webhook] leave postback processing failed", error);
+          leaveProcessingFailed = true;
         }
       }
     }),

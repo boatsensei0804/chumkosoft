@@ -13,6 +13,16 @@ const PUSH_URL = "https://api.line.me/v2/bot/message/push";
 const REPLY_URL = "https://api.line.me/v2/bot/message/reply";
 const MULTICAST_URL = "https://api.line.me/v2/bot/message/multicast";
 
+export type LineQuickReplyAction =
+  | { type: "postback"; label: string; data: string; displayText?: string }
+  | { type: "datetimepicker"; label: string; data: string; mode: "date"; initial?: string; min?: string; max?: string };
+
+export interface LineTextMessage {
+  type: "text";
+  text: string;
+  quickReply?: { items: { type: "action"; action: LineQuickReplyAction }[] };
+}
+
 export function isLineConfigured(): boolean {
   return Boolean(process.env.LINE_CHANNEL_ACCESS_TOKEN);
 }
@@ -58,13 +68,17 @@ export async function pushText(to: string, text: string): Promise<boolean> {
 }
 
 export async function replyText(replyToken: string, text: string): Promise<boolean> {
+  return replyLineMessage(replyToken, { type: "text", text });
+}
+
+export async function replyLineMessage(replyToken: string, message: LineTextMessage): Promise<boolean> {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-  if (!token) return false;
+  if (!token || (message.quickReply && (message.quickReply.items.length < 1 || message.quickReply.items.length > 13))) return false;
   try {
     const res = await fetch(REPLY_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ replyToken, messages: [{ type: "text", text }] }),
+      body: JSON.stringify({ replyToken, messages: [message] }),
       signal: AbortSignal.timeout(15_000),
     });
     return res.ok;

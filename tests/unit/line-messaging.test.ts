@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHmac } from "node:crypto";
-import { pushText, replyText, sendLineTextToUsers, verifyLineSignature } from "@/lib/line";
+import { pushText, replyLineMessage, replyText, sendLineTextToUsers, verifyLineSignature } from "@/lib/line";
 
 describe("LINE message delivery", () => {
   beforeEach(() => {
@@ -47,5 +47,17 @@ describe("LINE message delivery", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 401 }));
     expect(await pushText("Uparent", "ผลคำขอ")).toBe(false);
     expect(await replyText("reply-token", "รับคำขอแล้ว")).toBe(false);
+  });
+
+  it("sends a tappable leave choice as a LINE quick reply", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+    const sent = await replyLineMessage("reply-token", { type: "text", text: "เลือกประเภท", quickReply: { items: [
+      { type: "action", action: { type: "postback", label: "ลาป่วย", data: "leave|kind|student|SICK" } },
+    ] } });
+    expect(sent).toBe(true);
+    const [, options] = fetchMock.mock.calls[0];
+    const body = JSON.parse(options.body);
+    expect(body.messages[0].quickReply.items[0].action.data).toBe("leave|kind|student|SICK");
   });
 });

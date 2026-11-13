@@ -20,7 +20,8 @@ interface HistoryItem {
 }
 
 function failureLabel(code: string | null): string {
-  if (code === "HTTP_401" || code === "HTTP_403") return "ตรวจโทเคน LINE";
+  if (code === "HTTP_401") return "LINE ปฏิเสธโทเคน (401)";
+  if (code === "HTTP_403") return "โทเคนไม่มีสิทธิ์ส่ง (403)";
   if (code === "HTTP_429") return "โควตาหรืออัตราส่ง LINE เต็ม";
   if (code === "NETWORK_ERROR") return "เครือข่ายขัดข้อง";
   if (code === "HTTP_400") return "คำขอไม่ถูกต้อง";
@@ -113,6 +114,10 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
     </div>
 
     {feedback && <div role="status" className="rounded-xl border border-line bg-brand-soft px-4 py-3 text-sm font-semibold text-ink">{feedback}</div>}
+
+    {history.some((item) => item.errorCode === "HTTP_401" || item.errorCode === "HTTP_403") && <div className="rounded-xl border border-warning bg-warning-soft px-4 py-3 text-sm text-ink">
+      LINE ปฏิเสธ Channel access token บนเซิร์ฟเวอร์ กรุณาสร้างโทเคนใหม่จาก Messaging API ของ OA ที่ใช้งาน แล้วแก้ <code>LINE_CHANNEL_ACCESS_TOKEN</code> ในไฟล์ <code>.env</code> บนเซิร์ฟเวอร์ จากนั้นสร้างคอนเทนเนอร์แอปใหม่และกด “ลองส่งต่อ” ไม่ต้องสร้างประกาศซ้ำ
+    </div>}
 
     <section className="overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
       <div className="border-b border-line px-5 py-4"><h2 className="text-base font-bold text-ink-strong">รายการส่งล่าสุด</h2></div>

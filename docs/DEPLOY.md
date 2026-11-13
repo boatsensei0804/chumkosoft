@@ -91,6 +91,13 @@ room summary.
 After linking LINE to a student, a parent sends a private message such as
 `ลา 68-0421 ป่วย 14/11/2569 ถึง 15/11/2569 มีไข้` to the OA. For one day,
 omit `ถึง <last date>`. The active term must contain every requested day.
+For a no-typing flow, add a **แจ้งลา** button in the OA rich menu using
+LINE Official Account Manager. Set the button action to **Message** and its
+text to exactly `แจ้งลา`. Tapping it opens quick replies for the linked student,
+leave type, start/end dates, preset reason, and final confirmation. Rich menus
+are displayed in LINE's mobile app; the parent must have linked their LINE
+account to a student first. If the OA's rich menu was created with the Messaging
+API, edit it through that API instead of LINE Official Account Manager.
 The website shows pending requests under **คำขอลา**; classroom advisors or
 admins review them. Approval records sick or personal leave in daily attendance
 and sends the result to the requesting LINE account. A teacher's LINE message
@@ -125,6 +132,14 @@ LINE's monthly message quota still applies. A history entry records how many
 recipients LINE accepted; acceptance is not proof that a person read the message.
 If a batch fails, the admin can retry it from the history without changing the
 recipients or message. LINE retry keys prevent duplicates after uncertain errors.
+If history says `LINE รับแล้ว 0/N` and `HTTP_401` or `HTTP_403`, the Messaging
+API rejected the server's `LINE_CHANNEL_ACCESS_TOKEN`. Generate a fresh Channel
+access token from the **same** LINE Messaging API channel as the OA, update the
+server's private `.env` without pasting the token in chat or Git, recreate the
+app container, then use **ลองส่งต่อ** on the existing announcement. The server
+user can verify the token without displaying it by requesting LINE's bot info
+endpoint and reading only the HTTP status. A 200 response means the token is
+accepted; it does not prove delivery to each individual recipient.
 
 ## 6. Automatic checks and deploys
 
