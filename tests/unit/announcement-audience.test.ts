@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { announcementAudienceSchema, selectAudience, type AudienceCandidate } from "@/features/line/announcement-audience";
 
-const db = vi.hoisted(() => ({ guardian: { findMany: vi.fn() }, studentLineAccount: { findMany: vi.fn() }, staff: { findMany: vi.fn() }, enrollment: { findMany: vi.fn() }, classroom: { findMany: vi.fn() }, lineAnnouncement: { findUnique: vi.fn(), create: vi.fn() } }));
+const db = vi.hoisted(() => ({ guardian: { findMany: vi.fn() }, studentLineAccount: { findMany: vi.fn() }, staff: { findMany: vi.fn() }, enrollment: { findMany: vi.fn() }, classroom: { findMany: vi.fn() }, lineAnnouncement: { findUnique: vi.fn(), findMany: vi.fn(), updateMany: vi.fn(), create: vi.fn() } }));
 const send = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/prisma", () => ({ default: db }));
 vi.mock("@/lib/line", () => ({ isLineConfigured: () => true, sendLineMessageToUsers: send }));
 vi.mock("@/lib/audit", () => ({ logAudit: vi.fn() }));
 import { resolveAnnouncementAudience, getAnnouncementAudienceOptions, recipientFingerprint } from "@/features/line/services/announcement-audience-service";
-import { createAndSendLineAnnouncement } from "@/features/line/services/line-announcements";
+import { createAndSendLineAnnouncement, deleteLineAnnouncement, deliverLineAnnouncement, listLineAnnouncements } from "@/features/line/services/line-announcements";
 
 const candidates: AudienceCandidate[] = [
   { id: "guardian:g1", label: "Parent A", kind: "parent", classroomIds: ["room1"], lineUserId: "line-parent" },
@@ -22,6 +22,8 @@ beforeEach(() => {
   db.enrollment.findMany.mockResolvedValue([{ studentId: "s1", classroomId: "room1" }, { studentId: "s2", classroomId: "room2" }]);
   db.classroom.findMany.mockResolvedValue([{ id: "room1", code: "1/1" }, { id: "room2", code: "1/2" }]);
   db.lineAnnouncement.findUnique.mockResolvedValue(null);
+  db.lineAnnouncement.findMany.mockResolvedValue([]);
+  db.lineAnnouncement.updateMany.mockResolvedValue({ count: 1 });
 });
 
 describe("announcement recipient selection", () => {
@@ -68,6 +70,29 @@ describe("announcement recipient selection", () => {
     expect(result.ok).toBe(false);
     expect(send).not.toHaveBeenCalled();
     expect(db.lineAnnouncement.create).not.toHaveBeenCalled();
+  });
+
+  it("hides a deleted announcement without removing its delivery and retry records", async () => {
+    const result = await deleteLineAnnouncement("announcement1", "admin");
+    expect(result.ok).toBe(true);
+    expect(db.lineAnnouncement.updateMany).toHaveBeenCalledWith({ where: { id: "announcement1", isDeleted: false }, data: { isDeleted: true, deletedAt: expect.any(Date) } });
+    expect(send).not.toHaveBeenCalled();
+  });
+  it("excludes deleted announcements from history", async () => {
+    await listLineAnnouncements();
+    expect(db.lineAnnouncement.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { isDeleted: false } }));
+  });
+  it("never sends a deleted announcement, even through a stale retry button", async () => {
+    db.lineAnnouncement.findUnique.mockResolvedValue({ id: "deleted", isDeleted: true });
+    expect((await deliverLineAnnouncement("deleted", "admin")).ok).toBe(false);
+    expect(send).not.toHaveBeenCalled();
+    expect((await createAndSendLineAnnouncement({ requestKey: "11111111-1111-4111-8111-111111111111", kind: "NEWS", title: "Test", body: "Test body", audience: { mode: "all" }, expectedRecipients: 1, expectedRecipientFingerprint: "old" }, "admin")).ok).toBe(false);
+    expect(db.lineAnnouncement.create).not.toHaveBeenCalled();
+  });
+  it("stops subsequent batches if a record is deleted during delivery", async () => {
+    db.lineAnnouncement.findUnique.mockResolvedValueOnce({ id: "one", isDeleted: false, kind: "NEWS", title: "Test", body: "Body", batches: [{ id: "batch", status: "PENDING", recipients: ["target"], retryKey: "retry" }] }).mockResolvedValueOnce({ isDeleted: true });
+    expect((await deliverLineAnnouncement("one", "admin")).ok).toBe(false);
+    expect(send).not.toHaveBeenCalled();
   });
 
 });

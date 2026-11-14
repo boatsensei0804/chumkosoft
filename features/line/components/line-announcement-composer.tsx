@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Megaphone, Send } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Megaphone, Send, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { sendLineAnnouncementAction, retryLineAnnouncementAction, previewLineAudienceAction } from "@/features/line/announcement-actions";
+import { sendLineAnnouncementAction, retryLineAnnouncementAction, previewLineAudienceAction, deleteLineAnnouncementAction } from "@/features/line/announcement-actions";
 import { announcementText } from "@/features/line/announcement-text";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 import AnnouncementAudiencePicker from "./announcement-audience-picker";
 import type { AnnouncementAudience, AudienceOptions } from "@/features/line/announcement-audience";
 import type { LineAnnouncementKind } from "@prisma/client";
@@ -44,6 +45,8 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
   const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
   const [reviewOpen, setReviewOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [deleting, setDeleting] = useState<HistoryItem | null>(null);
+  const [deleteError, setDeleteError] = useState("");
   const [viewing, setViewing] = useState<HistoryItem | null>(null);
   const [historyQuery, setHistoryQuery] = useState("");
   const [onlyIncomplete, setOnlyIncomplete] = useState(false);
@@ -80,6 +83,20 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
       setAudiencePreview(result); setConfirmed(false); setComposerOpen(false); setReviewOpen(true);
     } catch { setFeedback("ตรวจผู้รับไม่สำเร็จ กรุณาลองอีกครั้ง"); }
     finally { setPreparing(false); }
+  }
+
+  function remove(): void {
+    if (!deleting || pending) return;
+    const id = deleting.id;
+    startTransition(async () => {
+      try {
+        const result = await deleteLineAnnouncementAction(id);
+        if (!result.ok) { setDeleteError(result.message); return; }
+        setDeleting(null); setDeleteError(""); setFeedback(result.message);
+        if (viewing?.id === id) setViewing(null);
+        router.refresh();
+      } catch { setDeleteError("เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่"); }
+    });
   }
 
   function retry(id: string): void {
@@ -163,14 +180,16 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
               </div>
               <p className="mt-1 text-xs text-muted">{new Date(item.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "medium", timeStyle: "short" })}{remaining > 0 ? ` · ${failureLabel(item.errorCode)}` : ""}</p>
             </div>
-            <div className="flex items-center gap-3 text-sm">
+            <div className="flex flex-wrap items-center gap-3 text-sm">
               <span className={remaining === 0 ? "text-success" : "text-warning"}>{remaining === 0 ? <CheckCircle2 className="mr-1 inline size-4" /> : null}LINE รับแล้ว {item.accepted}/{item.recipientCount}</span>
               {remaining > 0 && <button type="button" disabled={pending || !configured} onClick={() => retry(item.id)} className="rounded-lg border border-line px-3 py-1.5 font-semibold text-brand-ink disabled:opacity-50">{item.failed ? "ลองส่งต่อ" : "ส่งต่อ"}</button>}
+              <button type="button" disabled={pending} onClick={() => { setDeleteError(""); setDeleting(item); }} aria-label={`ลบประกาศ ${item.title}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-line px-3 text-sm font-semibold text-danger hover:bg-danger-soft disabled:opacity-50"><Trash2 className="size-4" />ลบ</button>
             </div>
           </div>;
         })}</div>}
     </section>
 
+    <ConfirmDialog open={deleting !== null} title="ลบประกาศ" message={`ต้องการลบ “${deleting?.title ?? ""}” ออกจากประวัติบนเว็บใช่ไหม? ข้อความที่ส่งถึง LINE แล้วจะยังอยู่ และคำขอส่งที่กำลังดำเนินการอาจส่งถึงผู้รับได้${deleteError ? `\n${deleteError}` : ""}`} confirmLabel="ยืนยันลบประกาศ" destructive pending={pending} onConfirm={remove} onClose={() => { setDeleting(null); setDeleteError(""); }} />
     {history.length > 0 && visibleHistory.length === 0 && <p className="py-4 text-center text-sm text-muted">ไม่พบประกาศที่ตรงกับตัวกรอง</p>}
     <Dialog open={viewing !== null} onOpenChange={(open) => { if (!open) setViewing(null); }}><DialogContent className="sm:max-w-xl"><DialogHeader className="text-left"><DialogTitle>{viewing?.title}</DialogTitle><DialogDescription>รายละเอียดข้อความที่ส่ง · LINE รับคำขอแล้ว {viewing?.accepted}/{viewing?.recipientCount} บัญชี</DialogDescription></DialogHeader><p className="whitespace-pre-wrap break-words rounded-xl bg-blue-50 p-4 text-sm leading-7">{viewing?.body}</p><p className="text-xs leading-5 text-muted">การรับคำขอของ LINE ไม่ใช่สถานะว่าผู้รับอ่านข้อความแล้ว</p></DialogContent></Dialog>
     <Dialog open={reviewOpen} onOpenChange={(open) => { if (!pending) { setReviewOpen(open); if (!open) setComposerOpen(true); } }}>

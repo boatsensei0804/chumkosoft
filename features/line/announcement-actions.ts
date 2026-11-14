@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import { requireRoles } from "@/lib/dal";
-import { createAndSendLineAnnouncement, deliverLineAnnouncement, type AnnouncementInput, type AnnouncementResult } from "@/features/line/services/line-announcements";
+import { createAndSendLineAnnouncement, deliverLineAnnouncement, deleteLineAnnouncement, type AnnouncementInput, type AnnouncementResult } from "@/features/line/services/line-announcements";
 
 const PATH = "/dashboard/line-announcements";
 
@@ -42,5 +42,18 @@ export async function previewLineAudienceAction(audience: unknown): Promise<{ ok
   } catch (error) {
     unstable_rethrow(error);
     return { ok: false, message: "ตรวจผู้รับไม่สำเร็จ กรุณาโหลดหน้าใหม่และเลือกผู้รับอีกครั้ง", count: 0, fingerprint: "", labels: [] };
+  }
+}
+
+export async function deleteLineAnnouncementAction(id: string): Promise<AnnouncementResult> {
+  const user = await requireRoles(["ADMIN"]);
+  try {
+    const result = await deleteLineAnnouncement(id, user.id);
+    if (result.ok) revalidatePath(PATH);
+    return result;
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[deleteLineAnnouncementAction]", error);
+    return { ok: false, message: "ลบประกาศไม่สำเร็จ กรุณาลองใหม่" };
   }
 }

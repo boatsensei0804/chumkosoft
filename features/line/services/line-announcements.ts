@@ -47,6 +47,7 @@ export async function getLinkedLineRecipientCount(): Promise<number> {
 
 export async function listLineAnnouncements() {
   return prisma.lineAnnouncement.findMany({
+    where: { isDeleted: false },
     orderBy: { createdAt: "desc" },
     take: 20,
     select: {
@@ -67,8 +68,9 @@ export async function createAndSendLineAnnouncement(input: AnnouncementInput, ac
   }
   if (!isLineConfigured()) return { ok: false, message: "ยังไม่ได้ตั้งค่า LINE Channel access token บนเซิร์ฟเวอร์" };
 
-  const existing = await prisma.lineAnnouncement.findUnique({ where: { requestKey: input.requestKey }, select: { id: true, kind: true, title: true, body: true, batches: { select: { recipients: true } } } });
+  const existing = await prisma.lineAnnouncement.findUnique({ where: { requestKey: input.requestKey }, select: { id: true, kind: true, title: true, body: true, isDeleted: true, batches: { select: { recipients: true } } } });
   if (existing) {
+    if (existing.isDeleted) return { ok: false, message: "ประกาศนี้ถูกลบแล้ว ไม่สามารถส่งซ้ำได้" };
     const savedRecipients = existing.batches.flatMap((batch) => Array.isArray(batch.recipients) ? batch.recipients.filter((value): value is string => typeof value === "string") : []);
     if (recipientFingerprint(savedRecipients) !== input.expectedRecipientFingerprint) return { ok: false, message: "กลุ่มผู้รับไม่ตรงกับประกาศเดิม กรุณาตรวจรายการส่งก่อนสร้างใหม่" };
     if (existing.kind !== input.kind || existing.title !== title || existing.body !== body) {
@@ -106,10 +108,12 @@ export async function deliverLineAnnouncement(id: string, actorId: string): Prom
     where: { id },
     include: { batches: { orderBy: { batchNumber: "asc" } } },
   });
-  if (!announcement) return { ok: false, message: "ไม่พบประกาศนี้" };
+  if (!announcement || announcement.isDeleted) return { ok: false, message: "ไม่พบประกาศนี้หรือประกาศถูกลบแล้ว" };
   const card = announcementCard(announcement.kind, announcement.title, announcement.body);
   for (const batch of announcement.batches) {
     if (batch.status === "ACCEPTED") continue;
+    const current = await prisma.lineAnnouncement.findUnique({ where: { id }, select: { isDeleted: true } });
+    if (!current || current.isDeleted) return { ok: false, message: "ประกาศถูกลบแล้ว ไม่ส่งรายการที่เหลือต่อ" };
     const recipients = Array.isArray(batch.recipients) ? batch.recipients.filter((value): value is string => typeof value === "string") : [];
     const result = await sendLineMessageToUsers(recipients, card, batch.retryKey);
     await prisma.lineAnnouncementBatch.update({
@@ -130,4 +134,12 @@ export async function deliverLineAnnouncement(id: string, actorId: string): Prom
     remaining,
     message: remaining === 0 ? `LINE รับคำขอส่งถึง ${accepted} บัญชีแล้ว` : `LINE รับคำขอส่งแล้ว ${accepted} บัญชี ยังไม่สำเร็จ ${remaining} บัญชี ตรวจรายการและลองส่งต่อได้`,
   };
+}
+
+/** Hide the record while preserving request keys and delivery receipts against replay. */
+export async function deleteLineAnnouncement(id: string, actorId: string): Promise<AnnouncementResult> {
+  if (typeof id !== "string" || !id || id.length > 150) return { ok: false, message: "รหัสประกาศไม่ถูกต้อง" };
+  const changed = await prisma.lineAnnouncement.updateMany({ where: { id, isDeleted: false }, data: { isDeleted: true, deletedAt: new Date() } });
+  if (changed.count) await logAudit({ actorId, action: "line.announcement.delete", targetType: "lineAnnouncement", targetId: id });
+  return { ok: true, message: "ลบประกาศออกจากรายการแล้ว ข้อความที่ส่งไปใน LINE จะยังอยู่" };
 }

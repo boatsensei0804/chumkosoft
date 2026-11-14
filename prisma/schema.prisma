@@ -642,6 +642,8 @@ model LineAnnouncement {
   recipientCount Int
   createdById    String
   createdAt      DateTime             @default(now())
+  isDeleted      Boolean              @default(false)
+  deletedAt      DateTime?
   batches        LineAnnouncementBatch[]
 
   @@index([createdAt])
