@@ -1,3 +1,4 @@
+import RecordSections from "@/features/dashboard/components/record-sections";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -120,7 +121,7 @@ export default async function StudentDetailPage({ params }: StudentDetailPagePro
         <StatusChip status={s.status} />
       </section>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+      <RecordSections labels={["ข้อมูลตัวตน", "การเกิด การศึกษา และสุขภาพ", "ที่อยู่และการเดินทาง", "สถานภาพครอบครัว", "กลุ่มพิเศษ (DMC)", "บิดา มารดา และผู้ปกครอง"]}>
         <SectionCard title="ข้อมูลตัวตน" bodyClassName="p-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="ชื่อ-สกุล (อังกฤษ)" value={addressLine([s.firstNameEn, s.lastNameEn])} />
@@ -218,7 +219,7 @@ export default async function StudentDetailPage({ params }: StudentDetailPagePro
             <p className="px-5 py-8 text-center text-[13.5px] text-muted">ยังไม่มีข้อมูลผู้ปกครอง — เพิ่มได้ที่หน้าผู้ปกครอง & LINE</p>
           )}
         </SectionCard>
-      </div>
+      </RecordSections>
     </div>
   );
 }

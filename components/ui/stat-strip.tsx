@@ -22,7 +22,7 @@ const toneChip: Record<StatTone, string> = {
 
 const toneValue: Record<StatTone, string> = {
   default: "text-ink-strong",
-  brand: "text-ink-strong",
+  brand: "text-brand-ink",
   success: "text-ink-strong",
   warning: "text-[oklch(0.5_0.13_60)]",
   danger: "text-danger",
@@ -49,17 +49,17 @@ export default function StatStrip({ items, className }: { items: StatItem[]; cla
         const tone = item.tone ?? "default";
         const Icon = item.icon;
         return (
-          <div key={item.label} className="flex min-w-0 flex-col gap-2 rounded-[18px] border border-line bg-bg p-3.5 shadow-sm sm:p-4">
+          <div key={item.label} className="flex min-w-0 flex-col gap-2 relative overflow-hidden rounded-[22px] border border-blue-100 bg-white p-4 shadow-[0_5px_20px_#24568206] sm:p-5">
             <div className="flex items-center gap-2">
               {Icon && (
-                <span className={cn("grid size-6 shrink-0 place-items-center rounded-md", toneChip[tone])} aria-hidden="true">
-                  <Icon className="size-3.5" />
+                <span className={cn("grid size-9 shrink-0 place-items-center rounded-xl", toneChip[tone])} aria-hidden="true">
+                  <Icon className="size-4" />
                 </span>
               )}
               <p className="text-[12px] font-medium leading-snug text-muted">{item.label}</p>
             </div>
             <div className="flex flex-wrap items-baseline gap-1.5">
-              <span className={cn("tabular text-[21px] font-semibold leading-none tracking-tight", toneValue[tone])}>{formatValue(item.value)}</span>
+              <span className={cn("tabular text-[30px] font-bold leading-none tracking-tight", toneValue[tone])}>{formatValue(item.value)}</span>
               {item.hint && <span className="text-[11.5px] font-medium text-faint">{item.hint}</span>}
             </div>
           </div>

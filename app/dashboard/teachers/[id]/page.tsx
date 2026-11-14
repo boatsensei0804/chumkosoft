@@ -1,3 +1,4 @@
+import RecordSections from "@/features/dashboard/components/record-sections";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -87,7 +88,7 @@ export default async function TeacherDetailPage({ params }: TeacherDetailPagePro
         </span>
       </section>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+      <RecordSections labels={["ข้อมูลส่วนบุคคล", "ข้อมูลราชการและใบประกอบวิชาชีพ", "วุฒิการศึกษา", "วิชาที่สอน (ภาคเรียนปัจจุบัน)"]}>
         <SectionCard title="ข้อมูลส่วนบุคคล" bodyClassName="p-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="วัน/เดือน/ปีเกิด" value={formatThaiDate(s.birthDate)} />
@@ -147,7 +148,7 @@ export default async function TeacherDetailPage({ params }: TeacherDetailPagePro
             <p className="px-5 py-8 text-center text-[13.5px] text-muted">ยังไม่มีวิชาที่สอนในภาคเรียนปัจจุบัน</p>
           )}
         </SectionCard>
-      </div>
+      </RecordSections>
     </div>
   );
 }

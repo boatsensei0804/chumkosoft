@@ -1,3 +1,4 @@
+import LineWorkspace from "@/features/line/components/line-workspace";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { UsersRound, CircleCheck, Clock, CircleMinus } from "lucide-react";
@@ -51,8 +52,10 @@ export default async function LinePage({ searchParams }: LinePageProps): Promise
         ]}
       />
       <p className="mb-5 text-xs text-muted">ตัวเลขด้านบนนับนักเรียนคนละ 1 ครั้งตามห้องและคำค้นที่เลือก แม้นักเรียนจะมีผู้ปกครองเชื่อม LINE หลายบัญชี</p>
-      <LineClassroomOverview rooms={roomStats} selectedId={classroomId} />
-      <LineManager page={result} query={query} configured={isLineConfigured()} classrooms={classrooms} classroomId={classroomId} filter={filter} />
+      <LineWorkspace key={`${classroomId}:${query}:${filter}:${result.page}`} initialView={classroomId || query || filter !== "all" || params.page ? "accounts" : "overview"}
+        overview={<LineClassroomOverview rooms={roomStats} selectedId={classroomId} />}
+        accounts={<LineManager page={result} query={query} configured={isLineConfigured()} classrooms={classrooms} classroomId={classroomId} filter={filter} />}
+      />
     </>
   );
 }

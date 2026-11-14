@@ -1,3 +1,5 @@
+import DailySchoolOverview from "@/features/dashboard/components/daily-school-overview";
+import { getDailyRollCallOverview } from "@/features/attendance/services/daily-roll-call-service";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
@@ -37,6 +39,8 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
     getEnrolmentTrend(),
     listAnnouncements(5),
   ]);
+  const date = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(now);
+  const rooms = await getDailyRollCallOverview(date, user.role === "ADMIN" ? null : user.staffId ?? "__no_staff__");
   const greeting = user.firstName ? `${thaiGreeting(now)} คุณ${user.firstName}` : thaiGreeting(now);
   return (
     <>
@@ -47,7 +51,8 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
           term={termLabel}
           date={formatThaiWeekdayLong(now)}
         />
-        <SummaryFigures figures={figures} />
+        <DailySchoolOverview rooms={rooms ?? []} date={date} scoped={user.role !== "ADMIN"} />
+        <div className="mt-2"><h2 className="mb-3 text-lg font-bold text-ink-strong">ข้อมูลทะเบียนของโรงเรียน</h2><SummaryFigures figures={figures} /></div>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.65fr_1fr]">
           <div className="flex flex-col gap-5">
