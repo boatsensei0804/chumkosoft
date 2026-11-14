@@ -1,6 +1,6 @@
 import "server-only";
 
-import { leaveCard, leaveBubble } from "@/features/leave/leave-card";
+import { leaveCard, leaveBubble, type LeaveCardState } from "@/features/leave/leave-card";
 import prisma from "@/lib/prisma";
 import { replyLineMessage, replyText, type LineQuickReplyAction } from "@/lib/line";
 import { handleLeaveLineMessage } from "@/features/leave/services/line-leave-service";
@@ -30,9 +30,9 @@ function dateButton(label: string, data: string, min: string, max: string, initi
   return { type: "action", action: { type: "datetimepicker", label, data, mode: "date", min, max, initial } };
 }
 
-async function choices(replyToken: string, message: string, items: Button[]): Promise<boolean> {
+async function choices(replyToken: string, message: string, items: Button[], state: LeaveCardState = "menu"): Promise<boolean> {
   const [title, ...lines] = message.split("\n");
-  return replyLineMessage(replyToken, leaveCard(title, lines.join("\n") || "เลือกจากปุ่มด้านล่าง", items.map((item) => item.action)));
+  return replyLineMessage(replyToken, leaveCard(title, lines.join("\n") || "เลือกจากปุ่มด้านล่าง", items.map((item) => item.action), "brand", state));
 }
 
 function iso(date: Date): string { return date.toISOString().slice(0, 10); }
@@ -76,7 +76,7 @@ async function chooseKind(replyToken: string, student: { id: string; firstName: 
   return choices(replyToken, `แจ้งลาของ ${student.firstName} ${student.lastName}\n1/4 เลือกประเภทการลา`, [
     button("ลาป่วย", `leave|kind|${student.id}|SICK`), button("ลากิจ", `leave|kind|${student.id}|PERSONAL`),
     button("เปลี่ยนนักเรียน", "leave|start"), button("ดูคำขอล่าสุด", "leave|history"), button("ยกเลิก", "leave|cancel"),
-  ]);
+  ], "kind");
 }
 
 export async function showLineLeaveHistory(lineUserId: string, replyToken: string): Promise<boolean> {
@@ -88,8 +88,8 @@ export async function showLineLeaveHistory(lineUserId: string, replyToken: strin
     orderBy: { createdAt: "desc" }, take: 5,
   });
   const labels = { PENDING: "รอครูอนุมัติ", APPROVED: "อนุมัติแล้ว", REJECTED: "ไม่อนุมัติ" };
-  if (!rows.length) return choices(replyToken, "คำขอลาของคุณ\nยังไม่มีคำขอลาที่คุณส่งสำหรับนักเรียนที่ผูกกับ LINE นี้", [button("แจ้งลาใหม่", "leave|start")]);
-  return replyLineMessage(replyToken, { type: "flex", altText: "สถานะคำขอล่าสุดของคุณ · รออนุมัติ/ผลพิจารณาจากครู", contents: { type: "carousel", contents: rows.map((row) => leaveBubble(labels[row.status], `${row.student.firstName} ${row.student.lastName}\n${row.kind === "SICK" ? "ลาป่วย" : "ลากิจ"} ${thai(iso(row.startDate))}${iso(row.startDate) === iso(row.endDate) ? "" : ` ถึง ${thai(iso(row.endDate))}`}${row.reviewNote ? `\nหมายเหตุ: ${row.reviewNote}` : ""}`, [button("แจ้งลาใหม่", "leave|start").action], row.status === "APPROVED" ? "success" : row.status === "REJECTED" ? "danger" : "brand")) } });
+  if (!rows.length) return choices(replyToken, "คำขอลาของคุณ\nยังไม่มีคำขอลาที่คุณส่งสำหรับนักเรียนที่ผูกกับ LINE นี้", [button("แจ้งลาใหม่", "leave|start")], "empty");
+  return replyLineMessage(replyToken, { type: "flex", altText: "สถานะคำขอล่าสุดของคุณ · รออนุมัติ/ผลพิจารณาจากครู", contents: { type: "carousel", contents: rows.map((row) => leaveBubble(labels[row.status], `${row.student.firstName} ${row.student.lastName}\n${row.kind === "SICK" ? "ลาป่วย" : "ลากิจ"} ${thai(iso(row.startDate))}${iso(row.startDate) === iso(row.endDate) ? "" : ` ถึง ${thai(iso(row.endDate))}`}${row.reviewNote ? `\nหมายเหตุ: ${row.reviewNote}` : ""}`, [button("แจ้งลาใหม่", "leave|start").action], row.status === "APPROVED" ? "success" : row.status === "REJECTED" ? "danger" : "brand", row.status === "APPROVED" ? "approved" : row.status === "REJECTED" ? "rejected" : "pending")) } });
 }
 
 export async function startLineLeaveChoices(lineUserId: string, replyToken: string, page = 0): Promise<boolean> {
@@ -100,7 +100,7 @@ export async function startLineLeaveChoices(lineUserId: string, replyToken: stri
   const lastPage = Math.max(0, Math.ceil(students.length / PAGE_SIZE) - 1);
   const current = Math.max(0, Math.min(lastPage, page));
   const pageStudents = students.slice(current * PAGE_SIZE, (current + 1) * PAGE_SIZE);
-  const bubbles = pageStudents.map((student) => leaveBubble("เลือกนักเรียน", `${student.firstName} ${student.lastName}\nรหัส ${student.studentCode}\nห้อง ${student.enrollments?.[0]?.classroom.code ?? "—"}\n\nตรวจชื่อให้ตรงกับลูกที่ต้องการแจ้งลา`, [button("แจ้งลาของนักเรียนคนนี้", `leave|student|${student.id}`).action]));
+  const bubbles = pageStudents.map((student) => leaveBubble("เลือกนักเรียน", `${student.firstName} ${student.lastName}\nรหัส ${student.studentCode}\nห้อง ${student.enrollments?.[0]?.classroom.code ?? "—"}\n\nตรวจชื่อให้ตรงกับลูกที่ต้องการแจ้งลา`, [button("แจ้งลาของนักเรียนคนนี้", `leave|student|${student.id}`).action], "brand", "student"));
   const navigation: Button[] = [];
   if (current > 0) navigation.push(button("ก่อนหน้า", `leave|page|${current - 1}`));
   if (current < lastPage) navigation.push(button("ถัดไป", `leave|page|${current + 1}`));
@@ -114,7 +114,7 @@ async function reasons(replyToken: string, studentId: string, kind: Kind, start:
   items.push(button("เปลี่ยน/เพิ่มวันลา", `leave|date|${studentId}|${kind}|${start}`));
   items.push(button("เปลี่ยนประเภทลา", `leave|student|${studentId}`));
   items.push(button("ยกเลิก", "leave|cancel"));
-  return choices(replyToken, `3/4 เลือกเหตุผล${kind === "SICK" ? "ลาป่วย" : "ลากิจ"} วันที่ ${thai(start)}${start === end ? "" : ` ถึง ${thai(end)}`}`, items);
+  return choices(replyToken, `3/4 เลือกเหตุผล${kind === "SICK" ? "ลาป่วย" : "ลากิจ"} วันที่ ${thai(start)}${start === end ? "" : ` ถึง ${thai(end)}`}`, items, "reason");
 }
 
 /** The rich-menu button may send the text "แจ้งลา" or postback data "leave|start". */
@@ -145,7 +145,7 @@ export async function handleLeavePostback(lineUserId: string, data: string, date
     if (tomorrow >= min && tomorrow <= max) items.push(button("ลาพรุ่งนี้", `leave|quick|${student.id}|${kind}|${tomorrow}`));
     items.push(dateButton("เลือกวันอื่น/หลายวัน", `leave|date|${student.id}|${kind}`, min, max, initial));
     items.push(button("ย้อนกลับ", `leave|student|${student.id}`), button("ยกเลิก", "leave|cancel"));
-    await choices(replyToken, `2/4 เลือกวัน${kind === "SICK" ? "ลาป่วย" : "ลากิจ"}ของ ${student.firstName}\nวันนี้/พรุ่งนี้เป็นการลา 1 วัน สามารถแก้ช่วงวันก่อนส่งได้`, items);
+    await choices(replyToken, `2/4 เลือกวัน${kind === "SICK" ? "ลาป่วย" : "ลากิจ"}ของ ${student.firstName}\nวันนี้/พรุ่งนี้เป็นการลา 1 วัน สามารถแก้ช่วงวันก่อนส่งได้`, items, "date");
     return true;
   }
   const start = step === "date" ? date ?? parts[4] : parts[4];
@@ -155,13 +155,13 @@ export async function handleLeavePostback(lineUserId: string, data: string, date
       button("วันเดียว", `leave|one|${student.id}|${kind}|${start}`),
       button("หลายวัน", `leave|range|${student.id}|${kind}|${start}`),
       button("เปลี่ยนวันเริ่ม", `leave|kind|${student.id}|${kind}`), button("ยกเลิก", "leave|cancel"),
-    ]); return true;
+    ], "date"); return true;
   }
   if (step === "quick") { await reasons(replyToken, student.id, kind, start, start); return true; }
   if (step === "one") { await reasons(replyToken, student.id, kind, start, start); return true; }
   if (step === "range") {
     const endLimit = iso(new Date(Math.min(term.endDate.getTime(), parseIso(start)!.getTime() + 30 * 86_400_000)));
-    await choices(replyToken, `เริ่มลา ${thai(start)}\nเลือกวันสุดท้าย (ไม่เกิน 31 วัน)`, [dateButton("เลือกวันสุดท้าย", `leave|end|${student.id}|${kind}|${start}`, start, endLimit, start), button("ย้อนกลับ", `leave|date|${student.id}|${kind}|${start}`), button("ยกเลิก", "leave|cancel")]);
+    await choices(replyToken, `เริ่มลา ${thai(start)}\nเลือกวันสุดท้าย (ไม่เกิน 31 วัน)`, [dateButton("เลือกวันสุดท้าย", `leave|end|${student.id}|${kind}|${start}`, start, endLimit, start), button("ย้อนกลับ", `leave|date|${student.id}|${kind}|${start}`), button("ยกเลิก", "leave|cancel")], "date");
     return true;
   }
   const end = step === "end" ? date ?? parts[5] : parts[5];
@@ -176,7 +176,7 @@ export async function handleLeavePostback(lineUserId: string, data: string, date
       button("ยืนยันส่งคำขอ", `leave|confirm|${student.id}|${kind}|${start}|${end}|${reason.code}`),
       button("แก้เหตุผล", `leave|reasons|${student.id}|${kind}|${start}|${end}`),
       button("แก้วันที่", `leave|kind|${student.id}|${kind}`), button("เปลี่ยนนักเรียน", "leave|start"), button("ยกเลิก", "leave|cancel"),
-    ]); return true;
+    ], "review"); return true;
   }
   if (step === "confirm") {
     const typed = `ลา ${student.studentCode} ${kind === "SICK" ? "ป่วย" : "กิจ"} ${start}${start === end ? "" : ` ถึง ${end}`} ${reason.text}`;

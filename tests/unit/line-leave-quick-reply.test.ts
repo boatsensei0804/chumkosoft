@@ -39,6 +39,7 @@ describe("LINE leave menu", () => {
     const message = mocks.replyLineMessage.mock.calls[0][1];
     expect(actionItems(message)[0].action.data).toBe("leave|student|student1");
     expect(cardText(message)).toContain("มะลิ");
+    expect(cardText(message)).toContain("/mascot/students.png");
   });
 
   it("walks through type, date, range, reason, confirmation and creates a pending request", async () => {
@@ -142,6 +143,7 @@ describe("LINE leave menu", () => {
     expect(message.type).toBe("flex");
     expect(message.contents.type).toBe("carousel");
     expect(message.contents.contents).toHaveLength(1);
+    expect(cardText(message)).toContain("/mascot/success.png");
     expect(cardText(message)).toContain("ChildTwo Family");
     expect(cardText(message)).toContain("อนุมัติแล้ว");
     expect(mocks.handleLeaveLineMessage).not.toHaveBeenCalled();

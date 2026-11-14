@@ -76,6 +76,7 @@ describe("LINE message delivery", () => {
     const payload = JSON.parse(options.body);
     expect(payload.messages[0].type).toBe("flex");
     expect(payload.messages[0].contents.header.backgroundColor).toBe("#B42332");
+    expect(payload.messages[0].contents.header.contents[1].url).toBe("https://chumkosoft.com/mascot/error.png");
   });
 
   it("delivers leave Flex cards through reply and parent push without altering actions", async () => {

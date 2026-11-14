@@ -69,7 +69,7 @@ export async function reviewLeaveRequest(id: string, decision: "APPROVED" | "REJ
   const statusText = decision === "APPROVED" ? "อนุมัติแล้ว" : "ไม่อนุมัติ";
   const dateLabel = (date: Date) => new Intl.DateTimeFormat("th-TH", { timeZone: "UTC", dateStyle: "medium" }).format(date);
   const reply = `คำขอลา ${student?.firstName ?? "นักเรียน"} ${student?.lastName ?? ""}: ${statusText}\n${dateLabel(request.startDate)}${request.startDate.getTime() === request.endDate.getTime() ? "" : ` ถึง ${dateLabel(request.endDate)}`}${note.trim() ? `\nหมายเหตุ: ${note.trim()}` : ""}`;
-  const sent = await pushLineMessage(request.parentLineUserId, leaveCard(statusText, reply, [{ type: "postback", label: "ดูคำขอล่าสุด", data: "leave|history", displayText: "ดูคำขอล่าสุด" }], decision === "APPROVED" ? "success" : "danger"));
+  const sent = await pushLineMessage(request.parentLineUserId, leaveCard(statusText, reply, [{ type: "postback", label: "ดูคำขอล่าสุด", data: "leave|history", displayText: "ดูคำขอล่าสุด" }], decision === "APPROVED" ? "success" : "danger", decision === "APPROVED" ? "approved" : "rejected"));
   return sent ? result : { ...result, message: `${result.message} แต่แจ้งผู้ปกครองทาง LINE ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อ` };
 }
 

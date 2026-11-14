@@ -104,7 +104,7 @@ export async function handleLeaveLineMessage(lineUserId: string, text: string, r
   await replyLineMessage(replyToken, leaveCard("รับคำขอลาแล้ว", `${student.firstName} ${student.lastName}\n${kind === "SICK" ? "ลาป่วย" : "ลากิจ"} ${thaiDate(startDate)}${startDate.getTime() === endDate.getTime() ? "" : ` ถึง ${thaiDate(endDate)}`}\nเหตุผล: ${reason}\n\nสถานะ: รอครูที่ปรึกษาอนุมัติ`, [
     { type: "postback", label: "ดูสถานะคำขอ", data: "leave|history", displayText: "ดูสถานะคำขอ" },
     { type: "postback", label: "แจ้งลาให้นักเรียนอีกคน", data: "leave|start", displayText: "แจ้งลาให้นักเรียนอีกคน" },
-  ]));
+  ], "brand", "pending"));
   await notifyAdvisorsOfLeaveRequest(request.id);
   return true;
 }

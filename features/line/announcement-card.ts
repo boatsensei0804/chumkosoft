@@ -35,10 +35,11 @@ export function announcementCard(kind: LineAnnouncementKind, title: string, body
       size: "mega",
       header: {
         type: "box" as const,
-        layout: "vertical" as const,
+        layout: "horizontal" as const,
+        spacing: "md",
         backgroundColor: accent,
         paddingAll: "18px",
-        contents: [{ type: "text" as const, text: label, color: "#FFFFFF", weight: "bold", size: "md" }],
+        contents: [{ type: "text" as const, text: label, color: "#FFFFFF", weight: "bold", size: "md", wrap: true, flex: 1 }, { type: "image" as const, url: `https://chumkosoft.com/mascot/${emergency ? "error" : "notify"}.png`, size: "60px", aspectRatio: "1:1", aspectMode: "fit" as const, flex: 0 }],
       },
       body: {
         type: "box" as const,
