@@ -39,7 +39,7 @@ export default function AppShell({ children, user, today }: AppShellProps): Reac
     <div className="relative min-h-dvh bg-[#f5f9fd]">
 
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-[var(--z-sticky)] hidden w-[256px] border-r border-line bg-bg lg:block">
+      <aside className="fixed inset-y-0 left-0 z-[var(--z-sticky)] hidden w-[256px] border-r border-line bg-bg xl:block">
         <SidebarContent user={user} />
       </aside>
 
@@ -54,7 +54,7 @@ export default function AppShell({ children, user, today }: AppShellProps): Reac
       </Sheet>
 
       {/* Content column */}
-      <div className="relative z-10 lg:pl-[256px]">
+      <div className="relative z-10 xl:pl-[256px]">
         <TopBar user={user} onOpenNav={() => setNavOpen(true)} today={today} onOpenPalette={() => setPaletteOpen(true)} />
         <main className="mx-auto max-w-[1480px] px-4 py-5 sm:px-6 sm:py-7 xl:px-8">{children}</main>
       </div>

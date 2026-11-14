@@ -11,6 +11,7 @@ export interface GuardianRow {
   monthlyIncome: number | null;
   bloodType: string | null;
   lineStatus: LineLinkStatus;
+  lineDisplayName: string | null;
   /** Pending one-time LINE link code, shown so staff can pass it to the guardian. */
   linkCode: string | null;
 }
@@ -22,5 +23,5 @@ export interface StudentGuardians {
   /** Active-term classroom code, or "—" when not enrolled. */
   classroom: string;
   guardians: GuardianRow[];
-  lineAccounts: { id: string; linked: boolean; linkCode: string | null }[];
+  lineAccounts: { id: string; linked: boolean; linkCode: string | null; lineDisplayName: string | null }[];
 }

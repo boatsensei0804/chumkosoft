@@ -12,6 +12,15 @@ function chunks(text: string): string[] {
   return parts;
 }
 
+function shortAltText(text: string): string {
+  let result = "";
+  for (const { segment } of new Intl.Segmenter("th", { granularity: "grapheme" }).segment(text)) {
+    if (result.length + segment.length > 400) break;
+    result += segment;
+  }
+  return result;
+}
+
 export function announcementCard(kind: LineAnnouncementKind, title: string, body: string) {
   const emergency = kind === "EMERGENCY";
   const accent = emergency ? "#B42332" : "#1164A9";
@@ -20,7 +29,7 @@ export function announcementCard(kind: LineAnnouncementKind, title: string, body
 
   return {
     type: "flex" as const,
-    altText: Array.from(fallback).slice(0, 400).join(""),
+    altText: shortAltText(fallback),
     contents: {
       type: "bubble" as const,
       size: "mega",

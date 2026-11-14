@@ -23,8 +23,8 @@ interface TopBarProps {
 
 export default function TopBar({ user, onOpenNav, today, onOpenPalette }: TopBarProps): React.ReactNode {
   return (
-    <header className="sticky top-0 z-[var(--z-sticky)] flex h-16 items-center gap-3 border-b border-line bg-bg px-4 lg:px-8">
-      <Button variant="ghost" size="icon" onClick={onOpenNav} aria-label="เปิดเมนู" className="lg:hidden">
+    <header className="sticky top-0 z-[var(--z-sticky)] flex h-16 items-center gap-3 border-b border-line bg-bg px-4 xl:px-8">
+      <Button variant="ghost" size="icon" onClick={onOpenNav} aria-label="เปิดเมนู" className="xl:hidden">
         <Menu className="size-5" />
       </Button>
 

@@ -2,10 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { addBehaviorPointsAction } from "@/features/behavior/actions";
+import { Pencil, Trash2 } from "lucide-react";
+import { addBehaviorPointsAction, updateBehaviorPointsAction, deleteBehaviorPointsAction } from "@/features/behavior/actions";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 interface StudentSummary { id: string; code: string; name: string; classroom: string; score: number }
-interface PointHistory { id: string; delta: number; source: "MANUAL" | "LATE_ENTRY"; title: string; note: string | null; actorName: string; createdAt: string }
+interface PointHistory { id: string; delta: number; source: "MANUAL" | "LATE_ENTRY"; title: string; note: string | null; actorName: string; createdAt: string; canManage: boolean }
 interface Data { term: { id: string; name: string } | null; students: StudentSummary[]; selectedStudent: StudentSummary | null; history: PointHistory[] }
 
 export default function BehaviorBrowser({ data }: { data: Data }): React.ReactNode {
@@ -17,17 +19,40 @@ export default function BehaviorBrowser({ data }: { data: Data }): React.ReactNo
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [message, setMessage] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<PointHistory | null>(null);
   const [pending, startTransition] = useTransition();
   const classrooms = [...new Set(data.students.map((student) => student.classroom))].sort();
   const visible = data.students.filter((student) => (!classroom || student.classroom === classroom) && `${student.code} ${student.name}`.toLowerCase().includes(query.trim().toLowerCase()));
 
   function save(): void {
     if (!data.selectedStudent || pending) return;
-    if (!window.confirm(`ยืนยัน${direction === "ADD" ? "เพิ่ม" : "หัก"} ${points} คะแนนให้ ${data.selectedStudent.name}\nหัวข้อ: ${title.trim()}`)) return;
+    if (!window.confirm(`${editingId ? "ยืนยันแก้ไขรายการ" : `ยืนยัน${direction === "ADD" ? "เพิ่ม" : "หัก"} ${points} คะแนน`}ให้ ${data.selectedStudent.name}\nหัวข้อ: ${title.trim()}`)) return;
     startTransition(async () => {
-      const result = await addBehaviorPointsAction({ studentId: data.selectedStudent!.id, direction, points: Number(points), title, note, requestId: crypto.randomUUID() });
+      const result = editingId
+        ? await updateBehaviorPointsAction({ id: editingId, direction, points: Number(points), title, note })
+        : await addBehaviorPointsAction({ studentId: data.selectedStudent!.id, direction, points: Number(points), title, note, requestId: crypto.randomUUID() });
       setMessage(result.message);
-      if (result.ok) { setTitle(""); setNote(""); router.refresh(); }
+      if (result.ok) { setTitle(""); setNote(""); setEditingId(null); router.refresh(); }
+    });
+  }
+
+  function edit(entry: PointHistory): void {
+    setEditingId(entry.id);
+    setDirection(entry.delta >= 0 ? "ADD" : "DEDUCT");
+    setPoints(String(Math.abs(entry.delta)));
+    setTitle(entry.title);
+    setNote(entry.note ?? "");
+    document.getElementById("behavior-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function confirmDelete(): void {
+    if (!deleting) return;
+    startTransition(async () => {
+      const result = await deleteBehaviorPointsAction(deleting.id);
+      setMessage(result.message);
+      setDeleting(null);
+      if (result.ok) { if (editingId === deleting.id) setEditingId(null); router.refresh(); }
     });
   }
 
@@ -53,20 +78,21 @@ export default function BehaviorBrowser({ data }: { data: Data }): React.ReactNo
             <p className="text-sm text-muted">{data.selectedStudent.classroom} · {data.selectedStudent.code}</p>
             <h2 className="mt-1 text-lg font-bold text-ink-strong">{data.selectedStudent.name}</h2>
             <p className="mt-2 text-3xl font-bold tabular text-brand-ink">{data.selectedStudent.score} <span className="text-sm font-medium text-muted">คะแนน</span></p>
-            <div className="mt-5 border-t border-line pt-5">
-              <h3 className="text-sm font-bold text-ink">เพิ่มหรือหักคะแนน</h3>
+            <div id="behavior-form" className="mt-5 scroll-mt-24 border-t border-line pt-5">
+              <h3 className="text-sm font-bold text-ink">{editingId ? "แก้ไขรายการคะแนน" : "เพิ่มหรือหักคะแนน"}</h3>
               <div className="mt-3 flex gap-2"><button type="button" aria-pressed={direction === "ADD"} onClick={() => setDirection("ADD")} className={`rounded-lg px-3 py-2 text-sm font-semibold ${direction === "ADD" ? "bg-success-soft text-success" : "border border-line text-muted"}`}>เพิ่มคะแนน</button><button type="button" aria-pressed={direction === "DEDUCT"} onClick={() => setDirection("DEDUCT")} className={`rounded-lg px-3 py-2 text-sm font-semibold ${direction === "DEDUCT" ? "bg-danger-soft text-danger" : "border border-line text-muted"}`}>หักคะแนน</button></div>
               <label className="mt-3 block text-sm font-semibold text-ink" htmlFor="behavior-points">จำนวนคะแนน</label><input id="behavior-points" type="number" min={1} max={100} step={1} value={points} onChange={(event) => setPoints(event.target.value)} className="mt-1 w-28 rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
               <label className="mt-3 block text-sm font-semibold text-ink" htmlFor="behavior-title">หัวข้อ/เหตุผล (จำเป็น)</label><input id="behavior-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} placeholder="เช่น ช่วยงานโรงเรียน" className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
               <label className="mt-3 block text-sm font-semibold text-ink" htmlFor="behavior-note">รายละเอียดเพิ่มเติม</label><textarea id="behavior-note" value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} rows={2} className="mt-1 w-full rounded-lg border border-line bg-surface p-3 text-sm" />
-              <button type="button" disabled={pending || title.trim().length < 3 || !Number.isInteger(Number(points)) || Number(points) < 1 || Number(points) > 100} onClick={save} className="mt-4 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{pending ? "กำลังบันทึก…" : `บันทึก${direction === "ADD" ? "เพิ่ม" : "หัก"}คะแนน`}</button>
+              <div className="mt-4 flex flex-wrap gap-2"><button type="button" disabled={pending || title.trim().length < 3 || !Number.isInteger(Number(points)) || Number(points) < 1 || Number(points) > 100} onClick={save} className="min-h-10 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{pending ? "กำลังบันทึก…" : editingId ? "บันทึกการแก้ไข" : `บันทึก${direction === "ADD" ? "เพิ่ม" : "หัก"}คะแนน`}</button>{editingId && <button type="button" disabled={pending} onClick={() => { setEditingId(null); setTitle(""); setNote(""); }} className="min-h-10 rounded-lg border border-line px-4 py-2 text-sm font-semibold text-ink">ยกเลิกการแก้ไข</button>}</div>
             </div>
             <div className="mt-6 border-t border-line pt-5"><h3 className="text-sm font-bold text-ink">ประวัติคะแนน</h3>
-              {data.history.length === 0 ? <p className="mt-3 text-sm text-muted">ยังไม่มีรายการ เริ่มที่ 100 คะแนน</p> : <div className="mt-3 divide-y divide-line">{data.history.map((entry) => <div key={entry.id} className="flex items-start justify-between gap-3 py-3"><div className="min-w-0"><p className="text-sm font-semibold text-ink">{entry.title}</p>{entry.note && <p className="text-xs text-muted">{entry.note}</p>}<p className="mt-1 text-xs text-muted">{entry.actorName} · {new Date(entry.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "medium", timeStyle: "short" })}</p></div><span className={`shrink-0 font-bold tabular ${entry.delta < 0 ? "text-danger" : entry.delta > 0 ? "text-success" : "text-muted"}`}>{entry.delta > 0 ? "+" : ""}{entry.delta}</span></div>)}</div>}
+              {data.history.length === 0 ? <p className="mt-3 text-sm text-muted">ยังไม่มีรายการ เริ่มที่ 100 คะแนน</p> : <div className="mt-3 divide-y divide-line">{data.history.map((entry) => <div key={entry.id} className="flex items-start justify-between gap-3 py-3"><div className="min-w-0"><p className="text-sm font-semibold text-ink">{entry.title}</p>{entry.note && <p className="text-xs text-muted">{entry.note}</p>}<p className="mt-1 text-xs text-muted">{entry.actorName} · {new Date(entry.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "medium", timeStyle: "short" })}</p>{entry.canManage && <div className="mt-2 flex flex-wrap gap-1"><button type="button" disabled={pending} onClick={() => edit(entry)} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-line px-2.5 text-xs font-semibold text-brand-ink"><Pencil className="size-3.5" /> แก้ไข</button><button type="button" disabled={pending} onClick={() => setDeleting(entry)} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-line px-2.5 text-xs font-semibold text-danger"><Trash2 className="size-3.5" /> ลบ</button></div>}</div><span className={`shrink-0 font-bold tabular ${entry.delta < 0 ? "text-danger" : entry.delta > 0 ? "text-success" : "text-muted"}`}>{entry.delta > 0 ? "+" : ""}{entry.delta}</span></div>)}</div>}
             </div>
           </>}
         </section>
       </div>
+      <ConfirmDialog open={deleting !== null} title="ลบรายการคะแนนที่บันทึกผิด" message={deleting ? `ยืนยันลบ “${deleting.title}” (${deleting.delta > 0 ? "+" : ""}${deleting.delta} คะแนน) ของ ${data.selectedStudent?.name ?? "นักเรียน"} ใช่ไหม? คะแนนรวมจะคำนวณใหม่ และระบบจะบันทึกประวัติการลบ` : ""} confirmLabel="ลบรายการ" destructive pending={pending} onConfirm={confirmDelete} onClose={() => setDeleting(null)} />
     </>}
   </div>;
 }

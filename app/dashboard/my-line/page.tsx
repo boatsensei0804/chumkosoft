@@ -16,14 +16,23 @@ export default async function MyLinePage(): Promise<React.ReactNode> {
     <div className="rounded-2xl border border-line bg-card p-6 text-sm text-ink">บัญชีครูนี้ยังไม่เชื่อมกับข้อมูลครูและบุคลากร กรุณาให้ผู้ดูแลระบบตรวจบัญชีของคุณ</div>
   </>;
 
-  const [line, setting, advisoryRooms] = await Promise.all([
+  const [line, setting, advisoryRooms, activeTerm] = await Promise.all([
     getAdvisorLine(user.staffId),
     prisma.advisorDigestSetting.findUnique({ where: { id: 1 }, select: { sendTime: true, oaAddFriendUrl: true } }),
     prisma.classroomAdvisor.findMany({
       where: { staffId: user.staffId, classroom: { isDeleted: false, academicYear: { isActive: true, isDeleted: false } } },
-      select: { classroom: { select: { code: true } } },
+      select: { classroomId: true, classroom: { select: { code: true } } },
+    }),
+    prisma.term.findFirst({
+      where: { isActive: true, isDeleted: false, academicYear: { isActive: true, isDeleted: false } },
+      select: { id: true },
     }),
   ]);
+  const classroomIds = advisoryRooms.map((room) => room.classroomId);
+  const [studentCount, pendingLeaveCount] = activeTerm && classroomIds.length > 0 ? await Promise.all([
+    prisma.enrollment.count({ where: { termId: activeTerm.id, classroomId: { in: classroomIds }, isDeleted: false, student: { isDeleted: false } } }),
+    prisma.leaveRequest.count({ where: { termId: activeTerm.id, classroomId: { in: classroomIds }, status: "PENDING" } }),
+  ]) : [0, 0];
   const friendUrl = setting?.oaAddFriendUrl ?? null;
   const friendQr = friendUrl ? await QRCode.toDataURL(friendUrl, { margin: 1, width: 184 }) : null;
 
@@ -36,6 +45,9 @@ export default async function MyLinePage(): Promise<React.ReactNode> {
       friendQr={friendQr}
       advisoryRooms={advisoryRooms.map((room) => room.classroom.code)}
       sendTime={setting?.sendTime ?? "09:00"}
+      studentCount={studentCount}
+      pendingLeaveCount={pendingLeaveCount}
+      hasActiveTerm={Boolean(activeTerm)}
     />
   </>;
 }

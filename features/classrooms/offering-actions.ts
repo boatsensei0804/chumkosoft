@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireRoles } from "@/lib/dal";
 import { STAFF_ROLES } from "@/features/auth/roles";
 import { offeringSchema } from "@/features/classrooms/schemas/offering-schema";
-import { addOfferingRecord, deleteOfferingRecord, getOfferingClassroomId } from "@/features/classrooms/services/classroom-service";
+import { addOfferingRecord, updateOfferingRecord, deleteOfferingRecord, getOfferingClassroomId } from "@/features/classrooms/services/classroom-service";
 import { fieldErrorsFromZod } from "@/utils/zod";
 import { runAction } from "@/lib/action-error";
 import type { ActionResult } from "@/types/form";
@@ -49,6 +49,27 @@ export async function deleteOfferingAction(id: string): Promise<ActionResult> {
     const classroomId = await getOfferingClassroomId(id);
     const result = await deleteOfferingRecord(id);
     if (result.ok && classroomId) {
+      revalidatePath(`/dashboard/classrooms/${classroomId}`);
+      revalidatePath("/dashboard/timetable");
+    }
+    return result;
+  });
+}
+
+export async function updateOfferingAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    await requireRoles(STAFF_ROLES);
+    const id = toText(formData.get("offeringId"));
+    const classroomId = await getOfferingClassroomId(id);
+    if (!classroomId) return { ok: false, message: "ไม่พบรายวิชาของห้อง" };
+    const periodsRaw = toText(formData.get("periodsPerWeek"));
+    const parsed = offeringSchema.safeParse({
+      courseId: formData.get("courseId"), teacherId: formData.get("teacherId"), roomId: formData.get("roomId"),
+      periodsPerWeek: periodsRaw === "" ? NaN : Number(periodsRaw),
+    });
+    if (!parsed.success) return { ok: false, message: "กรุณาตรวจสอบข้อมูล", fieldErrors: fieldErrorsFromZod(parsed.error) };
+    const result = await updateOfferingRecord(id, parsed.data);
+    if (result.ok) {
       revalidatePath(`/dashboard/classrooms/${classroomId}`);
       revalidatePath("/dashboard/timetable");
     }

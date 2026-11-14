@@ -15,6 +15,11 @@ export async function createStudentLinkCode(studentId: string, code: string): Pr
   await prisma.studentLineAccount.create({ data: { studentId, lineLinkCode: code } });
 }
 
+export async function removeStudentLineAccount(id: string): Promise<boolean> {
+  const result = await prisma.studentLineAccount.deleteMany({ where: { id, student: { isDeleted: false } } });
+  return result.count > 0;
+}
+
 export async function lineCodeExists(code: string): Promise<boolean> {
   const [guardian, studentAccount, staff] = await Promise.all([
     prisma.guardian.findFirst({ where: { lineLinkCode: code }, select: { id: true } }),
@@ -30,6 +35,14 @@ export async function getAdvisorLine(staffId: string) {
 
 export async function setAdvisorLinkCode(staffId: string, code: string): Promise<void> {
   await prisma.staff.update({ where: { id: staffId }, data: { lineLinkCode: code } });
+}
+
+export async function clearAdvisorLine(staffId: string): Promise<void> {
+  await prisma.staff.update({ where: { id: staffId }, data: { lineUserId: null, lineLinkCode: null } });
+}
+
+export async function otherStaffLinkedToLine(staffId: string, lineUserId: string): Promise<boolean> {
+  return (await prisma.staff.count({ where: { id: { not: staffId }, isDeleted: false, lineUserId } })) > 0;
 }
 
 export async function findAdvisorByLinkCode(code: string) {

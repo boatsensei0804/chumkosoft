@@ -143,7 +143,11 @@ export async function findOfferings(classroomId: string, termId: string) {
     orderBy: { course: { code: "asc" } },
     select: {
       id: true,
+      courseId: true,
+      teacherId: true,
+      roomId: true,
       periodsPerWeek: true,
+      timetableSlots: { where: { isDeleted: false }, select: { id: true } },
       course: { select: { code: true, name: true } },
       teacher: { select: { prefix: true, firstName: true, lastName: true } },
       room: { select: { code: true, name: true } },
@@ -178,9 +182,9 @@ export async function termInYear(termId: string, academicYearId: string): Promis
   return term !== null;
 }
 
-export async function offeringExists(termId: string, courseId: string, classroomId: string): Promise<boolean> {
+export async function offeringExists(termId: string, courseId: string, classroomId: string, exceptId?: string): Promise<boolean> {
   const row = await prisma.courseOffering.findFirst({
-    where: { termId, courseId, classroomId, isDeleted: false },
+    where: { termId, courseId, classroomId, isDeleted: false, ...(exceptId ? { id: { not: exceptId } } : {}) },
     select: { id: true },
   });
   return row !== null;
@@ -194,11 +198,37 @@ export async function createOffering(data: {
   roomId: string;
   periodsPerWeek: number;
 }): Promise<{ id: string }> {
-  return prisma.courseOffering.create({ data, select: { id: true } });
+  // A previously removed offering still occupies the unique course/term/class key.
+  // Restore it so staff can assign the same subject again without a unique error.
+  return prisma.courseOffering.upsert({
+    where: { termId_courseId_classroomId: { termId: data.termId, courseId: data.courseId, classroomId: data.classroomId } },
+    create: data,
+    update: { teacherId: data.teacherId, roomId: data.roomId, periodsPerWeek: data.periodsPerWeek, isDeleted: false, deletedAt: null },
+    select: { id: true },
+  });
+}
+
+export async function offeringKeyTaken(termId: string, courseId: string, classroomId: string, exceptId: string): Promise<boolean> {
+  const row = await prisma.courseOffering.findFirst({
+    where: { termId, courseId, classroomId, id: { not: exceptId } },
+    select: { id: true },
+  });
+  return row !== null;
 }
 
 export async function getOfferingRef(id: string) {
   return prisma.courseOffering.findFirst({ where: { id, isDeleted: false }, select: { id: true, classroomId: true } });
+}
+
+export async function getOfferingForEdit(id: string) {
+  return prisma.courseOffering.findFirst({
+    where: { id, isDeleted: false },
+    select: { id: true, termId: true, classroomId: true, courseId: true, teacherId: true, roomId: true, timetableSlots: { where: { isDeleted: false }, select: { id: true } } },
+  });
+}
+
+export async function updateOffering(id: string, input: { courseId: string; teacherId: string; roomId: string; periodsPerWeek: number }): Promise<void> {
+  await prisma.courseOffering.update({ where: { id }, data: input });
 }
 
 /** A subject already scheduled in the timetable cannot be removed from the class. */

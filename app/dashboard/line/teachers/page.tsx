@@ -4,6 +4,7 @@ import PageHeader from "@/features/dashboard/components/page-header";
 import AdvisorLineOverview from "@/features/line/components/advisor-line-overview";
 import { requireRoles } from "@/lib/dal";
 import prisma from "@/lib/prisma";
+import { getLineDisplayNames } from "@/features/line/services/line-profiles";
 
 export const metadata: Metadata = { title: "สถานะ LINE ครู · chumkosoft" };
 export const dynamic = "force-dynamic";
@@ -23,11 +24,13 @@ export default async function TeacherLineStatusPage(): Promise<React.ReactNode> 
     },
     orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
   });
+  const lineNames = await getLineDisplayNames(staff.flatMap((person) => person.lineUserId ? [person.lineUserId] : []));
   const rows = staff.map((person) => ({
     id: person.id,
     name: `${person.prefix ?? ""}${person.firstName} ${person.lastName}`,
     staffCode: person.staffCode,
     code: person.lineLinkCode,
+    lineDisplayName: person.lineUserId ? lineNames.get(person.lineUserId) ?? `บัญชี LINE •••${person.lineUserId.slice(-6)}` : null,
     type: person.type,
     classrooms: person.advisories.map((entry) => entry.classroom.code),
     status: person.lineUserId ? "CONNECTED" as const :

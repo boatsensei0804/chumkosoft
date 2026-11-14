@@ -3,12 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { requireRoles } from "@/lib/dal";
 import { STAFF_ROLES } from "@/features/auth/roles";
-import { generateLinkCode, generateStudentLinkCode, prepareClassroomLinkCodes, unlinkGuardianLine } from "@/features/line/services/line-service";
+import { generateLinkCode, generateStudentLinkCode, prepareClassroomLinkCodes, unlinkGuardianLine, removeStudentLineAccount } from "@/features/line/services/line-service";
 import { listGuardianClassrooms } from "@/features/guardians/services/guardian-service";
 import { runAction } from "@/lib/action-error";
 import type { ActionResult } from "@/types/form";
+import { logAudit } from "@/lib/audit";
 
-const LINE_PATH = "/dashboard/guardians";
+function revalidateLinePages(): void {
+  revalidatePath("/dashboard/line");
+  revalidatePath("/dashboard/guardians");
+}
 
 export async function prepareClassroomLinkCodesAction(classroomId: string): Promise<ActionResult & { created?: number }> {
   try {
@@ -52,7 +56,7 @@ export async function generateLinkCodeAction(guardianId: string): Promise<Action
   try {
     await requireRoles(STAFF_ROLES);
     const result = await generateLinkCode(guardianId);
-    if (result.ok) revalidatePath(LINE_PATH);
+    if (result.ok) revalidateLinePages();
     return result;
   } catch (error) {
     const { unstable_rethrow } = await import("next/navigation");
@@ -66,7 +70,7 @@ export async function generateStudentLinkCodeAction(studentId: string): Promise<
   try {
     await requireRoles(STAFF_ROLES);
     const result = await generateStudentLinkCode(studentId);
-    if (result.ok) revalidatePath(LINE_PATH);
+    if (result.ok) revalidateLinePages();
     return result;
   } catch (error) {
     const { unstable_rethrow } = await import("next/navigation");
@@ -78,9 +82,24 @@ export async function generateStudentLinkCodeAction(studentId: string): Promise<
 
 export async function unlinkGuardianAction(guardianId: string): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(STAFF_ROLES);
+    const user = await requireRoles(STAFF_ROLES);
     const result = await unlinkGuardianLine(guardianId);
-    if (result.ok) revalidatePath(LINE_PATH);
+    if (result.ok) {
+      await logAudit({ actorId: user.id, action: "line.guardian.unlink", targetType: "guardian", targetId: guardianId });
+      revalidateLinePages();
+    }
+    return result;
+  });
+}
+
+export async function removeStudentLineAccountAction(id: string): Promise<ActionResult> {
+  return runAction(async () => {
+    const user = await requireRoles(STAFF_ROLES);
+    const result = await removeStudentLineAccount(id);
+    if (result.ok) {
+      await logAudit({ actorId: user.id, action: "line.student_account.remove", targetType: "studentLineAccount", targetId: id });
+      revalidateLinePages();
+    }
     return result;
   });
 }

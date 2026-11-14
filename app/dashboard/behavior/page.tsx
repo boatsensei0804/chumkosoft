@@ -8,11 +8,11 @@ export const metadata: Metadata = { title: "คะแนนความประ
 export const dynamic = "force-dynamic";
 
 export default async function BehaviorPage({ searchParams }: { searchParams: Promise<{ student?: string }> }): Promise<React.ReactNode> {
-  await requireRoles(["ADMIN", "TEACHER"]);
+  const user = await requireRoles(["ADMIN", "TEACHER"]);
   const params = await searchParams;
-  const data = await getBehaviorOverview(params.student);
+  const data = await getBehaviorOverview(params.student, user);
   return <>
     <PageHeader title="คะแนนความประพฤติ" subtitle="เริ่มต้น 100 คะแนนต่อภาคเรียน มาสายเข้าโรงเรียนหัก 10 คะแนน และครูสามารถเพิ่มหรือหักพร้อมหัวข้อ" />
-    <BehaviorBrowser data={data} />
+    <BehaviorBrowser key={data.selectedStudent?.id ?? "none"} data={data} />
   </>;
 }

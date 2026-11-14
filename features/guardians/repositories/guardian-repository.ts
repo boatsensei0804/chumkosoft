@@ -4,16 +4,40 @@ import type { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import type { GuardianInput } from "@/features/guardians/schemas/guardian-schema";
 
+export type StudentLineFilter = "linked" | "pending" | "unprepared";
+
+const linkedLine: Prisma.StudentWhereInput = {
+  OR: [
+    { guardians: { some: { isDeleted: false, lineUserId: { not: null } } } },
+    { lineAccounts: { some: { lineUserId: { not: null } } } },
+  ],
+};
+const pendingLineCode: Prisma.StudentWhereInput = {
+  OR: [
+    { guardians: { some: { isDeleted: false, lineUserId: null, lineLinkCode: { not: null } } } },
+    { lineAccounts: { some: { lineUserId: null, lineLinkCode: { not: null } } } },
+  ],
+};
+
+function withLineFilter(student: Prisma.StudentWhereInput, filter?: StudentLineFilter): Prisma.StudentWhereInput {
+  if (filter === "linked") return { AND: [student, linkedLine] };
+  if (filter === "pending") return { AND: [student, { NOT: linkedLine }, pendingLineCode] };
+  if (filter === "unprepared") return { AND: [student, { NOT: linkedLine }, { NOT: pendingLineCode }] };
+  return student;
+}
+
 async function activeTermId(): Promise<string | undefined> {
-  const term = await prisma.term.findFirst({ where: { isActive: true, isDeleted: false }, select: { id: true } });
+  const term = await prisma.term.findFirst({ where: { isActive: true, isDeleted: false, academicYear: { isActive: true, isDeleted: false } }, select: { id: true } });
   return term?.id;
 }
 
-function studentWhere(search: string, classroomId: string | undefined, termId: string | undefined): Prisma.StudentWhereInput {
+function studentWhere(search: string, classroomId: string | undefined, termId: string | undefined, currentTermOnly = false): Prisma.StudentWhereInput {
   const q = search.trim();
   return {
     isDeleted: false,
+    ...(currentTermOnly && !termId ? { id: "__no_active_term__" } : {}),
     ...(classroomId ? { enrollments: { some: { classroomId, isDeleted: false, ...(termId ? { termId } : {}) } } } : {}),
+    ...(currentTermOnly && !classroomId && termId ? { enrollments: { some: { termId, isDeleted: false } } } : {}),
     ...(q
       ? {
           OR: [
@@ -38,10 +62,10 @@ export async function listGuardianClassrooms() {
 }
 
 /** Students (paged) with their guardians — includes students with none yet. */
-export async function findStudentsWithGuardians(params: { skip: number; take: number; search: string; classroomId?: string }) {
+export async function findStudentsWithGuardians(params: { skip: number; take: number; search: string; classroomId?: string; lineFilter?: StudentLineFilter; currentTermOnly?: boolean }) {
   const termId = await activeTermId();
   return prisma.student.findMany({
-    where: studentWhere(params.search, params.classroomId, termId),
+    where: withLineFilter(studentWhere(params.search, params.classroomId, termId, params.currentTermOnly), params.lineFilter),
     orderBy: { studentCode: "asc" },
     skip: params.skip,
     take: params.take,
@@ -79,9 +103,9 @@ export async function findStudentsWithGuardians(params: { skip: number; take: nu
   });
 }
 
-export async function countStudentsWithGuardians(search: string, classroomId?: string): Promise<number> {
+export async function countStudentsWithGuardians(search: string, classroomId?: string, lineFilter?: StudentLineFilter, currentTermOnly = false): Promise<number> {
   const termId = await activeTermId();
-  return prisma.student.count({ where: studentWhere(search, classroomId, termId) });
+  return prisma.student.count({ where: withLineFilter(studentWhere(search, classroomId, termId, currentTermOnly), lineFilter) });
 }
 
 /** Students (in scope) that have at least one guardian on record. */
@@ -99,6 +123,44 @@ export async function countGuardiansByLine(search: string, classroomId?: string)
     prisma.guardian.count({ where: { isDeleted: false, lineUserId: null, lineLinkCode: { not: null }, student } }),
   ]);
   return { linked, pending };
+}
+
+/** Count students once, regardless of how many guardian/LINE records they have. */
+export async function countStudentsByLine(search: string, classroomId?: string, currentTermOnly = false): Promise<{ total: number; linked: number; pending: number }> {
+  const termId = await activeTermId();
+  const student = studentWhere(search, classroomId, termId, currentTermOnly);
+  const [total, linkedCount, pending] = await Promise.all([
+    prisma.student.count({ where: student }),
+    prisma.student.count({ where: withLineFilter(student, "linked") }),
+    prisma.student.count({ where: withLineFilter(student, "pending") }),
+  ]);
+  return { total, linked: linkedCount, pending };
+}
+
+export async function listClassroomLineStats(): Promise<{ id: string; code: string; total: number; linked: number; pending: number; unprepared: number }[]> {
+  const [classrooms, termId] = await Promise.all([listGuardianClassrooms(), activeTermId()]);
+  const stats = new Map(classrooms.map((room) => [room.id, { id: room.id, code: room.code, total: 0, linked: 0, pending: 0, unprepared: 0 }]));
+  if (!termId || classrooms.length === 0) return [...stats.values()];
+  const enrollments = await prisma.enrollment.findMany({
+    where: { termId, isDeleted: false, classroomId: { in: classrooms.map((room) => room.id) }, student: { isDeleted: false } },
+    select: {
+      classroomId: true,
+      student: { select: {
+        guardians: { where: { isDeleted: false }, select: { lineUserId: true, lineLinkCode: true } },
+        lineAccounts: { select: { lineUserId: true, lineLinkCode: true } },
+      } },
+    },
+  });
+  for (const enrollment of enrollments) {
+    const room = stats.get(enrollment.classroomId);
+    if (!room) continue;
+    room.total += 1;
+    const accounts = [...enrollment.student.guardians, ...enrollment.student.lineAccounts];
+    if (accounts.some((account) => account.lineUserId)) room.linked += 1;
+    else if (accounts.some((account) => account.lineLinkCode)) room.pending += 1;
+    else room.unprepared += 1;
+  }
+  return [...stats.values()];
 }
 
 /** Full classroom guardian roster for batch LINE setup and printable handouts. */

@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Copy, ExternalLink, RefreshCw } from "lucide-react";
+import { CheckCircle2, Copy, ExternalLink, RefreshCw, UsersRound, ClipboardCheck, Bell, ArrowRight } from "lucide-react";
 
 interface Props {
   linked: boolean;
@@ -12,9 +13,12 @@ interface Props {
   friendQr: string | null;
   advisoryRooms: string[];
   sendTime: string;
+  studentCount: number;
+  pendingLeaveCount: number;
+  hasActiveTerm: boolean;
 }
 
-export default function AdvisorLineConnect({ linked, currentCode, friendUrl, friendQr, advisoryRooms, sendTime }: Props): React.ReactNode {
+export default function AdvisorLineConnect({ linked, currentCode, friendUrl, friendQr, advisoryRooms, sendTime, studentCount, pendingLeaveCount, hasActiveTerm }: Props): React.ReactNode {
   const router = useRouter();
   const code = currentCode;
   const [message, setMessage] = useState("");
@@ -32,14 +36,21 @@ export default function AdvisorLineConnect({ linked, currentCode, friendUrl, fri
     catch { setMessage("คัดลอกอัตโนมัติไม่ได้ กรุณาเลือกรหัสแล้วคัดลอกเอง"); }
   }
 
-  return <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+  return <div className="space-y-5">
+    <section aria-label="ภาพรวม LINE ของครู" className="grid gap-3 sm:grid-cols-3">
+      <div className="rounded-2xl border border-line bg-card p-4 shadow-sm"><p className="text-sm text-muted">ห้องที่ปรึกษา</p><p className="mt-2 text-3xl font-bold tabular text-ink-strong">{advisoryRooms.length}</p><p className="mt-1 text-xs text-muted">ห้องในปีการศึกษาปัจจุบัน</p></div>
+      <div className="rounded-2xl border border-line bg-card p-4 shadow-sm"><p className="text-sm text-muted">นักเรียนที่ดูแล</p><p className="mt-2 text-3xl font-bold tabular text-brand-ink">{studentCount.toLocaleString("th-TH")}</p><p className="mt-1 text-xs text-muted">{hasActiveTerm ? "คนในภาคเรียนปัจจุบัน" : "ยังไม่มีภาคเรียนที่เปิดใช้งาน"}</p></div>
+      <Link href="/dashboard/leave-requests" className="group rounded-2xl border border-line bg-card p-4 shadow-sm transition-colors hover:border-brand/40 hover:bg-brand-softer"><p className="flex items-center justify-between text-sm text-muted">คำขอลารอตรวจ <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></p><p className="mt-2 text-3xl font-bold tabular text-warning">{pendingLeaveCount.toLocaleString("th-TH")}</p><p className="mt-1 text-xs text-muted">รายการจากห้องที่ปรึกษาของคุณ</p></Link>
+    </section>
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
     <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-7">
       <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ${linked ? "bg-success-soft text-success" : code ? "bg-warning-soft text-warning" : "bg-surface-2 text-muted"}`}>
         {linked && <CheckCircle2 className="size-4" />}{linked ? "เชื่อม LINE แล้ว" : code ? "รอส่งรหัสใน LINE" : "ยังไม่เชื่อม LINE"}
       </div>
       {linked ? <>
         <h2 className="mt-5 text-xl font-bold text-ink-strong">เชื่อมสำเร็จแล้ว</h2>
-        <p className="mt-2 text-sm leading-relaxed text-muted">เมื่อถึงเวลาที่โรงเรียนตั้งไว้ คุณจะได้รับสรุปการเข้าโรงเรียนของห้องที่ปรึกษาทาง LINE OA</p>
+        <p className="mt-2 text-sm leading-relaxed text-muted">{advisoryRooms.length ? `คุณจะได้รับสรุปการเข้าโรงเรียนของ ${advisoryRooms.join(", ")} ตามเวลาที่โรงเรียนตั้งไว้` : "คุณเชื่อม LINE แล้ว แต่ยังไม่มีห้องที่ปรึกษา จึงยังไม่มีสรุปรายห้องที่จะส่ง"} คุณยังรับประกาศที่โรงเรียนส่งถึงครูได้</p>
+        {friendUrl && <a href={friendUrl} target="_blank" rel="noopener noreferrer" className="mt-5 inline-flex items-center gap-2 rounded-lg border border-line px-4 py-2 text-sm font-semibold text-brand-ink"><ExternalLink className="size-4" /> เปิด LINE OA โรงเรียน</a>}
       </> : <>
         <h2 className="mt-5 text-xl font-bold text-ink-strong">เชื่อมบัญชี LINE ของคุณ</h2>
         <ol className="mt-4 space-y-3 text-sm leading-relaxed text-ink">
@@ -70,5 +81,25 @@ export default function AdvisorLineConnect({ linked, currentCode, friendUrl, fri
       </div>
       {!linked && <button type="button" onClick={() => router.refresh()} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-ink"><RefreshCw className="size-4" /> ตรวจสถานะตอนนี้</button>}
     </aside>
+    </div>
+    <div className="grid gap-5 lg:grid-cols-2">
+      <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">
+        <h2 className="text-base font-bold text-ink-strong">LINE นี้ใช้รับอะไรบ้าง</h2>
+        <ul className="mt-4 space-y-3 text-sm text-ink">
+          <li className="flex gap-3"><UsersRound className="mt-0.5 size-5 shrink-0 text-brand-ink" /><span><b>สรุปการเข้าโรงเรียน</b><br /><span className="text-muted">ส่งวันจันทร์–ศุกร์ตามเวลาที่โรงเรียนกำหนด เมื่อมีห้องที่ปรึกษา</span></span></li>
+          <li className="flex gap-3"><ClipboardCheck className="mt-0.5 size-5 shrink-0 text-brand-ink" /><span><b>แจ้งคำขอลาของนักเรียน</b><br /><span className="text-muted">ตรวจรายละเอียดและพิจารณาคำขอในหน้าคำขอลา</span></span></li>
+          <li className="flex gap-3"><Bell className="mt-0.5 size-5 shrink-0 text-brand-ink" /><span><b>ประกาศจากโรงเรียน</b><br /><span className="text-muted">ข่าวสารและเหตุฉุกเฉินที่ส่งถึงบัญชี LINE ที่ผูกแล้ว</span></span></li>
+        </ul>
+      </section>
+      <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">
+        <h2 className="text-base font-bold text-ink-strong">งานที่เกี่ยวข้อง</h2>
+        <p className="mt-1 text-sm text-muted">เปิดงานบนเว็บไซต์ได้โดยตรง แม้ยังไม่ได้อ่านข้อความใน LINE</p>
+        <div className="mt-4 grid gap-2">
+          <Link href="/dashboard/leave-requests" className="flex items-center justify-between rounded-xl border border-line px-4 py-3 text-sm font-semibold text-brand-ink hover:bg-brand-softer">ตรวจคำขอลา <ArrowRight className="size-4" /></Link>
+          <Link href="/dashboard/attendance?mode=homeroom" className="flex items-center justify-between rounded-xl border border-line px-4 py-3 text-sm font-semibold text-brand-ink hover:bg-brand-softer">ดูการเช็คชื่อประจำห้อง <ArrowRight className="size-4" /></Link>
+        </div>
+        <p className="mt-4 text-xs leading-relaxed text-muted">หากเชื่อมแล้วแต่ไม่เห็นข้อความ ให้ตรวจว่าไม่ได้บล็อก LINE OA และเปิดการแจ้งเตือน LINE ไว้ หากยังมีปัญหาให้แจ้งผู้ดูแลระบบ</p>
+      </section>
+    </div>
   </div>;
 }

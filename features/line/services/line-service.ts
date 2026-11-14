@@ -5,7 +5,7 @@ import * as repo from "@/features/line/repositories/line-repository";
 import * as guardianRepo from "@/features/guardians/repositories/guardian-repository";
 import { pushText, replyText } from "@/lib/line";
 import { logAudit } from "@/lib/audit";
-import { linkTeacherRichMenu } from "@/features/line/services/teacher-rich-menu";
+import { linkTeacherRichMenu, teacherRichMenuId, unlinkTeacherRichMenu } from "@/features/line/services/teacher-rich-menu";
 import type { ActionResult } from "@/types/form";
 
 /** Pushes a gate check-in notification to every linked guardian of the student. */
@@ -48,6 +48,25 @@ export async function generateAdvisorLinkCode(staffId: string): Promise<ActionRe
   return { ok: true, code };
 }
 
+export async function unlinkAdvisorLine(staffId: string): Promise<ActionResult> {
+  const advisor = await repo.getAdvisorLine(staffId);
+  if (!advisor) return { ok: false, message: "ไม่พบบัญชีครู" };
+  const lineUserId = advisor.lineUserId;
+  const usedByOtherStaff = lineUserId ? await repo.otherStaffLinkedToLine(staffId, lineUserId) : false;
+  await repo.clearAdvisorLine(staffId);
+  if (lineUserId && !usedByOtherStaff) {
+    try {
+      const menuId = await teacherRichMenuId();
+      if (!menuId || !(await unlinkTeacherRichMenu(lineUserId, menuId))) {
+        return { ok: true, message: "ยกเลิกการเชื่อมแล้ว แต่ไม่สามารถอัปเดตริชเมนู LINE ได้ กรุณาตรวจการเชื่อมต่อ" };
+      }
+    } catch {
+      return { ok: true, message: "ยกเลิกการเชื่อมแล้ว แต่ไม่สามารถอัปเดตริชเมนู LINE ได้ กรุณาตรวจการเชื่อมต่อ" };
+    }
+  }
+  return { ok: true, message: "ยกเลิกการเชื่อม LINE ครูแล้ว" };
+}
+
 /** Generate missing link codes for every not-yet-linked guardian in a classroom. */
 export async function prepareClassroomLinkCodes(classroomId: string): Promise<ActionResult & { created?: number }> {
   const rows = await guardianRepo.findClassroomGuardiansForPrint(classroomId);
@@ -67,6 +86,13 @@ export async function unlinkGuardianLine(guardianId: string): Promise<ActionResu
   if (!guardian) return { ok: false, message: "ไม่พบผู้ปกครอง" };
   await repo.unlinkGuardian(guardianId);
   return { ok: true, message: "ยกเลิกการเชื่อม LINE แล้ว" };
+}
+
+/** Remove one student-level LINE association or unused code, without touching siblings. */
+export async function removeStudentLineAccount(id: string): Promise<ActionResult> {
+  if (!id) return { ok: false, message: "ไม่พบรายการ LINE ที่เลือก" };
+  const removed = await repo.removeStudentLineAccount(id);
+  return removed ? { ok: true, message: "ยกเลิกการผูก LINE หรือรหัสนี้แล้ว" } : { ok: false, message: "ไม่พบรายการ LINE ที่เลือก" };
 }
 
 /**

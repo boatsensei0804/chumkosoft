@@ -60,11 +60,15 @@ export async function getClassroomDetail(id: string): Promise<ClassroomDetail | 
 
   const offerings: OfferingRow[] = offeringRows.map((o) => ({
     id: o.id,
+    courseId: o.courseId,
+    teacherId: o.teacherId,
+    roomId: o.roomId,
     courseCode: o.course.code,
     courseName: o.course.name,
     teacher: personName(o.teacher) ?? "—",
     room: roomName(o.room),
     periodsPerWeek: o.periodsPerWeek,
+    scheduledCount: o.timetableSlots.length,
   }));
 
   return {
@@ -196,6 +200,30 @@ export async function deleteOfferingRecord(id: string): Promise<ActionResult> {
   const removedSlots = await repo.softDeleteOfferingWithSlots(id);
   const suffix = removedSlots > 0 ? ` (นำ ${removedSlots} คาบออกจากตารางด้วย)` : "";
   return { ok: true, message: `นำรายวิชาออกจากห้องเรียบร้อย${suffix}` };
+}
+
+export async function updateOfferingRecord(id: string, input: OfferingInput): Promise<ActionResult> {
+  const offering = await repo.getOfferingForEdit(id);
+  if (!offering) return { ok: false, message: "ไม่พบรายวิชาของห้อง" };
+  const [courseOk, teacherOk, roomOk] = await Promise.all([
+    repo.referenceExists("course", input.courseId),
+    repo.staffExists(input.teacherId),
+    repo.referenceExists("room", input.roomId),
+  ]);
+  if (!courseOk) return { ok: false, fieldErrors: { courseId: "ไม่พบรายวิชาที่เลือก" } };
+  if (!teacherOk) return { ok: false, fieldErrors: { teacherId: "ไม่พบผู้สอนที่เลือก" } };
+  if (!roomOk) return { ok: false, fieldErrors: { roomId: "ไม่พบห้องที่เลือก" } };
+  if (await repo.offeringKeyTaken(offering.termId, input.courseId, offering.classroomId, id)) {
+    return { ok: false, fieldErrors: { courseId: "ห้องนี้มีประวัติการเปิดรายวิชาที่เลือกแล้ว หากต้องการใช้รายวิชานั้น ให้สร้างรายการใหม่เพื่อคืนรายการเดิม" } };
+  }
+  if (offering.timetableSlots.length > 0) {
+    if (input.periodsPerWeek < offering.timetableSlots.length) return { ok: false, fieldErrors: { periodsPerWeek: `มี ${offering.timetableSlots.length} คาบในตารางแล้ว` } };
+    if (input.courseId !== offering.courseId || input.teacherId !== offering.teacherId || input.roomId !== offering.roomId) {
+      return { ok: false, message: "รายวิชานี้มีคาบในตารางแล้ว กรุณานำคาบออกก่อนเปลี่ยนวิชา ผู้สอน หรือห้อง" };
+    }
+  }
+  await repo.updateOffering(id, input);
+  return { ok: true, message: "บันทึกการแก้ไขรายวิชาของห้องแล้ว" };
 }
 
 export async function getOfferingClassroomId(id: string): Promise<string | null> {

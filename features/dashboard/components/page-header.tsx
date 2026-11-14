@@ -18,7 +18,7 @@ export default function PageHeader({ title, subtitle, actions }: PageHeaderProps
         </h1>
         {subtitle && <p className="mt-1.5 max-w-3xl text-[14px] leading-relaxed text-muted">{subtitle}</p>}
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
         {actions}
       </div>
     </div>

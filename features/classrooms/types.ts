@@ -39,11 +39,15 @@ export interface RosterEntry {
 
 export interface OfferingRow {
   id: string;
+  courseId: string;
+  teacherId: string;
+  roomId: string;
   courseCode: string;
   courseName: string;
   teacher: string;
   room: string;
   periodsPerWeek: number;
+  scheduledCount: number;
 }
 
 export interface AdvisorDetail {
