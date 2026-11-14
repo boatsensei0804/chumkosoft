@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Check, Clock3, CircleDashed, type LucideIcon } from "lucide-react";
 import type { DailyClassSummary } from "@/features/attendance/types";
 import MascotEmptyState from "@/components/ui/mascot-empty-state";
+import MobileRecordCard from "@/features/dashboard/components/mobile-record-card";
 
 function percent(count: number, total: number): number {
   return total > 0 ? Math.round((count / total) * 100) : 0;
@@ -50,7 +51,13 @@ export default function DailyRollCallOverview({ date, rooms }: { date: string; r
             <h3 className="text-sm font-semibold text-ink-strong">สรุปแยกตามห้องเรียน</h3>
             <p className="mt-0.5 text-xs text-muted">เปอร์เซ็นต์คำนวณจากจำนวนนักเรียนทั้งหมดของแต่ละห้อง</p>
           </div>
-          <div className="overflow-x-auto">
+          <div className="grid gap-3 p-3 md:hidden">
+            {rooms.map((room) => <MobileRecordCard key={room.classroomId} title={`ห้อง ${room.classroomCode}`} subtitle={room.gradeLevel}
+              fields={[{ label: "นักเรียน", value: `${room.total} คน` }, { label: "มาเรียน", value: stat(room.present, room.total) }, { label: "มาสาย", value: stat(room.late, room.total) }, { label: "ยังไม่เช็ค", value: stat(room.unchecked, room.total) }]}
+              actions={<Link href={`/dashboard/attendance?mode=homeroom&date=${date}&classroom=${room.classroomId}`} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-line px-3 text-sm font-semibold text-brand-ink">ดูรายชื่อ <ArrowRight className="size-4" /></Link>}
+            />)}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[780px] border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-line bg-surface text-xs font-semibold text-muted">

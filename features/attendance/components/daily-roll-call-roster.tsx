@@ -96,7 +96,18 @@ function DailyRollCallRosterEditor({ roster }: { roster: DailyClassRoster }): Re
         <Count label="ยังไม่เช็ค" count={counts.unchecked} color="text-muted" />
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="grid gap-3 p-3 md:hidden">
+        {roster.students.map((student, index) => {
+          const selected = statuses[student.studentId];
+          return <article key={student.studentId} className="rounded-xl border border-line bg-bg p-3">
+            <div className="flex items-start justify-between gap-2"><div><p className="text-sm font-semibold text-ink-strong">{index + 1}. {student.name}</p><p className="text-xs text-muted">รหัส {student.code}</p></div><span className="text-xs font-semibold text-brand-ink">{selected ? DAILY_ROLL_CALL_LABELS[selected] : "ยังไม่เช็ค"}</span></div>
+            <div role="group" aria-label={`เลือกสถานะ ${student.name}`} className="mt-3 grid grid-cols-2 gap-1.5">
+              {DAILY_ROLL_CALL_STATUSES.map((status) => <button key={status} type="button" aria-pressed={selected === status} disabled={isSaving} onClick={() => setStatuses((previous) => ({ ...previous, [student.studentId]: status }))} className={cn("min-h-10 rounded-lg px-2 text-xs font-semibold transition-colors disabled:opacity-50", selected === status ? STATUS_STYLE[status].active : STATUS_STYLE[status].idle)}>{DAILY_ROLL_CALL_LABELS[status]}</button>)}
+            </div>
+          </article>;
+        })}
+      </div>
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[970px] border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-line bg-surface text-xs font-semibold text-muted">

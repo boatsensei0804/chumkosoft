@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, KeyRound, ScanFace, CheckCircle2 } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, KeyRound, ScanFace, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import KioskAccountDialog from "./kiosk-account-dialog";
 import ResetPasswordDialog from "./reset-password-dialog";
+import MobileRecordCard from "@/features/dashboard/components/mobile-record-card";
+import RecordPreviewDialog from "@/features/dashboard/components/record-preview-dialog";
 import { deleteKioskAccountAction } from "@/features/kiosk/actions";
 import type { KioskAccountRow } from "@/features/kiosk/types";
 
@@ -27,6 +29,7 @@ export default function KioskManager({ accounts }: { accounts: KioskAccountRow[]
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<KioskAccountRow | null>(null);
+  const [viewing, setViewing] = useState<KioskAccountRow | null>(null);
   const [resetting, setResetting] = useState<KioskAccountRow | null>(null);
   const [deleting, setDeleting] = useState<KioskAccountRow | null>(null);
   const [isDeletePending, startDelete] = useTransition();
@@ -62,7 +65,7 @@ export default function KioskManager({ accounts }: { accounts: KioskAccountRow[]
   return (
     <TooltipProvider delayDuration={200}>
       <div className="overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
-        <div className="flex items-center justify-between gap-3 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div>
             <h2 className="text-[15px] font-bold text-ink-strong">บัญชีจุดสแกน (KIOSK)</h2>
             <p className="text-[12.5px] text-muted">บัญชีสำหรับเข้าใช้งานหน้าจอสแกนใบหน้าที่ประตูโรงเรียน</p>
@@ -73,7 +76,14 @@ export default function KioskManager({ accounts }: { accounts: KioskAccountRow[]
         </div>
 
         {accounts.length > 0 ? (
-          <div className="border-t border-line">
+          <>
+          <div className="grid gap-3 border-t border-line p-3 md:hidden">
+            {accounts.map((a) => <MobileRecordCard key={a.id} title={a.email} subtitle={`สร้างเมื่อ ${a.createdAt}`}
+              badge={<Badge variant="secondary" className={a.isActive ? "bg-success-soft text-success" : "text-muted"}>{a.isActive ? "ใช้งาน" : "ปิดใช้งาน"}</Badge>}
+              actions={<><Button variant="outline" size="sm" className="min-h-10" onClick={() => setViewing(a)}><Eye className="size-4" /> ดูข้อมูล</Button><Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(a)}><Pencil className="size-4" /> แก้ไข</Button><Button variant="outline" size="sm" className="min-h-10" onClick={() => setResetting(a)}><KeyRound className="size-4" /> เปลี่ยนรหัส</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(a)}><Trash2 className="size-4" /> ลบ</Button></>}
+            />)}
+          </div>
+          <div className="hidden border-t border-line md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -101,6 +111,7 @@ export default function KioskManager({ accounts }: { accounts: KioskAccountRow[]
                     <TableCell className="tabular-nums text-muted">{a.createdAt}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-0.5">
+                        <IconAction label="ดูข้อมูล" onClick={() => setViewing(a)}><Eye className="size-[18px]" /></IconAction>
                         <IconAction label="ตั้งรหัสผ่านใหม่" onClick={() => setResetting(a)}>
                           <KeyRound className="size-[18px]" />
                         </IconAction>
@@ -117,6 +128,7 @@ export default function KioskManager({ accounts }: { accounts: KioskAccountRow[]
               </TableBody>
             </Table>
           </div>
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center gap-3 border-t border-line px-6 py-14 text-center">
             <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint">
@@ -129,6 +141,7 @@ export default function KioskManager({ accounts }: { accounts: KioskAccountRow[]
       </div>
 
       <KioskAccountDialog open={dialogOpen} account={editing} onClose={() => setDialogOpen(false)} onSaved={handleSaved} />
+      {viewing && <RecordPreviewDialog open title={viewing.email} subtitle="บัญชีจุดสแกน" fields={[{ label: "สถานะ", value: viewing.isActive ? "ใช้งาน" : "ปิดใช้งาน" }, { label: "สร้างเมื่อ", value: viewing.createdAt }]} onClose={() => setViewing(null)} onEdit={() => { const account = viewing; setViewing(null); openEdit(account); }} />}
 
       {resetting && (
         <ResetPasswordDialog

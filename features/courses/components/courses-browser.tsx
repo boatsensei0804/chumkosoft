@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Search, Plus, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, Eye, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PaginationBar from "@/components/ui/pagination-bar";
 import CourseFormDialog from "./course-form-dialog";
+import MobileRecordCard from "@/features/dashboard/components/mobile-record-card";
+import RecordPreviewDialog from "@/features/dashboard/components/record-preview-dialog";
 import { deleteCourseAction } from "@/features/courses/actions";
 import { useListParams } from "@/features/dashboard/hooks/use-list-params";
 import type { CourseSummary } from "../types";
@@ -28,6 +30,7 @@ export default function CoursesBrowser({ page, query }: CoursesBrowserProps): Re
   const [search, setSearch] = useState(query);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CourseSummary | null>(null);
+  const [viewing, setViewing] = useState<CourseSummary | null>(null);
   const [deleting, setDeleting] = useState<CourseSummary | null>(null);
   const [isDeletePending, startDelete] = useTransition();
 
@@ -72,15 +75,15 @@ export default function CoursesBrowser({ page, query }: CoursesBrowserProps): Re
       <div className="flex flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-[14px] font-bold text-ink-strong">รายวิชาทั้งหมด</h2>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 rounded-[10px] border border-line bg-surface-2 px-3 py-2 sm:w-56">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-line bg-surface-2 px-3 py-2 sm:w-56 sm:flex-none">
               <Search className="size-[18px] text-faint" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="ค้นหารหัสหรือชื่อวิชา…"
                 aria-label="ค้นหารายวิชา"
-                className="w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
+                className="min-w-0 w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
               />
             </div>
             <Button onClick={openCreate}>
@@ -90,7 +93,14 @@ export default function CoursesBrowser({ page, query }: CoursesBrowserProps): Re
         </div>
 
         {courses.length > 0 ? (
-          <div className={cn("overflow-x-auto border-t border-line transition-opacity", isPending && "opacity-60")}>
+          <>
+          <div className={cn("grid gap-3 border-t border-line p-3 md:hidden", isPending && "opacity-60")}>
+            {courses.map((c) => <MobileRecordCard key={c.id} title={c.name} subtitle={`รหัส ${c.code}`}
+              fields={[{ label: "หน่วยกิต", value: c.credits ?? "—" }, { label: "เปิดสอน", value: `${c.offeringsCount} ห้อง` }]}
+              actions={<><Button variant="outline" size="sm" className="min-h-10" onClick={() => setViewing(c)}><Eye className="size-4" /> ดูข้อมูล</Button><Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(c)}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(c)}><Trash2 className="size-4" /> ลบ</Button></>}
+            />)}
+          </div>
+          <div className={cn("hidden overflow-x-auto border-t border-line transition-opacity md:block", isPending && "opacity-60")}>
             <Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow>
@@ -120,6 +130,7 @@ export default function CoursesBrowser({ page, query }: CoursesBrowserProps): Re
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-0.5">
+                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`ดูข้อมูล ${c.name}`} onClick={() => setViewing(c)}><Eye className="size-[18px]" /></Button></TooltipTrigger><TooltipContent>ดูข้อมูล</TooltipContent></Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`แก้ไข ${c.name}`} onClick={() => openEdit(c)}>
@@ -143,6 +154,7 @@ export default function CoursesBrowser({ page, query }: CoursesBrowserProps): Re
               </TableBody>
             </Table>
           </div>
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center gap-3 border-t border-line px-6 py-16 text-center">
             <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint" aria-hidden="true">
@@ -164,6 +176,7 @@ export default function CoursesBrowser({ page, query }: CoursesBrowserProps): Re
         />
 
         <CourseFormDialog open={dialogOpen} course={editing} onClose={() => setDialogOpen(false)} onSaved={handleSaved} />
+        {viewing && <RecordPreviewDialog open title={viewing.name} subtitle={`รหัสวิชา ${viewing.code}`} fields={[{ label: "หน่วยกิต", value: viewing.credits ?? "—" }, { label: "ห้องที่เปิดสอน", value: `${viewing.offeringsCount} ห้อง` }, { label: "คำอธิบาย", value: viewing.description ?? "—" }]} onClose={() => setViewing(null)} onEdit={() => { const course = viewing; setViewing(null); openEdit(course); }} />}
 
         <ConfirmDialog
           open={deleting !== null}

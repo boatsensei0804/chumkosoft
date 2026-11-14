@@ -6,6 +6,7 @@ import { CalendarDays, Clock3, GraduationCap, Users, type LucideIcon } from "luc
 import { NativeSelect } from "@/components/ui/native-select";
 import { cn } from "@/lib/utils";
 import MascotEmptyState from "@/components/ui/mascot-empty-state";
+import MobileRecordCard from "@/features/dashboard/components/mobile-record-card";
 import TimetableBuilder from "./timetable-builder";
 import { subjectColors } from "../data";
 import type { ContextOption, DayInfo, DayKey, ExternalBusy, Offering, PeriodRow, ScheduleOverviewData, ScheduleOverviewSlot } from "../types";
@@ -162,7 +163,17 @@ function ClassroomSummary({ overview, days, onSelect }: { overview: ScheduleOver
         <h3 className="text-sm font-semibold text-ink-strong">คาบเรียนที่จัดแล้ว แยกตามห้องและวัน</h3>
         <p className="mt-0.5 text-xs text-muted">เลือกแถวเพื่อเปิดตารางรายสัปดาห์ของห้องนั้น</p>
       </header>
-      <div className="overflow-x-auto">
+      <div className="grid gap-3 p-3 md:hidden">
+        {overview.classrooms.map((room) => {
+          const dayCounts = new Map<DayKey, number>();
+          for (const slot of overview.slots) if (slot.classroomId === room.id) dayCounts.set(slot.day, (dayCounts.get(slot.day) ?? 0) + 1);
+          return <MobileRecordCard key={room.id} title={`ห้อง ${room.code}`} subtitle={room.gradeLevel}
+            fields={[{ label: "จัดแล้ว / เป้าหมาย", value: `${room.slots}/${room.requiredPeriods} คาบ` }, ...days.map((day) => ({ label: day.short, value: `${dayCounts.get(day.key) ?? 0} คาบ` }))]}
+            actions={<button type="button" onClick={() => onSelect(room.id)} className="min-h-10 rounded-lg border border-line px-3 text-sm font-semibold text-brand-ink">ดูตารางรายสัปดาห์ →</button>}
+          />;
+        })}
+      </div>
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[780px] border-collapse text-left text-sm">
           <thead><tr className="border-b border-line bg-surface text-xs font-semibold text-muted"><th className="px-4 py-3">ห้อง</th>{days.map((day) => <th key={day.key} className="px-3 py-3 text-center">{day.short}</th>)}<th className="px-3 py-3 text-right">จัดแล้ว / เป้าหมาย</th><th className="px-4 py-3" /></tr></thead>
           <tbody>
@@ -205,7 +216,18 @@ function ReadOnlyGrid({
     <section className="overflow-hidden rounded-xl border border-line bg-bg">
       <div className="border-b border-line px-4 py-3 text-xs text-muted">ตารางนี้เป็นมุมมองสำหรับดูข้อมูล · เปลี่ยนแปลงตารางได้ในแท็บ “จัดและแก้ตาราง”</div>
       {slots.length === 0 ? <EmptySchedule message="ยังไม่มีวิชาจัดลงในตารางของรายการนี้" /> : (
-        <div className="overflow-x-auto">
+        <>
+        <div className="space-y-2 p-3 md:hidden">
+          {days.map((day, index) => <details key={day.key} open={index === 0} className="rounded-xl border border-line bg-bg">
+            <summary className="min-h-11 cursor-pointer px-3 py-2.5 text-sm font-bold text-brand-ink">{day.label}</summary>
+            <div className="divide-y divide-line border-t border-line">{periods.map((period) => {
+              if (period.kind === "break") return <p key={period.id} className="bg-surface-2 px-3 py-2 text-xs text-muted">{period.label} · {period.start}–{period.end}</p>;
+              const slot = byCell.get(`${day.key}:${period.id}`);
+              return <div key={period.id} className="flex gap-3 px-3 py-2.5"><span className="w-20 shrink-0 text-xs text-muted">{period.label}<br />{period.start}–{period.end}</span><div className="min-w-0 text-sm">{slot ? <><p className="font-semibold text-ink-strong">{slot.courseName}</p><p className="text-xs text-muted">{secondary === "teacher" ? slot.teacherName : slot.classroomCode} · {slot.roomName}</p></> : <p className="text-muted">ว่าง</p>}</div></div>;
+            })}</div>
+          </details>)}
+        </div>
+        <div className="hidden overflow-x-auto md:block">
           <div className="min-w-[780px]">
             <div className="grid gap-px bg-line" style={{ gridTemplateColumns: "78px repeat(5, minmax(130px, 1fr))" }}>
               <div className="bg-surface px-2 py-2.5 text-[11px] font-semibold text-muted">คาบ</div>
@@ -218,6 +240,7 @@ function ReadOnlyGrid({
             </div>
           </div>
         </div>
+        </>
       )}
     </section>
   );

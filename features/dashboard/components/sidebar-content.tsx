@@ -1,4 +1,7 @@
-import { LogOut } from "lucide-react";
+"use client";
+
+import { ChevronDown, LogOut } from "lucide-react";
+import { usePathname } from "next/navigation";
 import BrandMark from "./brand-mark";
 import SidebarNav from "./sidebar-nav";
 import { navGroups } from "../nav";
@@ -16,6 +19,7 @@ function visibleTo(role: CurrentUser["role"]): (item: NavItem) => boolean {
 }
 
 export default function SidebarContent({ user, onNavigate }: SidebarContentProps): React.ReactNode {
+  const pathname = usePathname();
   const groups = navGroups
     .map((g) => ({ label: g.label, items: g.items.filter(visibleTo(user.role)) }))
     .filter((g) => g.items.length > 0);
@@ -27,14 +31,16 @@ export default function SidebarContent({ user, onNavigate }: SidebarContentProps
       </div>
 
       <nav aria-label="เมนูหลัก" className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-4">
-        {groups.map((group, i) => (
-          <div key={group.label ?? `group-${i}`}>
-            {group.label && (
-              <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-faint">{group.label}</p>
-            )}
-            <SidebarNav items={group.items} onNavigate={onNavigate} />
-          </div>
-        ))}
+        {groups.map((group, i) => {
+          const active = group.items.some((item) => pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`)));
+          if (!group.label) return <SidebarNav key={`group-${i}`} items={group.items} onNavigate={onNavigate} />;
+          return <details key={`${group.label}-${active ? "active" : "inactive"}`} open={active} className="group/nav rounded-xl open:bg-surface-2/60">
+            <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between rounded-lg px-3 text-[12px] font-bold text-muted hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
+              {group.label}<ChevronDown className="size-4 transition-transform group-open/nav:rotate-180" />
+            </summary>
+            <div className="px-1 pb-1"><SidebarNav items={group.items} onNavigate={onNavigate} /></div>
+          </details>;
+        })}
       </nav>
 
       <div className="px-3 pb-4">

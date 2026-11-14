@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import ClassroomFormDialog from "./classroom-form-dialog";
+import MobileRecordCard from "@/features/dashboard/components/mobile-record-card";
 import { deleteClassroomAction } from "@/features/classrooms/actions";
 import type { ClassroomRow, TeacherOption } from "../types";
 
@@ -69,15 +70,15 @@ export default function ClassroomsBrowser({ classrooms, teachers }: ClassroomsBr
       <div className="flex flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-[14px] font-bold text-ink-strong">ห้องเรียนทั้งหมด · ปีการศึกษาปัจจุบัน</h2>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 rounded-[10px] border border-line bg-surface-2 px-3 py-2 sm:w-56">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-line bg-surface-2 px-3 py-2 sm:w-56 sm:flex-none">
               <Search className="size-[18px] text-faint" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="ค้นหาห้อง ระดับชั้น หรือครูที่ปรึกษา…"
                 aria-label="ค้นหาห้องเรียน"
-                className="w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
+                className="min-w-0 w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
               />
             </div>
             <Button onClick={openCreate}>
@@ -87,7 +88,15 @@ export default function ClassroomsBrowser({ classrooms, teachers }: ClassroomsBr
         </div>
 
         {results.length > 0 ? (
-          <div className="overflow-x-auto border-t border-line">
+          <>
+          <div className="grid gap-3 border-t border-line p-3 md:hidden">
+            {results.map((c) => <MobileRecordCard key={c.id}
+              title={c.code} subtitle={c.gradeLevel}
+              fields={[{ label: "ครูที่ปรึกษา", value: c.advisors.map((a) => a.name).join(", ") || "ยังไม่กำหนด" }, { label: "นักเรียน / วิชา", value: `${c.studentCount} คน · ${c.offeringCount} วิชา` }]}
+              actions={<><Button asChild variant="outline" size="sm" className="min-h-10"><Link href={`/dashboard/classrooms/${c.id}`}><ArrowRight className="size-4" /> ดูข้อมูล</Link></Button><Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(c)}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(c)}><Trash2 className="size-4" /> ลบ</Button></>}
+            />)}
+          </div>
+          <div className="hidden overflow-x-auto border-t border-line md:block">
             <Table className="min-w-[720px]">
               <TableHeader>
                 <TableRow>
@@ -162,6 +171,7 @@ export default function ClassroomsBrowser({ classrooms, teachers }: ClassroomsBr
               </TableBody>
             </Table>
           </div>
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center gap-3 border-t border-line px-6 py-16 text-center">
             <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint" aria-hidden="true">

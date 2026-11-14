@@ -117,12 +117,12 @@ function EntryRow({
         )}
 
         {student.state === "ABSENT" && (
-          <Button size="sm" disabled={pending} onClick={onCheckIn}>
+          <Button size="sm" className="min-h-10" disabled={pending} onClick={onCheckIn}>
             <Check className="size-4" /> บันทึกเข้า
           </Button>
         )}
         {student.state === "IN" && (
-          <Button size="sm" variant="outline" disabled={pending} onClick={onCheckOut}>
+          <Button size="sm" variant="outline" className="min-h-10" disabled={pending} onClick={onCheckOut}>
             <LogOut className="size-4" /> บันทึกออก
           </Button>
         )}

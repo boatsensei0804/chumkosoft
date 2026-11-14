@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { addBehaviorPointsAction, updateBehaviorPointsAction, deleteBehaviorPointsAction } from "@/features/behavior/actions";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 
@@ -62,7 +62,7 @@ export default function BehaviorBrowser({ data }: { data: Data }): React.ReactNo
       <p className="text-sm font-semibold text-muted">{data.term.name}</p>
       {message && <p role="status" className="rounded-lg bg-brand-soft px-4 py-3 text-sm text-ink">{message}</p>}
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-        <section className="overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
+        <section className={`overflow-hidden rounded-2xl border border-line bg-card shadow-sm ${data.selectedStudent ? "hidden lg:block" : ""}`}>
           <div className="flex flex-wrap gap-3 border-b border-line p-4">
             <input aria-label="ค้นหานักเรียน" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหารหัสหรือชื่อนักเรียน" className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
             <select aria-label="กรองห้องเรียน" value={classroom} onChange={(event) => setClassroom(event.target.value)} className="rounded-lg border border-line bg-surface px-3 py-2 text-sm"><option value="">ทุกห้อง</option>{classrooms.map((code) => <option key={code} value={code}>{code}</option>)}</select>
@@ -73,8 +73,9 @@ export default function BehaviorBrowser({ data }: { data: Data }): React.ReactNo
           </button>)}</div>
           {visible.length === 0 && <p className="p-8 text-center text-sm text-muted">ไม่พบนักเรียน</p>}
         </section>
-        <section className="rounded-2xl border border-line bg-card p-5 shadow-sm">
+        <section className={`rounded-2xl border border-line bg-card p-4 shadow-sm sm:p-5 ${data.selectedStudent ? "" : "hidden lg:block"}`}>
           {!data.selectedStudent ? <div className="py-12 text-center text-sm text-muted">เลือกนักเรียนจากตารางเพื่อดูคะแนนและบันทึกรายการ</div> : <>
+            <button type="button" onClick={() => router.push("/dashboard/behavior")} className="mb-4 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-brand-ink lg:hidden"><ArrowLeft className="size-4" /> กลับไปรายชื่อนักเรียน</button>
             <p className="text-sm text-muted">{data.selectedStudent.classroom} · {data.selectedStudent.code}</p>
             <h2 className="mt-1 text-lg font-bold text-ink-strong">{data.selectedStudent.name}</h2>
             <p className="mt-2 text-3xl font-bold tabular text-brand-ink">{data.selectedStudent.score} <span className="text-sm font-medium text-muted">คะแนน</span></p>

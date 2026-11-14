@@ -144,7 +144,7 @@ function RosterRow({
               aria-checked={active}
               onClick={() => onChange(student.studentId, st)}
               className={cn(
-                "rounded-[8px] px-3 py-1.5 text-[13px] font-semibold transition-colors",
+                "min-h-10 rounded-[8px] px-3 py-1.5 text-[13px] font-semibold transition-colors",
                 active ? cn(STATUS_TINT[st], "ring-1", STATUS_ACTIVE_RING[st]) : "bg-surface-2 text-muted hover:text-ink",
               )}
             >

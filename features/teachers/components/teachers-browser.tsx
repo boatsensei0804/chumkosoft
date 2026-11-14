@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PaginationBar from "@/components/ui/pagination-bar";
 import StaffFormDialog from "./staff-form-dialog";
+import MobileRecordCard from "@/features/dashboard/components/mobile-record-card";
 import { deleteStaffAction } from "@/features/teachers/actions";
 import { useListParams } from "@/features/dashboard/hooks/use-list-params";
 import type { StaffKind, StaffSummary } from "../types";
@@ -105,15 +106,15 @@ export default function TeachersBrowser({ page, query, filter, canManageAccounts
               );
             })}
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 rounded-[10px] border border-line bg-surface-2 px-3 py-2 sm:w-56">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-line bg-surface-2 px-3 py-2 sm:w-56 sm:flex-none">
               <Search className="size-[18px] text-faint" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="ค้นหาชื่อ รหัส หรือตำแหน่ง…"
                 aria-label="ค้นหาครูและบุคลากร"
-                className="w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
+                className="min-w-0 w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
               />
             </div>
             <Button onClick={openCreate}>
@@ -123,7 +124,17 @@ export default function TeachersBrowser({ page, query, filter, canManageAccounts
         </div>
 
         {staff.length > 0 ? (
-          <div className={cn("overflow-x-auto border-t border-line transition-opacity", isPending && "opacity-60")}>
+          <>
+          <div className={cn("grid gap-3 border-t border-line p-3 md:hidden", isPending && "opacity-60")}>
+            {staff.map((s) => <MobileRecordCard key={s.id}
+              title={[s.prefix, `${s.firstName} ${s.lastName}`].filter(Boolean).join(" ")}
+              subtitle={`รหัส ${s.code} · ${s.position ?? "ยังไม่ระบุตำแหน่ง"}`}
+              badge={<Badge variant="secondary" className={kindStyle[s.type].className}>{kindStyle[s.type].label}</Badge>}
+              fields={[{ label: "วิชาที่สอน", value: `${s.subjectsCount} วิชา` }, { label: "อีเมล", value: s.email ?? "—" }]}
+              actions={<><Button asChild variant="outline" size="sm" className="min-h-10"><Link href={`/dashboard/teachers/${s.id}`}><Eye className="size-4" /> ดูข้อมูล</Link></Button><Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(s)}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(s)}><Trash2 className="size-4" /> ลบ</Button></>}
+            />)}
+          </div>
+          <div className={cn("hidden overflow-x-auto border-t border-line transition-opacity md:block", isPending && "opacity-60")}>
             <Table className="min-w-[720px]">
               <TableHeader>
                 <TableRow>
@@ -199,6 +210,7 @@ export default function TeachersBrowser({ page, query, filter, canManageAccounts
               </TableBody>
             </Table>
           </div>
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center gap-3 border-t border-line px-6 py-16 text-center">
             <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint" aria-hidden="true">

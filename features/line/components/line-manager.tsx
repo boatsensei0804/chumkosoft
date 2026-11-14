@@ -48,12 +48,14 @@ export default function LineManager({ page, query, configured, classrooms, class
   const { navigate, isPending } = useListParams("/dashboard/line", { q: query, page: page.page, classroom: classroomId, filter });
   const [search, setSearch] = useState(query);
   const [unlinking, setUnlinking] = useState<{ kind: "guardian" | "student"; id: string; label: string } | null>(null);
+  const [viewingStudentId, setViewingStudentId] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [exportClassroomId, setExportClassroomId] = useState(classroomId || classrooms[0]?.id || "");
   const [oaUrl, setOaUrl] = useState("");
   const [preparing, setPreparing] = useState(false);
   const [, startAction] = useTransition();
+  const viewingStudent = page.rows.find((student) => student.studentId === viewingStudentId) ?? null;
 
   useEffect(() => {
     if (search === query) return;
@@ -211,8 +213,8 @@ export default function LineManager({ page, query, configured, classrooms, class
         </div>
       ) : (
         <div className={cn("rounded-2xl border border-line bg-card transition-opacity lg:overflow-x-auto", isPending && "opacity-60")}>
-          <table className="w-full border-collapse text-left lg:min-w-[760px]">
-            <thead className="hidden lg:table-header-group"><tr className="border-b border-line bg-surface text-[11.5px] font-semibold uppercase tracking-wide text-muted"><th className="px-4 py-3">นักเรียน / การเชื่อม LINE</th><th className="px-4 py-3">ผู้ปกครอง / รหัสเชื่อม</th><th className="w-36 px-4 py-3 text-right">จัดการ</th></tr></thead>
+          <table className="w-full border-collapse text-left lg:min-w-[560px]">
+            <thead className="hidden lg:table-header-group"><tr className="border-b border-line bg-surface text-[11.5px] font-semibold uppercase tracking-wide text-muted"><th className="px-4 py-3">นักเรียน / การเชื่อม LINE</th><th className="w-44 px-4 py-3 text-right">บัญชีและรหัส</th></tr></thead>
             <tbody className="block space-y-3 p-3 lg:table-row-group lg:space-y-0 lg:p-0">
               {page.rows.map((student) => {
                 const linkedCount = student.guardians.filter((guardian) => guardian.lineStatus === "linked").length + student.lineAccounts.filter((account) => account.linked).length;
@@ -224,36 +226,7 @@ export default function LineManager({ page, query, configured, classrooms, class
                     <p className="mt-0.5 text-xs text-muted">{student.classroom} · รหัส {student.code}</p>
                     <p className={`mt-2 text-xs font-semibold ${linkedCount ? "text-success" : pendingCount ? "text-warning" : "text-muted"}`}>{linkedCount ? `เชื่อม LINE แล้ว ${linkedCount} รายการ` : pendingCount ? `มีรหัสรอผูก ${pendingCount} รายการ` : "ยังไม่มีรหัสเชื่อม"}</p>
                   </td>
-                  <td className="block px-4 py-3 lg:table-cell">
-                    <p className="mb-2 text-xs font-semibold text-muted lg:hidden">บัญชีและรหัสเชื่อม</p>
-                    {student.guardians.length === 0 ? (
-                      <p className="py-1 text-[13px] text-faint">ยังไม่มีข้อมูลผู้ปกครอง · ผูก LINE กับนักเรียนได้</p>
-                    ) : (
-                      <div className="flex flex-col divide-y divide-line">
-                        {student.guardians.map((g) => {
-                          const meta = STATUS_META[g.lineStatus];
-                          return (
-                            <div key={g.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2.5 first:pt-1 last:pb-1">
-                              <div className="min-w-0"><p className="text-[13px] font-semibold text-ink-strong">{[g.prefix, g.fullName].filter(Boolean).join(" ")} <span className="font-normal text-muted">· {g.relation}</span></p>{g.lineDisplayName && <p className="mt-1 text-xs text-brand-ink">ชื่อ LINE: {g.lineDisplayName}</p>}{g.linkCode && <p className="mt-1 inline-flex rounded bg-brand-softer px-2 py-0.5 font-mono text-xs font-bold tracking-[0.18em] text-brand-ink">รหัส {g.linkCode}</p>}</div>
-                              <Badge variant="outline" className={meta.className}>{meta.label}</Badge>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {student.lineAccounts.length > 0 && <div className="mt-2 space-y-2">{student.lineAccounts.map((account) => <div key={account.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-brand-softer px-3 py-2 text-xs"><div><p className="font-semibold text-brand-ink">{account.linked ? `LINE: ${account.lineDisplayName}` : account.linkCode ? `รหัสรอผูก ${account.linkCode}` : "ยังไม่มีรหัส"}</p><p className="mt-0.5 text-muted">ผูกกับนักเรียนโดยตรง · ยังไม่ระบุชื่อผู้ปกครอง</p></div><button type="button" onClick={() => setUnlinking({ kind: "student", id: account.id, label: `${student.name} · ${account.lineDisplayName ?? account.linkCode ?? "รายการ LINE"}` })} className="min-h-9 rounded-lg border border-line bg-card px-2.5 py-1.5 font-semibold text-danger hover:bg-danger-soft">{account.linked ? "ยกเลิกการผูก" : "ลบรหัส"}</button></div>)}</div>}
-                  </td>
-                  <td className="block border-t border-line px-4 py-3 text-left lg:table-cell lg:border-0 lg:text-right">
-                    <div className="flex flex-wrap items-center gap-1.5 lg:flex-col lg:items-end">
-                      {student.guardians.map((g) => g.lineStatus === "linked" ? (
-                        <Button key={g.id} variant="ghost" size="sm" className="min-h-9 text-[11px] text-danger" onClick={() => setUnlinking({ kind: "guardian", id: g.id, label: `${g.fullName} · ${g.lineDisplayName ?? "LINE"}` })}>ยกเลิก {g.fullName}</Button>
-                      ) : (
-                        <span key={g.id} className="inline-flex flex-wrap items-center gap-1"><Button variant="outline" size="sm" className="min-h-9 text-[11px]" disabled={pendingId === g.id} onClick={() => generateCode(g.id)}>{g.lineStatus === "pending" ? "สร้างรหัสใหม่" : "สร้างรหัส"}</Button>{g.lineStatus === "pending" && <Button variant="ghost" size="sm" className="min-h-9 text-[11px] text-danger" onClick={() => setUnlinking({ kind: "guardian", id: g.id, label: `${g.fullName} · รหัส ${g.linkCode}` })}>ลบรหัส</Button>}</span>
-                      ))}
-                      {student.guardians.length === 0 && <span className="text-xs text-faint">ใช้รหัสกับ LINE OA ของโรงเรียน</span>}
-                      <Button variant="outline" size="sm" className="min-h-9 text-[11px]" disabled={pendingId === student.studentId} onClick={() => generateStudentCode(student.studentId)}>สร้างรหัสเพิ่ม</Button>
-                    </div>
-                  </td>
+                  <td className="block px-4 py-3 lg:table-cell lg:text-right"><Button variant="outline" size="sm" className="min-h-10" onClick={() => setViewingStudentId(student.studentId)}>ดูและจัดการ</Button></td>
                 </tr>
               );})}
             </tbody>
@@ -264,6 +237,23 @@ export default function LineManager({ page, query, configured, classrooms, class
       <div className="overflow-hidden rounded-2xl border border-line bg-card">
         <PaginationBar page={page.page} pageCount={page.pageCount} total={page.total} pageSize={page.pageSize} disabled={isPending} onPageChange={(p) => navigate({ page: p })} />
       </div>
+
+      <Dialog open={viewingStudent !== null} onOpenChange={(open) => { if (!open) setViewingStudentId(null); }}>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto bg-bg sm:max-w-2xl">
+          <DialogHeader className="text-left"><DialogTitle>{viewingStudent?.name ?? "จัดการ LINE"}</DialogTitle><DialogDescription>{viewingStudent ? `${viewingStudent.classroom} · รหัส ${viewingStudent.code}` : ""}</DialogDescription></DialogHeader>
+          {viewingStudent && <div className="space-y-4">
+            <section>
+              <h3 className="mb-2 text-sm font-bold text-ink">ผู้ปกครองที่มีข้อมูลในระบบ</h3>
+              {viewingStudent.guardians.length === 0 ? <p className="rounded-lg bg-surface-2 p-3 text-sm text-muted">ยังไม่มีข้อมูลผู้ปกครอง สร้างรหัสผูกกับนักเรียนโดยตรงได้</p> : <div className="space-y-2">{viewingStudent.guardians.map((g) => <div key={g.id} className="rounded-xl border border-line p-3"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-sm font-semibold text-ink-strong">{[g.prefix, g.fullName].filter(Boolean).join(" ")} · {g.relation}</p>{g.lineDisplayName && <p className="mt-1 text-xs text-brand-ink">LINE: {g.lineDisplayName}</p>}{g.linkCode && <p className="mt-1 font-mono text-sm font-bold tracking-widest text-brand-ink">รหัส {g.linkCode}</p>}</div><Badge variant="outline" className={STATUS_META[g.lineStatus].className}>{STATUS_META[g.lineStatus].label}</Badge></div><div className="mt-3 flex flex-wrap gap-2">{g.lineStatus === "linked" ? <Button variant="outline" size="sm" className="min-h-10 text-danger" onClick={() => setUnlinking({ kind: "guardian", id: g.id, label: `${g.fullName} · ${g.lineDisplayName ?? "LINE"}` })}>ยกเลิกการผูก</Button> : <><Button variant="outline" size="sm" className="min-h-10" disabled={pendingId === g.id} onClick={() => generateCode(g.id)}>{g.lineStatus === "pending" ? "สร้างรหัสใหม่" : "สร้างรหัส"}</Button>{g.lineStatus === "pending" && <Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setUnlinking({ kind: "guardian", id: g.id, label: `${g.fullName} · รหัส ${g.linkCode}` })}>ลบรหัส</Button>}</>}</div></div>)}</div>}
+            </section>
+            <section>
+              <h3 className="mb-2 text-sm font-bold text-ink">บัญชีที่ผูกกับนักเรียนโดยตรง</h3>
+              {viewingStudent.lineAccounts.length > 0 && <div className="space-y-2">{viewingStudent.lineAccounts.map((account) => <div key={account.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line p-3 text-sm"><div><p className="font-semibold text-ink-strong">{account.linked ? `LINE: ${account.lineDisplayName}` : account.linkCode ? `รหัสรอผูก ${account.linkCode}` : "ยังไม่มีรหัส"}</p><p className="text-xs text-muted">ยังไม่ระบุชื่อผู้ปกครอง</p></div><Button variant="outline" size="sm" className="min-h-10 text-danger" onClick={() => setUnlinking({ kind: "student", id: account.id, label: `${viewingStudent.name} · ${account.lineDisplayName ?? account.linkCode ?? "รายการ LINE"}` })}>{account.linked ? "ยกเลิกการผูก" : "ลบรหัส"}</Button></div>)}</div>}
+              <Button variant="outline" size="sm" className="mt-3 min-h-10" disabled={pendingId === viewingStudent.studentId} onClick={() => generateStudentCode(viewingStudent.studentId)}>สร้างรหัสสำหรับผู้ปกครองเพิ่ม</Button>
+            </section>
+          </div>}
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={unlinking !== null}

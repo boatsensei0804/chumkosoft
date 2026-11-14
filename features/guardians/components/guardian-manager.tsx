@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Search, Plus, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, Eye, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,6 +13,8 @@ import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PaginationBar from "@/components/ui/pagination-bar";
 import ClassroomFilter from "./classroom-filter";
 import GuardianFormDialog from "./guardian-form-dialog";
+import MobileRecordCard from "@/features/dashboard/components/mobile-record-card";
+import RecordPreviewDialog from "@/features/dashboard/components/record-preview-dialog";
 import { useListParams } from "@/features/dashboard/hooks/use-list-params";
 import { deleteGuardianAction } from "@/features/guardians/actions";
 import type { GuardianRow, StudentGuardians } from "@/features/guardians/types";
@@ -43,6 +45,7 @@ export default function GuardianManager({ page, query, classrooms, classroomId }
   const { navigate, isPending } = useListParams("/dashboard/guardians", { q: query, page: page.page, classroom: classroomId });
   const [search, setSearch] = useState(query);
   const [editing, setEditing] = useState<Editing | null>(null);
+  const [viewing, setViewing] = useState<{ studentId: string; studentName: string; guardian: GuardianRow } | null>(null);
   const [deleting, setDeleting] = useState<GuardianRow | null>(null);
   const [isRemovePending, startRemove] = useTransition();
 
@@ -95,7 +98,14 @@ export default function GuardianManager({ page, query, classrooms, classroomId }
             <p className="text-[15px] font-semibold text-ink-strong">ไม่พบนักเรียนในห้องที่เลือก</p>
           </div>
         ) : (
-          <div className={cn("overflow-x-auto rounded-xl border border-line bg-card transition-opacity", isPending && "opacity-60")}>
+          <>
+          <div className={cn("grid gap-3 rounded-xl border border-line bg-card p-3 transition-opacity md:hidden", isPending && "opacity-60")}>
+            {page.rows.map((student) => <MobileRecordCard key={student.studentId} title={student.name} subtitle={`รหัส ${student.code} · ${student.classroom}`}
+              fields={[{ label: "ผู้ปกครอง", value: student.guardians.length ? `${student.guardians.length} คน` : "ยังไม่มี" }, { label: "ผูก LINE", value: `${student.guardians.filter((g) => g.lineStatus === "linked").length} คน` }]}
+              actions={<div className="w-full space-y-2"><Button variant="outline" size="sm" className="min-h-10" onClick={() => setEditing({ studentId: student.studentId, studentName: student.name, guardian: null })}><Plus className="size-4" /> เพิ่มผู้ปกครอง</Button>{student.guardians.map((g) => <div key={g.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-2 p-2.5"><div className="min-w-0"><p className="text-sm font-semibold text-ink">{[g.prefix, g.fullName].filter(Boolean).join(" ")}</p><p className="text-xs text-muted">{g.relation} · {g.lineStatus === "linked" ? "ผูก LINE แล้ว" : g.lineStatus === "pending" ? "รอผูก LINE" : "ยังไม่ผูก LINE"}</p></div><div className="flex gap-1"><Button variant="ghost" size="sm" className="min-h-10" onClick={() => setViewing({ studentId: student.studentId, studentName: student.name, guardian: g })}><Eye className="size-4" /> ดู</Button><Button variant="ghost" size="sm" className="min-h-10" onClick={() => setEditing({ studentId: student.studentId, studentName: student.name, guardian: g })}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(g)}><Trash2 className="size-4" /> ลบ</Button></div></div>)}</div>}
+            />)}
+          </div>
+          <div className={cn("hidden overflow-x-auto rounded-xl border border-line bg-card transition-opacity md:block", isPending && "opacity-60")}>
             <Table className="min-w-[820px]">
               <TableHeader>
                 <TableRow>
@@ -154,6 +164,7 @@ export default function GuardianManager({ page, query, classrooms, classroomId }
                         </Button>
                         {student.guardians.map((g) => (
                           <div key={g.id} className="flex min-h-8 items-center gap-0.5">
+                            <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`ดูข้อมูล ${g.fullName}`} onClick={() => setViewing({ studentId: student.studentId, studentName: student.name, guardian: g })}><Eye className="size-[17px]" /></Button></TooltipTrigger><TooltipContent>ดูข้อมูล</TooltipContent></Tooltip>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`แก้ไข ${g.fullName}`} onClick={() => setEditing({ studentId: student.studentId, studentName: student.name, guardian: g })}>
@@ -179,6 +190,7 @@ export default function GuardianManager({ page, query, classrooms, classroomId }
               </TableBody>
             </Table>
           </div>
+          </>
         )}
 
         <div className="overflow-hidden rounded-2xl border border-line bg-card">
@@ -195,6 +207,8 @@ export default function GuardianManager({ page, query, classrooms, classroomId }
             onSaved={handleSaved}
           />
         )}
+
+        {viewing && <RecordPreviewDialog open title={[viewing.guardian.prefix, viewing.guardian.fullName].filter(Boolean).join(" ")} subtitle={`ผู้ปกครองของ ${viewing.studentName}`} fields={[{ label: "ความสัมพันธ์", value: viewing.guardian.relation }, { label: "เบอร์โทรศัพท์", value: viewing.guardian.phone ?? "—" }, { label: "อาชีพ", value: viewing.guardian.occupation ?? "—" }, { label: "กรุ๊ปเลือด", value: viewing.guardian.bloodType ?? "—" }, { label: "สถานะ LINE", value: viewing.guardian.lineStatus === "linked" ? "ผูกแล้ว" : viewing.guardian.lineStatus === "pending" ? "รอผูก" : "ยังไม่ผูก" }]} onClose={() => setViewing(null)} onEdit={() => { const item = viewing; setViewing(null); setEditing(item); }} />}
 
         <ConfirmDialog
           open={deleting !== null}

@@ -79,15 +79,15 @@ export default function AttendanceCalendar({
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <div className="min-w-[735px]">
+      <div>
+        <div className="w-full">
           <div className="grid grid-cols-7 border-b border-line bg-surface">
             {WEEKDAYS.map((weekday) => (
               <div key={weekday} className="px-2 py-2 text-center text-[11px] font-semibold text-muted sm:text-xs">{weekday}</div>
             ))}
           </div>
           <div className="grid grid-cols-7">
-            {Array.from({ length: firstDay }, (_, i) => <div key={`blank-${i}`} className="min-h-[112px] border-b border-r border-line bg-surface/50" aria-hidden="true" />)}
+            {Array.from({ length: firstDay }, (_, i) => <div key={`blank-${i}`} className="min-h-20 border-b border-r border-line bg-surface/50 sm:min-h-[112px]" aria-hidden="true" />)}
             {Array.from({ length: daysInMonth }, (_, i) => {
               const number = i + 1;
               const iso = `${yearText}-${monthText}-${String(number).padStart(2, "0")}`;
@@ -101,19 +101,19 @@ export default function AttendanceCalendar({
                   href={dateUrl(iso, mode, offeringId, classroomId)}
                   aria-current={selected ? "date" : undefined}
                   aria-label={`${number} ${monthLabel}${day ? `, บันทึกแล้ว ${day.checked} คน, ยังไม่เช็ค ${day.unchecked} คน, มาสาย ${day.late} คน` : ", ไม่มีคาบเรียน"}`}
-                  className={`group min-h-[112px] border-b border-r border-line p-2 transition-colors hover:bg-brand-softer ${selected ? "bg-brand-soft ring-2 ring-inset ring-brand" : "bg-bg"}`}
+                  className={`group min-w-0 min-h-20 border-b border-r border-line p-1 transition-colors hover:bg-brand-softer sm:min-h-[112px] sm:p-2 ${selected ? "bg-brand-soft ring-2 ring-inset ring-brand" : "bg-bg"}`}
                 >
                   <div className="flex items-center justify-between gap-1">
                     <span className={`grid size-6 place-items-center rounded-full text-xs font-semibold tabular ${selected ? "bg-brand text-white" : "text-ink-strong group-hover:bg-brand-soft"}`}>{number}</span>
-                    {day && <Icon className={`size-4 ${statusColor}`} aria-hidden="true" />}
+                    {day && <Icon className={`hidden size-4 sm:block ${statusColor}`} aria-hidden="true" />}
                   </div>
                   {day?.state === "no-session" ? (
-                    <p className="mt-3 text-[11px] text-faint">{day.total === 0 ? "ไม่มีรายชื่อ" : mode === "class" ? "ไม่มีคาบ" : "วันหยุด"}</p>
+                    <p className="mt-2 text-[9px] leading-tight text-faint sm:mt-3 sm:text-[11px]">{day.total === 0 ? "ไม่มีรายชื่อ" : mode === "class" ? "ไม่มีคาบ" : "วันหยุด"}</p>
                   ) : day ? (
-                    <div className="mt-2 space-y-0.5 text-[10.5px] leading-snug tabular sm:text-[11px]">
-                      <p className="text-success">เช็คแล้ว {day.checked}</p>
-                      <p className="text-muted">ยังไม่เช็ค {day.unchecked}</p>
-                      <p className={day.late > 0 ? "font-semibold text-warning" : "text-faint"}>สาย {day.late}</p>
+                    <div className="mt-1 space-y-0.5 text-[9px] leading-tight tabular sm:mt-2 sm:text-[11px]">
+                      <p className="text-success"><span className="sm:hidden">✓ </span><span className="hidden sm:inline">เช็คแล้ว </span>{day.checked}</p>
+                      <p className="text-muted"><span className="sm:hidden">○ </span><span className="hidden sm:inline">ยังไม่เช็ค </span>{day.unchecked}</p>
+                      <p className={day.late > 0 ? "font-semibold text-warning" : "text-faint"}><span className="sm:hidden">ส </span><span className="hidden sm:inline">สาย </span>{day.late}</p>
                     </div>
                   ) : null}
                 </Link>

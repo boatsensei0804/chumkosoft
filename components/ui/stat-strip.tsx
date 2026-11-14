@@ -56,9 +56,9 @@ export default function StatStrip({ items, className }: { items: StatItem[]; cla
                   <Icon className="size-3.5" />
                 </span>
               )}
-              <p className="truncate text-[12px] font-medium text-muted">{item.label}</p>
+              <p className="text-[12px] font-medium leading-snug text-muted">{item.label}</p>
             </div>
-            <div className="flex items-baseline gap-1.5 pl-8">
+            <div className="flex flex-wrap items-baseline gap-1.5">
               <span className={cn("tabular text-[21px] font-semibold leading-none tracking-tight", toneValue[tone])}>{formatValue(item.value)}</span>
               {item.hint && <span className="text-[11.5px] font-medium text-faint">{item.hint}</span>}
             </div>

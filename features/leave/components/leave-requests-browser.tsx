@@ -22,6 +22,7 @@ export default function LeaveRequestsBrowser({ items, isAdmin }: { items: LeaveI
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<LeaveStatus | "ALL">("PENDING");
   const [selected, setSelected] = useState<{ item: LeaveItem; decision: "APPROVED" | "REJECTED" } | null>(null);
+  const [viewing, setViewing] = useState<LeaveItem | null>(null);
   const [note, setNote] = useState("");
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
@@ -74,16 +75,23 @@ export default function LeaveRequestsBrowser({ items, isAdmin }: { items: LeaveI
             <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${item.status === "PENDING" ? "bg-warning-soft text-warning" : item.status === "APPROVED" ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}>{item.status === "PENDING" ? "รอพิจารณา" : item.status === "APPROVED" ? "อนุมัติ" : "ไม่อนุมัติ"}</span>
           </div>
           <p className="mt-2 text-sm text-ink">{item.kind === "SICK" ? "ลาป่วย" : "ลากิจ"} · {thaiDate(item.startDate)}{item.endDate === item.startDate ? "" : ` ถึง ${thaiDate(item.endDate)}`}</p>
-          <p className="mt-1 whitespace-pre-wrap text-sm text-muted">เหตุผล: {item.reason}</p>
-          {item.reviewNote && <p className="mt-1 text-sm text-muted">หมายเหตุจากผู้พิจารณา: {item.reviewNote}</p>}
+          <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-sm text-muted">เหตุผล: {item.reason}</p>
           <p className="mt-2 text-xs text-muted">แจ้งครูที่ปรึกษาทาง LINE: {item.advisorNotifiedCount ? `${item.advisorNotifiedCount} บัญชี` : "ยังไม่สำเร็จ"} · ส่งคำขอ {new Date(item.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "medium", timeStyle: "short" })}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => setViewing(item)} className="min-h-10 rounded-lg border border-line px-3 py-2 text-sm font-semibold text-brand-ink">ดูรายละเอียด</button>
           {item.status === "PENDING" && <><button type="button" disabled={pending} onClick={() => { setSelected({ item, decision: "APPROVED" }); setNote(""); }} className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">อนุมัติ</button><button type="button" disabled={pending} onClick={() => { setSelected({ item, decision: "REJECTED" }); setNote(""); }} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink disabled:opacity-50">ไม่อนุมัติ</button></>}
           {isAdmin && item.status === "PENDING" && item.advisorNotifiedCount === 0 && <button type="button" disabled={pending} onClick={() => retryNotification(item.id)} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-brand-ink disabled:opacity-50">แจ้งครูอีกครั้ง</button>}
         </div>
       </article>)}</div>}
     </section>
+    <Dialog open={viewing !== null} onOpenChange={(open) => !open && setViewing(null)}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader><DialogTitle>รายละเอียดคำขอลา</DialogTitle><DialogDescription>{viewing ? `${viewing.studentName} · ${viewing.studentCode} · ห้อง ${viewing.classroomCode}` : ""}</DialogDescription></DialogHeader>
+        {viewing && <div className="space-y-3 text-sm text-ink"><p className="rounded-lg bg-surface-2 p-3 font-semibold">{viewing.kind === "SICK" ? "ลาป่วย" : "ลากิจ"} · {thaiDate(viewing.startDate)}{viewing.endDate === viewing.startDate ? "" : ` ถึง ${thaiDate(viewing.endDate)}`}</p><div><p className="text-xs text-muted">เหตุผลที่ผู้ปกครองแจ้ง</p><p className="mt-1 whitespace-pre-wrap">{viewing.reason}</p></div>{viewing.reviewNote && <div><p className="text-xs text-muted">หมายเหตุจากผู้พิจารณา</p><p className="mt-1 whitespace-pre-wrap">{viewing.reviewNote}</p></div>}<p className="text-xs text-muted">แจ้งครูที่ปรึกษาทาง LINE {viewing.advisorNotifiedCount}/{viewing.advisorTargetCount} บัญชี</p></div>}
+        <DialogFooter><button type="button" onClick={() => setViewing(null)} className="min-h-10 rounded-lg border border-line px-4 py-2 text-sm font-semibold">ปิด</button>{viewing?.status === "PENDING" && <><button type="button" onClick={() => { setSelected({ item: viewing, decision: "REJECTED" }); setViewing(null); setNote(""); }} className="min-h-10 rounded-lg border border-line px-4 py-2 text-sm font-semibold">ไม่อนุมัติ</button><button type="button" onClick={() => { setSelected({ item: viewing, decision: "APPROVED" }); setViewing(null); setNote(""); }} className="min-h-10 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">อนุมัติ</button></>}</DialogFooter>
+      </DialogContent>
+    </Dialog>
     <Dialog open={selected !== null} onOpenChange={(open) => !pending && !open && setSelected(null)}>
       <DialogContent>
         <DialogHeader><DialogTitle>{selected?.decision === "APPROVED" ? "อนุมัติคำขอลา" : "ไม่อนุมัติคำขอลา"}</DialogTitle>

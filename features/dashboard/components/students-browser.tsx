@@ -14,6 +14,7 @@ import StatusChip from "./status-chip";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PaginationBar from "@/components/ui/pagination-bar";
 import StudentFormDialog from "@/features/students/components/student-form-dialog";
+import MobileRecordCard from "./mobile-record-card";
 import { deleteStudentAction, deleteStudentsAction } from "@/features/students/actions";
 import { useListParams } from "@/features/dashboard/hooks/use-list-params";
 import type { EnrolmentStatus, StudentSummary, ClassroomOption } from "../types";
@@ -147,15 +148,15 @@ export default function StudentsBrowser({ page, query, filter, classrooms }: Stu
             })}
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 rounded-[10px] border border-line bg-surface-2 px-3 py-2 sm:w-56">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-line bg-surface-2 px-3 py-2 sm:w-56 sm:flex-none">
               <Search className="size-[18px] text-faint" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="ค้นหาชื่อ หรือรหัส…"
                 aria-label="ค้นหานักเรียน"
-                className="w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
+                className="min-w-0 w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
               />
             </div>
             <Button onClick={openCreate}>
@@ -179,7 +180,17 @@ export default function StudentsBrowser({ page, query, filter, classrooms }: Stu
         )}
 
         {students.length > 0 ? (
-          <div className={cn("overflow-x-auto border-t border-line transition-opacity", isPending && "opacity-60")}>
+          <>
+          <div className={cn("grid gap-3 border-t border-line p-3 md:hidden", isPending && "opacity-60")}>
+            {students.map((s) => <MobileRecordCard key={s.id}
+              title={<span className="flex items-start gap-2"><Checkbox checked={selected.has(s.id)} onCheckedChange={() => toggleOne(s.id)} aria-label={`เลือก ${s.firstName} ${s.lastName}`} /><span>{[s.prefix, `${s.firstName} ${s.lastName}`].filter(Boolean).join(" ")}</span></span>}
+              subtitle={`รหัส ${s.code} · ${s.classroom}`}
+              badge={<StatusChip status={s.status} />}
+              fields={[{ label: "ระดับ", value: s.grade }, { label: "วันที่ลงทะเบียน", value: s.enrolledAt }]}
+              actions={<><Button asChild variant="outline" size="sm" className="min-h-10"><Link href={`/dashboard/students/${s.id}`}><Eye className="size-4" /> ดูข้อมูล</Link></Button><Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(s)}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(s)}><Trash2 className="size-4" /> ลบ</Button></>}
+            />)}
+          </div>
+          <div className={cn("hidden overflow-x-auto border-t border-line transition-opacity md:block", isPending && "opacity-60")}>
             <Table className="min-w-[720px]">
               <TableHeader>
                 <TableRow>
@@ -260,6 +271,7 @@ export default function StudentsBrowser({ page, query, filter, classrooms }: Stu
               </TableBody>
             </Table>
           </div>
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center gap-3 border-t border-line px-6 py-16 text-center">
             <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint" aria-hidden="true">

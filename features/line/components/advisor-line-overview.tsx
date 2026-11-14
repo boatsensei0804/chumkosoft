@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Copy } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { generateAdvisorLineCodeAction, unlinkAdvisorLineAction } from "@/features/line/advisor-code-actions";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 
@@ -22,6 +23,7 @@ export default function AdvisorLineOverview({ rows }: { rows: TeacherRow[] }): R
   const [filter, setFilter] = useState<Status | "ALL">("ALL");
   const [message, setMessage] = useState("");
   const [unlinking, setUnlinking] = useState<TeacherRow | null>(null);
+  const [viewingId, setViewingId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const counts = useMemo(() => ({
     connected: rows.filter((row) => row.status === "CONNECTED").length,
@@ -29,6 +31,7 @@ export default function AdvisorLineOverview({ rows }: { rows: TeacherRow[] }): R
     unlinked: rows.filter((row) => row.status === "UNLINKED" || row.status === "NO_ACCOUNT").length,
   }), [rows]);
   const visible = rows.filter((row) => (filter === "ALL" || row.status === filter) && `${row.name} ${row.staffCode} ${row.classrooms.join(" ")}`.toLowerCase().includes(query.trim().toLowerCase()));
+  const viewing = rows.find((row) => row.id === viewingId) ?? null;
 
   function generate(staffId: string): void {
     startTransition(async () => {
@@ -69,22 +72,30 @@ export default function AdvisorLineOverview({ rows }: { rows: TeacherRow[] }): R
           <option value="ALL">ทุกสถานะ</option><option value="CONNECTED">เชื่อมแล้ว</option><option value="PENDING">รอส่งรหัส</option><option value="UNLINKED">ยังไม่เชื่อม</option><option value="NO_ACCOUNT">ยังไม่มีบัญชีครู</option>
         </select>
       </div>
-      <div className="md:overflow-x-auto"><table className="w-full text-left text-sm md:min-w-[650px]">
-        <thead className="hidden bg-surface-2 text-muted md:table-header-group"><tr><th className="px-4 py-3 font-semibold">ครูและบุคลากร</th><th className="px-4 py-3 font-semibold">รหัสบุคลากร</th><th className="px-4 py-3 font-semibold">ห้องที่ปรึกษา</th><th className="px-4 py-3 font-semibold">สถานะ LINE</th><th className="px-4 py-3 font-semibold">รหัสเชื่อม / จัดการ</th></tr></thead>
+      <div className="md:overflow-x-auto"><table className="w-full text-left text-sm md:min-w-[550px]">
+        <thead className="hidden bg-surface-2 text-muted md:table-header-group"><tr><th className="px-4 py-3 font-semibold">ครูและบุคลากร</th><th className="px-4 py-3 font-semibold">สถานะ LINE</th><th className="px-4 py-3 text-right font-semibold">จัดการ</th></tr></thead>
         <tbody className="block space-y-3 p-3 md:table-row-group md:space-y-0 md:divide-y md:divide-line md:p-0">{visible.map((row) => <tr key={row.id} className="block rounded-xl border border-line p-1 md:table-row md:rounded-none md:border-0 md:p-0">
-          <td className="block px-3 py-2 font-semibold text-ink md:table-cell md:px-4 md:py-3">{row.name}{row.lineDisplayName && <p className="mt-1 text-xs font-medium text-brand-ink">ชื่อ LINE: {row.lineDisplayName}</p>}</td>
-          <td className="block px-3 py-1 text-muted md:table-cell md:px-4 md:py-3"><span className="md:hidden">รหัสบุคลากร: </span>{row.staffCode}</td>
-          <td className="block px-3 py-1 text-muted md:table-cell md:px-4 md:py-3"><span className="md:hidden">ห้องที่ปรึกษา: </span>{row.classrooms.join(", ") || "—"}</td>
+          <td className="block px-3 py-2 font-semibold text-ink md:table-cell md:px-4 md:py-3">{row.name}<p className="mt-1 text-xs font-normal text-muted">{row.staffCode} · ห้องที่ปรึกษา {row.classrooms.join(", ") || "—"}</p></td>
           <td className="block px-3 py-2 md:table-cell md:px-4 md:py-3"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS[row.status].className}`}>{STATUS[row.status].label}</span></td>
-          <td className="block px-3 py-3 md:table-cell md:px-4">{row.status !== "NO_ACCOUNT" && <div className="flex flex-wrap items-center gap-2">
-            {row.code && <><span className="font-mono font-bold tracking-widest text-brand-ink select-all">{row.code}</span><button type="button" aria-label={`คัดลอกรหัสของ ${row.name}`} onClick={() => copy(row.code!)} className="grid size-9 place-items-center rounded text-muted hover:bg-surface-2"><Copy className="size-4" /></button></>}
-            {row.status !== "CONNECTED" && <button type="button" disabled={pending} onClick={() => generate(row.id)} className="min-h-9 whitespace-nowrap rounded-lg border border-line px-2.5 py-1.5 text-xs font-semibold text-brand-ink disabled:opacity-50">{row.code ? "สร้างรหัสใหม่" : "สร้างรหัส"}</button>}
-            {(row.status === "CONNECTED" || row.status === "PENDING") && <button type="button" disabled={pending} onClick={() => setUnlinking(row)} className="min-h-9 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-danger hover:bg-danger-soft disabled:opacity-50">{row.status === "CONNECTED" ? "ยกเลิกการผูก" : "ลบรหัส"}</button>}
-          </div>}</td>
+          <td className="block px-3 py-3 md:table-cell md:px-4 md:text-right"><button type="button" onClick={() => setViewingId(row.id)} className="min-h-10 rounded-lg border border-line px-3 py-2 font-semibold text-brand-ink hover:bg-surface-2">ดูและจัดการ</button></td>
         </tr>)}</tbody>
       </table></div>
       {visible.length === 0 && <p className="p-8 text-center text-sm text-muted">ไม่พบครูที่ตรงกับตัวกรอง</p>}
     </section>
+    <Dialog open={viewing !== null} onOpenChange={(open) => { if (!open) setViewingId(null); }}>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader><DialogTitle>{viewing?.name ?? "ข้อมูล LINE ครู"}</DialogTitle><DialogDescription>{viewing ? `รหัสบุคลากร ${viewing.staffCode} · ห้องที่ปรึกษา ${viewing.classrooms.join(", ") || "—"}` : ""}</DialogDescription></DialogHeader>
+        {viewing && <div className="space-y-4 text-sm">
+          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS[viewing.status].className}`}>{STATUS[viewing.status].label}</span>
+          {viewing.lineDisplayName && <p className="rounded-lg bg-surface-2 p-3">ชื่อ LINE: <strong>{viewing.lineDisplayName}</strong></p>}
+          {viewing.code && <div className="flex flex-wrap items-center gap-2 rounded-lg bg-brand-soft p-3"><span>รหัสเชื่อม</span><span className="font-mono font-bold tracking-widest text-brand-ink select-all">{viewing.code}</span><button type="button" aria-label={`คัดลอกรหัสของ ${viewing.name}`} onClick={() => copy(viewing.code!)} className="grid size-10 place-items-center rounded-lg hover:bg-card"><Copy className="size-4" /></button></div>}
+          {viewing.status === "NO_ACCOUNT" ? <p className="text-muted">ต้องสร้างบัญชีครูที่เปิดใช้งานก่อน จึงจะออกรหัสเชื่อมได้</p> : <div className="flex flex-wrap gap-2">
+            {viewing.status !== "CONNECTED" && <button type="button" disabled={pending} onClick={() => generate(viewing.id)} className="min-h-10 rounded-lg border border-line px-3 py-2 font-semibold text-brand-ink disabled:opacity-50">{viewing.code ? "สร้างรหัสใหม่" : "สร้างรหัส"}</button>}
+            {(viewing.status === "CONNECTED" || viewing.status === "PENDING") && <button type="button" disabled={pending} onClick={() => setUnlinking(viewing)} className="min-h-10 rounded-lg border border-line px-3 py-2 font-semibold text-danger hover:bg-danger-soft disabled:opacity-50">{viewing.status === "CONNECTED" ? "ยกเลิกการผูก" : "ลบรหัส"}</button>}
+          </div>}
+        </div>}
+      </DialogContent>
+    </Dialog>
     <ConfirmDialog open={unlinking !== null} title="ยกเลิกการผูก LINE ครู" message={unlinking ? `ยืนยันยกเลิกบัญชีของ ${unlinking.name}${unlinking.lineDisplayName ? ` (LINE: ${unlinking.lineDisplayName})` : ""} ใช่ไหม? ครูจะไม่ได้รับสรุปและประกาศผ่านบัญชีนี้จนกว่าจะผูกใหม่` : ""} confirmLabel="ยืนยันยกเลิก" destructive pending={pending} onConfirm={unlink} onClose={() => setUnlinking(null)} />
   </div>;
 }

@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
-import { Search, Trash2, ScanFace, TriangleAlert, CheckCircle2, Info } from "lucide-react";
+import { ArrowLeft, Search, Trash2, ScanFace, TriangleAlert, CheckCircle2, Info } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -51,7 +51,7 @@ export default function FacesBrowser({ students, selected }: FacesBrowserProps):
     <TooltipProvider delayDuration={200}>
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[340px_1fr] lg:items-start">
         {/* Student list */}
-        <div className="flex flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
+        <div className={cn("flex flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm", selected && "hidden lg:flex")}>
           <div className="border-b border-line p-3">
             <div className="flex items-center gap-2 rounded-[10px] border border-line bg-surface-2 px-3 py-2">
               <Search className="size-[18px] text-faint" />
@@ -103,7 +103,8 @@ export default function FacesBrowser({ students, selected }: FacesBrowserProps):
 
         {/* Selected student panel */}
         {selected ? (
-          <div className="flex flex-col gap-5 rounded-2xl border border-line bg-card p-5 shadow-sm">
+          <div className="flex flex-col gap-5 rounded-2xl border border-line bg-card p-4 shadow-sm sm:p-5">
+            <button type="button" onClick={() => router.push("/dashboard/faces?view=students")} className="inline-flex min-h-10 items-center gap-2 self-start text-sm font-semibold text-brand-ink lg:hidden"><ArrowLeft className="size-4" /> กลับไปรายชื่อนักเรียน</button>
             <div>
               <h2 className="text-[16px] font-bold text-ink-strong">{selected.name}</h2>
               <p className="tabular text-[12.5px] text-muted">
@@ -158,7 +159,7 @@ export default function FacesBrowser({ students, selected }: FacesBrowserProps):
             )}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-line bg-card px-6 py-20 text-center">
+          <div className="hidden flex-col items-center justify-center gap-3 rounded-2xl border border-line bg-card px-6 py-20 text-center lg:flex">
             <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint" aria-hidden="true">
               <ScanFace className="size-6" />
             </span>

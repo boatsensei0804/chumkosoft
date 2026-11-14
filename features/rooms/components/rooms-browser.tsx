@@ -3,13 +3,15 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Search, Plus, Pencil, Trash2, MapPin } from "lucide-react";
+import { Search, Plus, Eye, Pencil, Trash2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import RoomFormDialog from "./room-form-dialog";
+import MobileRecordCard from "@/features/dashboard/components/mobile-record-card";
+import RecordPreviewDialog from "@/features/dashboard/components/record-preview-dialog";
 import { deleteRoomAction } from "@/features/rooms/actions";
 import type { RoomRow } from "../types";
 
@@ -18,6 +20,7 @@ export default function RoomsBrowser({ rooms }: { rooms: RoomRow[] }): React.Rea
   const [query, setQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<RoomRow | null>(null);
+  const [viewing, setViewing] = useState<RoomRow | null>(null);
   const [deleting, setDeleting] = useState<RoomRow | null>(null);
   const [isDeletePending, startDelete] = useTransition();
 
@@ -56,15 +59,15 @@ export default function RoomsBrowser({ rooms }: { rooms: RoomRow[] }): React.Rea
       <div className="flex flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-[14px] font-bold text-ink-strong">ห้องและสถานที่ทั้งหมด</h2>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 rounded-[10px] border border-line bg-surface-2 px-3 py-2 sm:w-56">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-line bg-surface-2 px-3 py-2 sm:w-56 sm:flex-none">
               <Search className="size-[18px] text-faint" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="ค้นหารหัส ชื่อ หรืออาคาร…"
                 aria-label="ค้นหาห้อง"
-                className="w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
+                className="min-w-0 w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
               />
             </div>
             <Button onClick={openCreate}>
@@ -74,7 +77,14 @@ export default function RoomsBrowser({ rooms }: { rooms: RoomRow[] }): React.Rea
         </div>
 
         {results.length > 0 ? (
-          <div className="overflow-x-auto border-t border-line">
+          <>
+          <div className="grid gap-3 border-t border-line p-3 md:hidden">
+            {results.map((r) => <MobileRecordCard key={r.id} title={r.name ?? r.code} subtitle={`รหัส ${r.code}`}
+              fields={[{ label: "อาคาร", value: r.building ?? "—" }, { label: "ความจุ", value: r.capacity ?? "—" }, { label: "ใช้สอน", value: `${r.offeringCount} วิชา` }]}
+              actions={<><Button variant="outline" size="sm" className="min-h-10" onClick={() => setViewing(r)}><Eye className="size-4" /> ดูข้อมูล</Button><Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(r)}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(r)}><Trash2 className="size-4" /> ลบ</Button></>}
+            />)}
+          </div>
+          <div className="hidden overflow-x-auto border-t border-line md:block">
             <Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow>
@@ -106,6 +116,7 @@ export default function RoomsBrowser({ rooms }: { rooms: RoomRow[] }): React.Rea
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-0.5">
+                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`ดูข้อมูล ${r.code}`} onClick={() => setViewing(r)}><Eye className="size-[18px]" /></Button></TooltipTrigger><TooltipContent>ดูข้อมูล</TooltipContent></Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`แก้ไข ${r.code}`} onClick={() => openEdit(r)}>
@@ -129,6 +140,7 @@ export default function RoomsBrowser({ rooms }: { rooms: RoomRow[] }): React.Rea
               </TableBody>
             </Table>
           </div>
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center gap-3 border-t border-line px-6 py-16 text-center">
             <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint" aria-hidden="true">
@@ -145,6 +157,7 @@ export default function RoomsBrowser({ rooms }: { rooms: RoomRow[] }): React.Rea
         </div>
 
         <RoomFormDialog open={dialogOpen} room={editing} onClose={() => setDialogOpen(false)} onSaved={handleSaved} />
+        {viewing && <RecordPreviewDialog open title={viewing.name ?? viewing.code} subtitle={`รหัสห้อง ${viewing.code}`} fields={[{ label: "อาคาร", value: viewing.building ?? "—" }, { label: "ความจุ", value: viewing.capacity === null ? "—" : `${viewing.capacity} คน` }, { label: "รายวิชาที่ใช้ห้องนี้", value: `${viewing.offeringCount} วิชา` }]} onClose={() => setViewing(null)} onEdit={() => { const room = viewing; setViewing(null); openEdit(room); }} />}
 
         <ConfirmDialog
           open={deleting !== null}
