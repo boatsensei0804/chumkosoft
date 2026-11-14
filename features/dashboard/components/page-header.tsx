@@ -8,10 +8,10 @@ interface PageHeaderProps {
 
 export default function PageHeader({ title, subtitle, actions }: PageHeaderProps): React.ReactNode {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
-      <div className="min-w-0">
+    <div className="relative mb-6 flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-[22px] border border-blue-100 bg-gradient-to-r from-white via-white to-blue-50 p-5 shadow-[0_4px_20px_#16487806] sm:p-7">
+      <div className="min-w-0 border-l-4 border-brand pl-4">
         <h1
-          className="text-[25px] font-bold tracking-tight text-ink-strong sm:text-[29px]"
+          className="text-[26px] font-bold tracking-tight text-ink-strong sm:text-[32px]"
           style={{ textWrap: "balance" }}
         >
           {title}

@@ -1,5 +1,7 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+import { navGroups } from "../nav";
 import { Menu, Search, CalendarDays, LogOut, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -22,11 +24,15 @@ interface TopBarProps {
 }
 
 export default function TopBar({ user, onOpenNav, today, onOpenPalette }: TopBarProps): React.ReactNode {
+  const pathname = usePathname();
+  const current = navGroups.flatMap((group) => group.items).filter((item) => pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`))).sort((a, b) => b.href.length - a.href.length)[0];
   return (
-    <header className="sticky top-0 z-[var(--z-sticky)] flex h-16 items-center gap-3 border-b border-line bg-bg px-4 xl:px-8">
+    <header className="sticky top-0 z-[var(--z-sticky)] flex h-16 items-center gap-3 border-b border-blue-100/70 bg-white/90 px-4 backdrop-blur-xl xl:px-7">
       <Button variant="ghost" size="icon" onClick={onOpenNav} aria-label="เปิดเมนู" className="xl:hidden">
         <Menu className="size-5" />
       </Button>
+
+      <div className="hidden shrink-0 border-r border-line pr-5 lg:block"><p className="text-[10px] font-bold tracking-[0.16em] text-brand">CHUMKOSOFT</p><p className="mt-0.5 text-sm font-semibold text-ink-strong">{current?.label ?? "พื้นที่ทำงาน"}</p></div>
 
       {/* Opens the ⌘K command palette — a real destination search, not a text field. */}
       <button
@@ -34,7 +40,7 @@ export default function TopBar({ user, onOpenNav, today, onOpenPalette }: TopBar
         onClick={onOpenPalette}
         aria-label="ค้นหาและไปยังหน้า (⌘K)"
         aria-keyshortcuts="Meta+K Control+K"
-        className="flex w-full max-w-lg items-center gap-2.5 rounded-lg border border-line bg-surface px-3 py-2 text-left transition-colors hover:border-line-strong"
+        className="flex w-full max-w-sm items-center gap-2.5 rounded-full border border-blue-100 bg-blue-50/60 px-3 py-2 text-left transition-colors hover:border-line-strong"
       >
         <Search className="size-[19px] text-faint" />
         <span className="flex-1 text-[14px] text-faint">ค้นหาเมนู ไปยังหน้า…</span>

@@ -21,7 +21,7 @@ export default function SidebarNav({ items, onNavigate }: SidebarNavProps): Reac
 
   return (
     <TooltipProvider delayDuration={200}>
-      <ul className="flex flex-col gap-0.5">
+      <ul className="flex flex-col gap-1.5">
         {items.map((item) => {
           const active = item.available && isActive(pathname, item.href);
           const Icon = item.icon;
@@ -53,12 +53,12 @@ export default function SidebarNav({ items, onNavigate }: SidebarNavProps): Reac
                 onClick={onNavigate}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-colors",
-                  active ? "bg-brand-soft text-brand-ink" : "text-ink hover:bg-surface-sunken",
+                  "group relative flex items-center gap-3 min-h-11 rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition-all",
+                  active ? "bg-brand text-white shadow-[0_4px_12px_#2563eb25]" : "text-ink hover:bg-surface-sunken",
                 )}
               >
-                {active && <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-brand" aria-hidden="true" />}
-                <Icon className={cn("size-5", active ? "text-brand-strong" : "text-muted")} />
+                {active && <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-white/70" aria-hidden="true" />}
+                <Icon className={cn("size-5", active ? "text-white" : "text-muted")} />
                 <span className="flex-1">{item.label}</span>
                 {typeof item.badge === "number" && (
                   <span

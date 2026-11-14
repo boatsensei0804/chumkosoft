@@ -36,10 +36,10 @@ export default function AppShell({ children, user, today }: AppShellProps): Reac
   }, []);
 
   return (
-    <div className="relative min-h-dvh bg-[#f5f9fd]">
+    <div className="school-workspace relative min-h-dvh bg-[#eef5fc]">
 
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-[var(--z-sticky)] hidden w-[256px] border-r border-line bg-bg xl:block">
+      <aside className="fixed inset-y-4 left-4 z-[var(--z-sticky)] hidden w-[248px] overflow-hidden rounded-[24px] border border-white bg-bg shadow-[0_12px_48px_#16487812] xl:block">
         <SidebarContent user={user} />
       </aside>
 
@@ -54,9 +54,9 @@ export default function AppShell({ children, user, today }: AppShellProps): Reac
       </Sheet>
 
       {/* Content column */}
-      <div className="relative z-10 xl:pl-[256px]">
+      <div className="relative z-10 xl:pl-[280px]">
         <TopBar user={user} onOpenNav={() => setNavOpen(true)} today={today} onOpenPalette={() => setPaletteOpen(true)} />
-        <main className="mx-auto max-w-[1480px] px-4 py-5 sm:px-6 sm:py-7 xl:px-8">{children}</main>
+        <main className="mx-auto max-w-[1480px] px-4 py-5 sm:px-6 sm:py-7 xl:px-7">{children}</main>
       </div>
 
       <CommandPalette open={paletteOpen} items={commandItems} onClose={() => setPaletteOpen(false)} />

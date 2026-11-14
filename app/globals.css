@@ -303,3 +303,35 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Shared staff workspace: consistent visual hierarchy across registry pages. */
+.school-workspace main > .mb-6 { isolation: isolate; }
+.school-workspace main table thead {
+  background: #edf5ff;
+  color: #355779;
+}
+.school-workspace main table thead th {
+  padding-top: 15px;
+  padding-bottom: 15px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.school-workspace main table tbody tr {
+  transition: background-color 150ms ease;
+}
+.school-workspace main table tbody tr:hover { background-color: #f4f9ff; }
+.school-workspace main table tbody td { padding-top: 15px; padding-bottom: 15px; }
+.school-workspace main input:not([type="checkbox"]):not([type="radio"]),
+.school-workspace main select {
+  min-height: 40px;
+}
+.school-workspace main input:focus-visible,
+.school-workspace main select:focus-visible,
+.school-workspace main textarea:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .school-workspace main table tbody tr { transition: none; }
+}
