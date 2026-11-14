@@ -1,7 +1,8 @@
 import "server-only";
 
 import prisma from "@/lib/prisma";
-import { pushText } from "@/lib/line";
+import { leaveCard } from "@/features/leave/leave-card";
+import { pushLineMessage } from "@/lib/line";
 import { logAudit } from "@/lib/audit";
 import { notifyAdvisorsOfLeaveRequest } from "@/features/leave/services/line-leave-service";
 import type { CurrentUser } from "@/lib/dal";
@@ -66,8 +67,9 @@ export async function reviewLeaveRequest(id: string, decision: "APPROVED" | "REJ
   await logAudit({ actorId: user.id, action: decision === "APPROVED" ? "leave.request.approve" : "leave.request.reject", targetType: "leaveRequest", targetId: id });
   const student = await prisma.student.findUnique({ where: { id: request.studentId }, select: { firstName: true, lastName: true } });
   const statusText = decision === "APPROVED" ? "อนุมัติแล้ว" : "ไม่อนุมัติ";
-  const reply = `คำขอลา ${student?.firstName ?? "นักเรียน"} ${student?.lastName ?? ""}: ${statusText}${note.trim() ? `\nหมายเหตุ: ${note.trim()}` : ""}`;
-  const sent = await pushText(request.parentLineUserId, reply);
+  const dateLabel = (date: Date) => new Intl.DateTimeFormat("th-TH", { timeZone: "UTC", dateStyle: "medium" }).format(date);
+  const reply = `คำขอลา ${student?.firstName ?? "นักเรียน"} ${student?.lastName ?? ""}: ${statusText}\n${dateLabel(request.startDate)}${request.startDate.getTime() === request.endDate.getTime() ? "" : ` ถึง ${dateLabel(request.endDate)}`}${note.trim() ? `\nหมายเหตุ: ${note.trim()}` : ""}`;
+  const sent = await pushLineMessage(request.parentLineUserId, leaveCard(statusText, reply, [{ type: "postback", label: "ดูคำขอล่าสุด", data: "leave|history", displayText: "ดูคำขอล่าสุด" }], decision === "APPROVED" ? "success" : "danger"));
   return sent ? result : { ...result, message: `${result.message} แต่แจ้งผู้ปกครองทาง LINE ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อ` };
 }
 

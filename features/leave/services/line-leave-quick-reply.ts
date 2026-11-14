@@ -1,5 +1,6 @@
 import "server-only";
 
+import { leaveCard, leaveBubble } from "@/features/leave/leave-card";
 import prisma from "@/lib/prisma";
 import { replyLineMessage, replyText, type LineQuickReplyAction } from "@/lib/line";
 import { handleLeaveLineMessage } from "@/features/leave/services/line-leave-service";
@@ -25,11 +26,13 @@ function button(label: string, data: string): Button {
 }
 
 function dateButton(label: string, data: string, min: string, max: string, initial: string): Button {
+  if (min === max) return button(label, `${data}|${min}`);
   return { type: "action", action: { type: "datetimepicker", label, data, mode: "date", min, max, initial } };
 }
 
 async function choices(replyToken: string, message: string, items: Button[]): Promise<boolean> {
-  return replyLineMessage(replyToken, { type: "text", text: message, quickReply: { items } });
+  const [title, ...lines] = message.split("\n");
+  return replyLineMessage(replyToken, leaveCard(title, lines.join("\n") || "เลือกจากปุ่มด้านล่าง", items.map((item) => item.action)));
 }
 
 function iso(date: Date): string { return date.toISOString().slice(0, 10); }
@@ -54,7 +57,7 @@ async function linkedStudents(lineUserId: string, termId: string) {
       { guardians: { some: { lineUserId, isDeleted: false } } },
       { lineAccounts: { some: { lineUserId } } },
     ] },
-    select: { id: true, studentCode: true, firstName: true, lastName: true },
+    select: { id: true, studentCode: true, firstName: true, lastName: true, enrollments: { where: { termId, status: "ACTIVE", isDeleted: false }, select: { classroom: { select: { code: true } } } } },
     orderBy: { studentCode: "asc" },
   });
 }
@@ -85,8 +88,8 @@ export async function showLineLeaveHistory(lineUserId: string, replyToken: strin
     orderBy: { createdAt: "desc" }, take: 5,
   });
   const labels = { PENDING: "รอครูอนุมัติ", APPROVED: "อนุมัติแล้ว", REJECTED: "ไม่อนุมัติ" };
-  const text = rows.length ? "คำขอล่าสุดที่คุณส่ง (ไม่เกิน 5 รายการ)\n\n" + rows.map((row, index) => `${index + 1}. ${row.student.firstName} ${row.student.lastName}\n${row.kind === "SICK" ? "ลาป่วย" : "ลากิจ"} ${thai(iso(row.startDate))}${iso(row.startDate) === iso(row.endDate) ? "" : ` ถึง ${thai(iso(row.endDate))}`}\nสถานะ: ${labels[row.status]}${row.reviewNote ? `\nหมายเหตุ: ${row.reviewNote.slice(0, 200)}` : ""}`).join("\n\n") : "ยังไม่มีคำขอลาที่คุณส่งสำหรับนักเรียนที่ผูกกับ LINE นี้";
-  return choices(replyToken, text, [button("แจ้งลาใหม่", "leave|start")]);
+  if (!rows.length) return choices(replyToken, "คำขอลาของคุณ\nยังไม่มีคำขอลาที่คุณส่งสำหรับนักเรียนที่ผูกกับ LINE นี้", [button("แจ้งลาใหม่", "leave|start")]);
+  return replyLineMessage(replyToken, { type: "flex", altText: "สถานะคำขอล่าสุดของคุณ · รออนุมัติ/ผลพิจารณาจากครู", contents: { type: "carousel", contents: rows.map((row) => leaveBubble(labels[row.status], `${row.student.firstName} ${row.student.lastName}\n${row.kind === "SICK" ? "ลาป่วย" : "ลากิจ"} ${thai(iso(row.startDate))}${iso(row.startDate) === iso(row.endDate) ? "" : ` ถึง ${thai(iso(row.endDate))}`}${row.reviewNote ? `\nหมายเหตุ: ${row.reviewNote}` : ""}`, [button("แจ้งลาใหม่", "leave|start").action], row.status === "APPROVED" ? "success" : row.status === "REJECTED" ? "danger" : "brand")) } });
 }
 
 export async function startLineLeaveChoices(lineUserId: string, replyToken: string, page = 0): Promise<boolean> {
@@ -96,11 +99,14 @@ export async function startLineLeaveChoices(lineUserId: string, replyToken: stri
   if (!students.length) return replyText(replyToken, "LINE นี้ยังไม่ผูกกับนักเรียนในภาคเรียนปัจจุบัน กรุณาขอรหัสเชื่อมบัญชีจากโรงเรียนก่อน");
   const lastPage = Math.max(0, Math.ceil(students.length / PAGE_SIZE) - 1);
   const current = Math.max(0, Math.min(lastPage, page));
-  const items = students.slice(current * PAGE_SIZE, (current + 1) * PAGE_SIZE).map((s) => button(`${s.firstName} ${s.studentCode}`.slice(0, 20), `leave|student|${s.id}`));
-  if (current > 0) items.push(button("ก่อนหน้า", `leave|page|${current - 1}`));
-  if (current < lastPage) items.push(button("ถัดไป", `leave|page|${current + 1}`));
-  items.push(button("ดูคำขอล่าสุด", "leave|history"));
-  return choices(replyToken, `เลือกนักเรียนที่ต้องการแจ้งลา (${students.length} คน)\nหน้า ${current + 1}/${lastPage + 1}\n\n${students.slice(current * PAGE_SIZE, (current + 1) * PAGE_SIZE).map((student) => `${student.firstName} ${student.lastName} · รหัส ${student.studentCode}`).join("\n")}\n\nเลือกแจ้งลาทีละคน หากลูกหลายคนลาพร้อมกัน ให้ส่งแยกคนละคำขอ`, items);
+  const pageStudents = students.slice(current * PAGE_SIZE, (current + 1) * PAGE_SIZE);
+  const bubbles = pageStudents.map((student) => leaveBubble("เลือกนักเรียน", `${student.firstName} ${student.lastName}\nรหัส ${student.studentCode}\nห้อง ${student.enrollments?.[0]?.classroom.code ?? "—"}\n\nตรวจชื่อให้ตรงกับลูกที่ต้องการแจ้งลา`, [button("แจ้งลาของนักเรียนคนนี้", `leave|student|${student.id}`).action]));
+  const navigation: Button[] = [];
+  if (current > 0) navigation.push(button("ก่อนหน้า", `leave|page|${current - 1}`));
+  if (current < lastPage) navigation.push(button("ถัดไป", `leave|page|${current + 1}`));
+  navigation.push(button("ดูคำขอล่าสุด", "leave|history"));
+  bubbles.push(leaveBubble("เมนูแจ้งลา", `ผูกนักเรียนไว้ ${students.length} คน · หน้า ${current + 1}/${lastPage + 1}\nเลื่อนการ์ดเพื่อเลือกลูกทีละคน หากลาหลายคนให้ส่งแยกคำขอ`, navigation.map((item) => item.action)));
+  return replyLineMessage(replyToken, { type: "flex", altText: "เลือกนักเรียนที่ต้องการแจ้งลา · ตรวจชื่อและรหัสก่อนเลือก", contents: { type: "carousel", contents: bubbles } });
 }
 
 async function reasons(replyToken: string, studentId: string, kind: Kind, start: string, end: string): Promise<boolean> {
@@ -158,7 +164,7 @@ export async function handleLeavePostback(lineUserId: string, data: string, date
     await choices(replyToken, `เริ่มลา ${thai(start)}\nเลือกวันสุดท้าย (ไม่เกิน 31 วัน)`, [dateButton("เลือกวันสุดท้าย", `leave|end|${student.id}|${kind}|${start}`, start, endLimit, start), button("ย้อนกลับ", `leave|date|${student.id}|${kind}|${start}`), button("ยกเลิก", "leave|cancel")]);
     return true;
   }
-  const end = step === "end" ? date : parts[5];
+  const end = step === "end" ? date ?? parts[5] : parts[5];
   if (!end || !parseIso(end) || end < start || end > max || parseIso(end)!.getTime() - parseIso(start)!.getTime() > 30 * 86_400_000) {
     await replyText(replyToken, "ช่วงวันที่ลาไม่ถูกต้อง กรุณากดแจ้งลาใหม่อีกครั้ง"); return true;
   }

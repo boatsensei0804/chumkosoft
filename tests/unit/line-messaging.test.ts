@@ -1,6 +1,7 @@
+import { leaveCard } from "@/features/leave/leave-card";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHmac } from "node:crypto";
-import { pushText, replyLineMessage, replyText, sendLineMessageToUsers, sendLineTextToUsers, verifyLineSignature } from "@/lib/line";
+import { pushLineMessage, pushText, replyLineMessage, replyText, sendLineMessageToUsers, sendLineTextToUsers, verifyLineSignature } from "@/lib/line";
 import { announcementCard } from "@/features/line/announcement-card";
 import { teacherMenuSyncSignature, verifyTeacherMenuSync } from "@/features/line/teacher-menu-sync-auth";
 
@@ -75,6 +76,16 @@ describe("LINE message delivery", () => {
     const payload = JSON.parse(options.body);
     expect(payload.messages[0].type).toBe("flex");
     expect(payload.messages[0].contents.header.backgroundColor).toBe("#B42332");
+  });
+
+  it("delivers leave Flex cards through reply and parent push without altering actions", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+    const card = leaveCard("Review", "Child Two", [{ type: "postback", label: "Confirm", data: "leave|confirm|student2" }]);
+    expect(await replyLineMessage("reply-token", card)).toBe(true);
+    expect(await pushLineMessage("Uparent", card)).toBe(true);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ replyToken: "reply-token", messages: [card] });
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ to: "Uparent", messages: [card] });
   });
 
   it("authenticates teacher menu sync only within five minutes", () => {

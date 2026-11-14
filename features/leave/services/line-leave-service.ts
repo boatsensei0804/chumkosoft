@@ -1,6 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+import { leaveCard } from "@/features/leave/leave-card";
 import prisma from "@/lib/prisma";
 import { replyLineMessage, replyText, sendLineTextToUsers } from "@/lib/line";
 import { logAudit } from "@/lib/audit";
@@ -100,7 +101,10 @@ export async function handleLeaveLineMessage(lineUserId: string, text: string, r
     throw error;
   }
   await logAudit({ action: "leave.request.create", targetType: "leaveRequest", targetId: request.id, detail: `${student.studentCode ?? studentCode} · ${kind}` });
-  await replyLineMessage(replyToken, { type: "text", text: `รับคำขอ${kind === "SICK" ? "ลาป่วย" : "ลากิจ"}ของ ${student.firstName} ${student.lastName} วันที่ ${thaiDate(startDate)}${startDate.getTime() === endDate.getTime() ? "" : ` ถึง ${thaiDate(endDate)}`} แล้ว\nสถานะ: รอครูที่ปรึกษาอนุมัติ`, quickReply: { items: [{ type: "action", action: { type: "postback", label: "ดูสถานะคำขอ", data: "leave|history", displayText: "ดูสถานะคำขอ" } }, { type: "action", action: { type: "postback", label: "แจ้งลาเพิ่ม", data: "leave|start", displayText: "แจ้งลาเพิ่ม" } }] } });
+  await replyLineMessage(replyToken, leaveCard("รับคำขอลาแล้ว", `${student.firstName} ${student.lastName}\n${kind === "SICK" ? "ลาป่วย" : "ลากิจ"} ${thaiDate(startDate)}${startDate.getTime() === endDate.getTime() ? "" : ` ถึง ${thaiDate(endDate)}`}\nเหตุผล: ${reason}\n\nสถานะ: รอครูที่ปรึกษาอนุมัติ`, [
+    { type: "postback", label: "ดูสถานะคำขอ", data: "leave|history", displayText: "ดูสถานะคำขอ" },
+    { type: "postback", label: "แจ้งลาให้นักเรียนอีกคน", data: "leave|start", displayText: "แจ้งลาให้นักเรียนอีกคน" },
+  ]));
   await notifyAdvisorsOfLeaveRequest(request.id);
   return true;
 }

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
+import type { LineFlexMessage } from "@/features/line/flex-types";
 import type { announcementCard } from "@/features/line/announcement-card";
 
 /**
@@ -32,7 +33,7 @@ export function isLineConfigured(): boolean {
 
 /** LINE accepts up to 500 IDs per multicast request. A stable retry key keeps
  * a retried request from sending the same announcement twice. */
-export async function sendLineMessageToUsers(to: string[], message: LineTextMessage | LineAnnouncementCard, retryKey: string): Promise<{ accepted: boolean; code: string }> {
+export async function sendLineMessageToUsers(to: string[], message: LineTextMessage | LineAnnouncementCard | LineFlexMessage, retryKey: string): Promise<{ accepted: boolean; code: string }> {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!token) return { accepted: false, code: "NOT_CONFIGURED" };
   if (to.length < 1 || to.length > 500) return { accepted: false, code: "INVALID_RECIPIENT_COUNT" };
@@ -59,13 +60,17 @@ export async function sendLineTextToUsers(to: string[], text: string, retryKey: 
 }
 
 export async function pushText(to: string, text: string): Promise<boolean> {
+  return pushLineMessage(to, { type: "text", text });
+}
+
+export async function pushLineMessage(to: string, message: LineTextMessage | LineFlexMessage): Promise<boolean> {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!token) return false;
   try {
     const res = await fetch(PUSH_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ to, messages: [{ type: "text", text }] }),
+      body: JSON.stringify({ to, messages: [message] }),
       signal: AbortSignal.timeout(15_000),
     });
     return res.ok;
@@ -78,9 +83,9 @@ export async function replyText(replyToken: string, text: string): Promise<boole
   return replyLineMessage(replyToken, { type: "text", text });
 }
 
-export async function replyLineMessage(replyToken: string, message: LineTextMessage): Promise<boolean> {
+export async function replyLineMessage(replyToken: string, message: LineTextMessage | LineFlexMessage): Promise<boolean> {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-  if (!token || (message.quickReply && (message.quickReply.items.length < 1 || message.quickReply.items.length > 13))) return false;
+  if (!token || ("quickReply" in message && message.quickReply && (message.quickReply.items.length < 1 || message.quickReply.items.length > 13))) return false;
   try {
     const res = await fetch(REPLY_URL, {
       method: "POST",
