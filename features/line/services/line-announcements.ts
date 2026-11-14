@@ -6,6 +6,8 @@ import prisma from "@/lib/prisma";
 import { isLineConfigured, sendLineMessageToUsers } from "@/lib/line";
 import { logAudit } from "@/lib/audit";
 import { announcementText } from "@/features/line/announcement-text";
+import type { AnnouncementAudience } from "@/features/line/announcement-audience";
+import { resolveAnnouncementAudience, recipientFingerprint } from "./announcement-audience-service";
 import { announcementCard } from "@/features/line/announcement-card";
 
 const BATCH_SIZE = 500;
@@ -16,6 +18,8 @@ export interface AnnouncementInput {
   title: string;
   body: string;
   expectedRecipients: number;
+  audience: AnnouncementAudience;
+  expectedRecipientFingerprint: string;
 }
 
 export interface AnnouncementResult {
@@ -63,17 +67,20 @@ export async function createAndSendLineAnnouncement(input: AnnouncementInput, ac
   }
   if (!isLineConfigured()) return { ok: false, message: "ยังไม่ได้ตั้งค่า LINE Channel access token บนเซิร์ฟเวอร์" };
 
-  const existing = await prisma.lineAnnouncement.findUnique({ where: { requestKey: input.requestKey }, select: { id: true, kind: true, title: true, body: true } });
+  const existing = await prisma.lineAnnouncement.findUnique({ where: { requestKey: input.requestKey }, select: { id: true, kind: true, title: true, body: true, batches: { select: { recipients: true } } } });
   if (existing) {
+    const savedRecipients = existing.batches.flatMap((batch) => Array.isArray(batch.recipients) ? batch.recipients.filter((value): value is string => typeof value === "string") : []);
+    if (recipientFingerprint(savedRecipients) !== input.expectedRecipientFingerprint) return { ok: false, message: "กลุ่มผู้รับไม่ตรงกับประกาศเดิม กรุณาตรวจรายการส่งก่อนสร้างใหม่" };
     if (existing.kind !== input.kind || existing.title !== title || existing.body !== body) {
       return { ok: false, message: "ข้อความประกาศเปลี่ยนไป กรุณาตรวจรายการส่งเดิมก่อนสร้างประกาศใหม่" };
     }
     return deliverLineAnnouncement(existing.id, actorId);
   }
 
-  const recipients = await linkedLineUserIds();
+  const resolved = await resolveAnnouncementAudience(input.audience);
+  const recipients = resolved.recipients;
   if (recipients.length === 0) return { ok: false, message: "ยังไม่มีบัญชี LINE ที่เชื่อมกับนักเรียนหรือครู" };
-  if (recipients.length !== input.expectedRecipients) {
+  if (recipients.length !== input.expectedRecipients || resolved.fingerprint !== input.expectedRecipientFingerprint) {
     return { ok: false, message: "จำนวนผู้รับเปลี่ยนไป กรุณาโหลดหน้านี้ใหม่เพื่อตรวจจำนวนก่อนส่ง" };
   }
   const chunks = Array.from({ length: Math.ceil(recipients.length / BATCH_SIZE) }, (_, index) => recipients.slice(index * BATCH_SIZE, (index + 1) * BATCH_SIZE));

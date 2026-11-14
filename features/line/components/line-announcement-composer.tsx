@@ -4,8 +4,10 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Megaphone, Send } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { sendLineAnnouncementAction, retryLineAnnouncementAction } from "@/features/line/announcement-actions";
+import { sendLineAnnouncementAction, retryLineAnnouncementAction, previewLineAudienceAction } from "@/features/line/announcement-actions";
 import { announcementText } from "@/features/line/announcement-text";
+import AnnouncementAudiencePicker from "./announcement-audience-picker";
+import type { AnnouncementAudience, AudienceOptions } from "@/features/line/announcement-audience";
 import type { LineAnnouncementKind } from "@prisma/client";
 
 interface HistoryItem {
@@ -29,8 +31,13 @@ function failureLabel(code: string | null): string {
   return code ? `LINE ตอบ ${code}` : "รอส่งต่อ";
 }
 
-export default function LineAnnouncementComposer({ recipientCount, configured, history }: { recipientCount: number; configured: boolean; history: HistoryItem[] }): React.ReactNode {
+export default function LineAnnouncementComposer({ recipientCount, configured, history, audienceOptions }: { recipientCount: number; configured: boolean; history: HistoryItem[]; audienceOptions: AudienceOptions }): React.ReactNode {
   const router = useRouter();
+  const [audience, setAudience] = useState<AnnouncementAudience>({ mode: "all" });
+  const [audiencePreview, setAudiencePreview] = useState<{ count: number; fingerprint: string; labels: string[] } | null>(null);
+  const [preparing, setPreparing] = useState(false);
+  const selectedCount = audiencePreview?.count ?? 0;
+  const audienceValid = !("ids" in audience) || audience.ids.length > 0;
   const [kind, setKind] = useState<LineAnnouncementKind>("NEWS");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -48,9 +55,9 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
   const valid = title.trim().length > 0 && title.trim().length <= 120 && body.trim().length > 0 && body.trim().length <= 3000 && preview.length <= 5000;
 
   function submit(): void {
-    if (!confirmed || !valid || pending) return;
+    if (!confirmed || !valid || pending || !audiencePreview) return;
     startTransition(async () => {
-      const result = await sendLineAnnouncementAction({ requestKey, kind, title, body, expectedRecipients: recipientCount });
+      const result = await sendLineAnnouncementAction({ requestKey, kind, title, body, expectedRecipients: audiencePreview.count, audience, expectedRecipientFingerprint: audiencePreview.fingerprint });
       setFeedback(result.message);
       setReviewOpen(false);
       setConfirmed(false);
@@ -62,6 +69,17 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
       }
       router.refresh();
     });
+  }
+
+  async function prepareReview(): Promise<void> {
+    if (preparing || !audienceValid) return;
+    setPreparing(true);
+    try {
+      const result = await previewLineAudienceAction(audience);
+      if (!result.ok || result.count === 0) { setFeedback(result.message ?? "ไม่พบบัญชี LINE ผู้รับในกลุ่มที่เลือก"); return; }
+      setAudiencePreview(result); setConfirmed(false); setComposerOpen(false); setReviewOpen(true);
+    } catch { setFeedback("ตรวจผู้รับไม่สำเร็จ กรุณาลองอีกครั้ง"); }
+    finally { setPreparing(false); }
   }
 
   function retry(id: string): void {
@@ -83,6 +101,8 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
       <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">
         <h2 className="text-lg font-bold text-ink-strong">เขียนประกาศ</h2>
         <p className="mt-1 text-sm text-muted">ตรวจข้อความและจำนวนผู้รับก่อนส่งจริง</p>
+        <AnnouncementAudiencePicker options={audienceOptions} value={audience} disabled={pending || preparing} onChange={(next) => { setAudience(next); setAudiencePreview(null); }} />
+        {feedback && <p role="status" className="mt-3 text-sm text-brand-ink">{feedback}</p>}
         <div className="mt-5 grid gap-3 sm:grid-cols-2" role="group" aria-label="ประเภทประกาศ">
           <button type="button" aria-pressed={kind === "NEWS"} onClick={() => setKind("NEWS")}
             className={`flex items-center gap-3 rounded-xl border p-3 text-left text-sm font-semibold ${kind === "NEWS" ? "border-brand bg-brand-soft text-brand-ink" : "border-line text-ink"}`}>
@@ -104,17 +124,15 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
           placeholder="ระบุสิ่งที่เกิดขึ้น เวลา สถานที่ และสิ่งที่ผู้รับควรทำ" className="mt-1.5 w-full resize-y rounded-xl border border-line bg-surface px-4 py-3 text-sm leading-relaxed text-ink outline-none focus:border-brand" />
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted">ส่งถึงบัญชี LINE ที่ผูกกับระบบเท่านั้น · นับบัญชีที่ซ้ำเพียงครั้งเดียว</p>
-          <button type="button" disabled={!configured || recipientCount === 0 || !valid || pending} onClick={() => { setConfirmed(false); setComposerOpen(false); setReviewOpen(true); }}
+          <button type="button" disabled={!configured || !audienceValid || !valid || pending || preparing} onClick={prepareReview}
             className="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
-            <Send className="size-4" /> ตรวจสอบก่อนส่ง
+            <Send className="size-4" /> {preparing ? "กำลังตรวจผู้รับ…" : "ตรวจสอบผู้รับและข้อความ"}
           </button>
         </div>
       </section>
       <aside className="space-y-4">
         <div className="rounded-2xl border border-line bg-card p-5 shadow-sm">
-          <p className="text-sm font-semibold text-muted">ผู้รับที่เชื่อม LINE แล้ว</p>
-          <p className="mt-2 text-4xl font-bold tabular text-brand-ink">{recipientCount.toLocaleString("th-TH")}</p>
-          <p className="mt-1 text-xs text-muted">บัญชี LINE ไม่ซ้ำ · ผูกกับนักเรียนหรือครูในระบบ</p>
+          <p className="text-sm font-semibold text-muted">กลุ่มผู้รับที่เลือก</p><p className="mt-2 text-xl font-bold text-brand-ink">{audience.mode === "all" ? "ทั้งหมด" : audience.mode === "staff" ? "ครู/บุคลากร" : audience.mode === "classrooms" ? "ผู้ปกครองรายห้อง" : "รายบุคคล"}</p><p className="mt-2 text-xs leading-6 text-muted">ตรวจรายชื่อและจำนวนบัญชีที่ไม่นับซ้ำในขั้นถัดไป ไม่มีการส่งข้อความจนกดยืนยัน</p>
         </div>
         {!configured && <div className="rounded-2xl border border-warning bg-warning-soft p-4 text-sm text-ink">ยังไม่ได้ตั้งค่า LINE Channel access token บนเซิร์ฟเวอร์ จึงยังส่งประกาศไม่ได้</div>}
         <div className="rounded-2xl border border-line bg-card p-5 text-sm leading-relaxed text-muted shadow-sm">
@@ -159,7 +177,7 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>ตรวจประกาศก่อนส่ง</DialogTitle>
-          <DialogDescription>LINE จะได้รับคำขอส่งข้อความนี้ถึง {recipientCount.toLocaleString("th-TH")} บัญชี</DialogDescription>
+          <DialogDescription>LINE จะได้รับคำขอส่งข้อความนี้ถึง {selectedCount.toLocaleString("th-TH")} บัญชีที่ไม่ซ้ำ</DialogDescription>
         </DialogHeader>
         <div className="max-h-80 overflow-y-auto rounded-xl bg-surface p-3">
           <div className="overflow-hidden rounded-xl border border-line bg-card shadow-sm">
@@ -168,6 +186,7 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
             <p className="px-4 pb-3 text-right text-[11px] font-semibold tracking-wide text-muted">CHUMKOSOFT SCHOOL</p>
           </div>
         </div>
+        <section className="rounded-xl border border-line p-3"><h3 className="text-sm font-semibold">ผู้รับจริง {selectedCount.toLocaleString("th-TH")} บัญชี</h3><p className="mt-1 text-xs text-muted">แสดงชื่อจากข้อมูลที่ผูกในระบบ บัญชีเดียวที่ผูกหลายรายการจะรวมไว้ในบรรทัดเดียว</p><ol className="mt-2 max-h-48 list-inside list-decimal space-y-2 overflow-y-auto text-xs leading-6">{audiencePreview?.labels.map((label, index) => <li key={index}>{label}</li>)}</ol></section>
         <label className="flex items-start gap-2 text-sm text-ink">
           <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} className="mt-1" />
           <span>ฉันตรวจข้อความและจำนวนผู้รับแล้ว</span>
@@ -176,7 +195,7 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
           <button type="button" disabled={pending} onClick={() => { setReviewOpen(false); setComposerOpen(true); }} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-ink">กลับไปแก้ไข</button>
           <button type="button" disabled={!confirmed || pending} onClick={submit}
             className={`rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 ${kind === "EMERGENCY" ? "bg-danger" : "bg-brand"}`}>
-            {pending ? "กำลังส่ง…" : `ยืนยันส่งถึง ${recipientCount.toLocaleString("th-TH")} บัญชี`}
+            {pending ? "กำลังส่ง…" : `ยืนยันส่งถึง ${selectedCount.toLocaleString("th-TH")} บัญชี`}
           </button>
         </DialogFooter>
       </DialogContent>

@@ -32,3 +32,15 @@ export async function retryLineAnnouncementAction(id: string): Promise<Announcem
     return { ok: false, message: "ส่งต่อไม่สำเร็จ กรุณาตรวจรายการส่งก่อนลองอีกครั้ง" };
   }
 }
+
+export async function previewLineAudienceAction(audience: unknown): Promise<{ ok: boolean; message?: string; count: number; fingerprint: string; labels: string[] }> {
+  await requireRoles(["ADMIN"]);
+  try {
+    const { resolveAnnouncementAudience } = await import("@/features/line/services/announcement-audience-service");
+    const result = await resolveAnnouncementAudience(audience);
+    return { ok: true, count: result.recipients.length, fingerprint: result.fingerprint, labels: result.labels };
+  } catch (error) {
+    unstable_rethrow(error);
+    return { ok: false, message: "ตรวจผู้รับไม่สำเร็จ กรุณาโหลดหน้าใหม่และเลือกผู้รับอีกครั้ง", count: 0, fingerprint: "", labels: [] };
+  }
+}
