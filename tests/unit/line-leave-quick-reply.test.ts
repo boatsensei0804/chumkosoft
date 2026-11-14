@@ -1,23 +1,27 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  termFindFirst: vi.fn(), studentFindMany: vi.fn(), studentFindFirst: vi.fn(),
+  leaveFindMany: vi.fn(), termFindFirst: vi.fn(), studentFindMany: vi.fn(), studentFindFirst: vi.fn(),
   replyLineMessage: vi.fn(), replyText: vi.fn(), handleLeaveLineMessage: vi.fn(),
 }));
-vi.mock("@/lib/prisma", () => ({ default: { term: { findFirst: mocks.termFindFirst }, student: { findMany: mocks.studentFindMany, findFirst: mocks.studentFindFirst } } }));
+vi.mock("@/lib/prisma", () => ({ default: { leaveRequest: { findMany: mocks.leaveFindMany }, term: { findFirst: mocks.termFindFirst }, student: { findMany: mocks.studentFindMany, findFirst: mocks.studentFindFirst } } }));
 vi.mock("@/lib/line", () => ({ replyLineMessage: mocks.replyLineMessage, replyText: mocks.replyText }));
 vi.mock("@/features/leave/services/line-leave-service", () => ({ handleLeaveLineMessage: mocks.handleLeaveLineMessage }));
 
 import { handleLeavePostback, startLineLeaveChoices } from "@/features/leave/services/line-leave-quick-reply";
 
 describe("LINE leave menu", () => {
+  afterEach(() => vi.useRealTimers());
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-14T02:00:00Z"));
     vi.clearAllMocks();
     mocks.termFindFirst.mockResolvedValue({ id: "term1", startDate: new Date("2026-11-01T00:00:00Z"), endDate: new Date("2026-12-31T00:00:00Z") });
     mocks.studentFindMany.mockResolvedValue([{ id: "student1", studentCode: "68-0421", firstName: "มะลิ", lastName: "ดี" }]);
     mocks.studentFindFirst.mockResolvedValue({ id: "student1", studentCode: "68-0421", firstName: "มะลิ", lastName: "ดี" });
     mocks.replyLineMessage.mockResolvedValue(true);
     mocks.replyText.mockResolvedValue(true);
+    mocks.leaveFindMany.mockResolvedValue([]);
     mocks.handleLeaveLineMessage.mockResolvedValue(true);
   });
 
@@ -26,13 +30,14 @@ describe("LINE leave menu", () => {
     expect(mocks.studentFindMany.mock.calls[0][0].where.OR).toHaveLength(2);
     const message = mocks.replyLineMessage.mock.calls[0][1];
     expect(message.quickReply.items[0].action.data).toBe("leave|student|student1");
+    expect(message.text).toContain("มะลิ");
   });
 
   it("walks through type, date, range, reason, confirmation and creates a pending request", async () => {
     await handleLeavePostback("Uparent", "leave|student|student1", undefined, "r1", "e1");
     expect(mocks.replyLineMessage.mock.lastCall?.[1].quickReply.items[0].action.data).toBe("leave|kind|student1|SICK");
     await handleLeavePostback("Uparent", "leave|kind|student1|SICK", undefined, "r2", "e2");
-    expect(mocks.replyLineMessage.mock.lastCall?.[1].quickReply.items[0].action.type).toBe("datetimepicker");
+    expect(mocks.replyLineMessage.mock.lastCall?.[1].quickReply.items.some((item: { action: { type: string } }) => item.action.type === "datetimepicker")).toBe(true);
     await handleLeavePostback("Uparent", "leave|date|student1|SICK", "2026-11-14", "r3", "e3");
     await handleLeavePostback("Uparent", "leave|range|student1|SICK|2026-11-14", undefined, "r4", "e4");
     expect(mocks.replyLineMessage.mock.lastCall?.[1].quickReply.items[0].action.max).toBe("2026-12-14");
@@ -49,4 +54,68 @@ describe("LINE leave menu", () => {
     expect(mocks.handleLeaveLineMessage).not.toHaveBeenCalled();
     expect(mocks.replyText).toHaveBeenCalled();
   });
+  it("submits nothing on the short today path until confirmation", async () => {
+    await handleLeavePostback("Uparent", "leave|kind|student1|SICK", undefined, "r", "event");
+    const items = mocks.replyLineMessage.mock.lastCall?.[1].quickReply.items;
+    expect(items[0].action.data).toBe("leave|quick|student1|SICK|2026-11-14");
+    expect(items[1].action.data).toBe("leave|quick|student1|SICK|2026-11-15");
+    await handleLeavePostback("Uparent", items[0].action.data, undefined, "r", "event");
+    expect(mocks.replyLineMessage.mock.lastCall?.[1].text).toContain("3/4");
+    await handleLeavePostback("Uparent", "leave|reason|student1|SICK|2026-11-14|2026-11-14|fever", undefined, "r", "event");
+    expect(mocks.handleLeaveLineMessage).not.toHaveBeenCalled();
+    expect(mocks.replyLineMessage.mock.lastCall?.[1].quickReply.items.some((item: { action: { label: string } }) => item.action.label === "แก้เหตุผล")).toBe(true);
+  });
+
+  it("keeps multi-child selection and pagination within LINE's 13-button limit", async () => {
+    mocks.studentFindMany.mockResolvedValue(Array.from({ length: 25 }, (_, index) => ({ id: `student${index}`, firstName: `Child${index}`, lastName: "Test", studentCode: `${index}` })));
+    await startLineLeaveChoices("Uparent", "r", 1);
+    const items = mocks.replyLineMessage.mock.lastCall?.[1].quickReply.items;
+    expect(items).toHaveLength(13);
+    expect(items[0].action.data).toBe("leave|student|student10");
+    expect(items.at(-1).action.data).toBe("leave|history");
+  });
+
+  it("does not offer today or tomorrow beyond the active term", async () => {
+    vi.setSystemTime(new Date("2026-12-31T02:00:00Z"));
+    await handleLeavePostback("Uparent", "leave|kind|student1|SICK", undefined, "r", "event");
+    const items = mocks.replyLineMessage.mock.lastCall?.[1].quickReply.items;
+    expect(items.some((item: { action: { label: string } }) => item.action.label === "ลาวันนี้")).toBe(true);
+    expect(items.some((item: { action: { label: string } }) => item.action.label === "ลาพรุ่งนี้")).toBe(false);
+  });
+
+  it("reopens reason choices and never submits when editing the summary", async () => {
+    await handleLeavePostback("Uparent", "leave|reasons|student1|SICK|2026-11-14|2026-11-15", undefined, "r", "event");
+    expect(mocks.replyLineMessage.mock.lastCall?.[1].text).toContain("3/4");
+    expect(mocks.handleLeaveLineMessage).not.toHaveBeenCalled();
+  });
+
+  it("limits history to the sender and currently linked nondeleted students", async () => {
+    await handleLeavePostback("Uparent", "leave|history", undefined, "r", "event");
+    const query = mocks.leaveFindMany.mock.calls[0][0];
+    expect(query.where.parentLineUserId).toBe("Uparent");
+    expect(query.where.student.isDeleted).toBe(false);
+    expect(query.where.student.OR[0].guardians.some.lineUserId).toBe("Uparent");
+    expect(query.take).toBe(5);
+    expect(mocks.handleLeaveLineMessage).not.toHaveBeenCalled();
+  });
+
+  it("uses the explicitly chosen second child when the parent has multiple children", async () => {
+    mocks.studentFindMany.mockResolvedValue([
+      { id: "student1", studentCode: "001", firstName: "ChildOne", lastName: "Family" },
+      { id: "student2", studentCode: "002", firstName: "ChildTwo", lastName: "Family" },
+    ]);
+    await startLineLeaveChoices("Uparent", "r");
+    const message = mocks.replyLineMessage.mock.lastCall?.[1];
+    expect(message.text).toContain("ChildOne Family");
+    expect(message.text).toContain("ChildTwo Family");
+    expect(message.quickReply.items[1].action.data).toBe("leave|student|student2");
+    mocks.studentFindFirst.mockResolvedValue({ id: "student2", studentCode: "002", firstName: "ChildTwo", lastName: "Family" });
+    await handleLeavePostback("Uparent", "leave|reason|student2|SICK|2026-11-14|2026-11-14|fever", undefined, "r", "event");
+    expect(mocks.replyLineMessage.mock.lastCall?.[1].text).toContain("ChildTwo Family");
+    expect(mocks.handleLeaveLineMessage).not.toHaveBeenCalled();
+    await handleLeavePostback("Uparent", "leave|confirm|student2|SICK|2026-11-14|2026-11-14|fever", undefined, "r", "event");
+    expect(mocks.studentFindFirst.mock.lastCall?.[0].where.id).toBe("student2");
+    expect(mocks.handleLeaveLineMessage).toHaveBeenCalledWith("Uparent", "ลา 002 ป่วย 2026-11-14 มีไข้ ไม่สบาย", "r", "event");
+  });
+
 });

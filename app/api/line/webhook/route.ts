@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyLineSignature } from "@/lib/line";
 import { handleLinkMessage } from "@/features/line/services/line-service";
 import { handleLeaveLineMessage } from "@/features/leave/services/line-leave-service";
-import { handleLeavePostback, startLineLeaveChoices } from "@/features/leave/services/line-leave-quick-reply";
+import { handleLeavePostback, startLineLeaveChoices, showLineLeaveHistory } from "@/features/leave/services/line-leave-quick-reply";
 
 /**
  * LINE Messaging API webhook — the one REST endpoint in the app, because LINE is
@@ -71,6 +71,8 @@ export async function POST(request: Request): Promise<Response> {
         try {
           if (["แจ้งลา", "ลา"].includes(event.message.text.trim())) {
             await startLineLeaveChoices(event.source.userId, event.replyToken);
+          } else if (["สถานะการลา", "คำขอล่าสุด"].includes(event.message.text.trim())) {
+            await showLineLeaveHistory(event.source.userId, event.replyToken);
           } else if (!await handleLeaveLineMessage(event.source.userId, event.message.text, event.replyToken, event.message.id)) {
             await handleLinkMessage(event.source.userId, event.message.text, event.replyToken);
           }

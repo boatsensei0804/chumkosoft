@@ -2,7 +2,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import prisma from "@/lib/prisma";
-import { replyText, sendLineTextToUsers } from "@/lib/line";
+import { replyLineMessage, replyText, sendLineTextToUsers } from "@/lib/line";
 import { logAudit } from "@/lib/audit";
 
 const HELP = "แจ้งลา: พิมพ์ ลา <รหัสนักเรียน> <ป่วย|กิจ> <วันเริ่ม> [ถึง <วันสุดท้าย>] <เหตุผล>\nตัวอย่าง: ลา 68-0421 ป่วย 14/11/2569 ถึง 15/11/2569 มีไข้";
@@ -52,7 +52,7 @@ export async function handleLeaveLineMessage(lineUserId: string, text: string, r
     return true;
   }
 
-  const term = await prisma.term.findFirst({ where: { isActive: true, isDeleted: false }, select: { id: true, startDate: true, endDate: true } });
+  const term = await prisma.term.findFirst({ where: { isActive: true, isDeleted: false, academicYear: { isActive: true, isDeleted: false } }, select: { id: true, startDate: true, endDate: true } });
   if (!term || startDate.toISOString().slice(0, 10) < term.startDate.toISOString().slice(0, 10) || endDate.toISOString().slice(0, 10) > term.endDate.toISOString().slice(0, 10)) {
     await replyText(replyToken, "ช่วงวันที่ลาต้องอยู่ในภาคเรียนที่กำลังใช้งาน กรุณาตรวจสอบวันอีกครั้ง");
     return true;
@@ -100,7 +100,7 @@ export async function handleLeaveLineMessage(lineUserId: string, text: string, r
     throw error;
   }
   await logAudit({ action: "leave.request.create", targetType: "leaveRequest", targetId: request.id, detail: `${student.studentCode ?? studentCode} · ${kind}` });
-  await replyText(replyToken, `รับคำขอ${kind === "SICK" ? "ลาป่วย" : "ลากิจ"}ของ ${student.firstName} ${student.lastName} วันที่ ${thaiDate(startDate)}${startDate.getTime() === endDate.getTime() ? "" : ` ถึง ${thaiDate(endDate)}`} แล้ว\nสถานะ: รอครูที่ปรึกษาอนุมัติ`);
+  await replyLineMessage(replyToken, { type: "text", text: `รับคำขอ${kind === "SICK" ? "ลาป่วย" : "ลากิจ"}ของ ${student.firstName} ${student.lastName} วันที่ ${thaiDate(startDate)}${startDate.getTime() === endDate.getTime() ? "" : ` ถึง ${thaiDate(endDate)}`} แล้ว\nสถานะ: รอครูที่ปรึกษาอนุมัติ`, quickReply: { items: [{ type: "action", action: { type: "postback", label: "ดูสถานะคำขอ", data: "leave|history", displayText: "ดูสถานะคำขอ" } }, { type: "action", action: { type: "postback", label: "แจ้งลาเพิ่ม", data: "leave|start", displayText: "แจ้งลาเพิ่ม" } }] } });
   await notifyAdvisorsOfLeaveRequest(request.id);
   return true;
 }

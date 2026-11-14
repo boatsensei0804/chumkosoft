@@ -109,7 +109,7 @@ export async function handleLinkMessage(lineUserId: string, text: string, replyT
     await repo.linkGuardian(guardian.id, lineUserId);
     await logAudit({ action: "line.link", targetType: "guardian", targetId: guardian.id, detail: guardian.fullName });
     const childName = `${guardian.student.firstName} ${guardian.student.lastName}`;
-    await replyText(replyToken, `ผูกบัญชีสำเร็จ ✅\nคุณจะได้รับแจ้งเตือนเมื่อ ${childName} เข้าโรงเรียน\nหากต้องการแจ้งลา พิมพ์ ลา เพื่อดูวิธีใช้`);
+    await replyText(replyToken, `ผูกบัญชีสำเร็จ ✅\nคุณจะได้รับแจ้งเตือนเมื่อ ${childName} เข้าโรงเรียน\nแจ้งลาได้โดยกดเมนูแจ้งลา หรือพิมพ์ แจ้งลา เพื่อเลือกประเภทและวันที่`);
     return;
   }
 
@@ -133,6 +133,6 @@ export async function handleLinkMessage(lineUserId: string, text: string, replyT
   await repo.linkStudentAccount(studentAccount.id, lineUserId);
   await logAudit({ action: "line.link", targetType: "student", targetId: studentAccount.studentId, detail: "guardian LINE account" });
   const childName = `${studentAccount.student.firstName} ${studentAccount.student.lastName}`;
-  await replyText(replyToken, `ผูกบัญชีสำเร็จ ✅\nคุณจะได้รับแจ้งเตือนเมื่อ ${childName} เข้าโรงเรียน\nหากต้องการแจ้งลา พิมพ์ ลา เพื่อดูวิธีใช้`);
+  await replyText(replyToken, `ผูกบัญชีสำเร็จ ✅\nคุณจะได้รับแจ้งเตือนเมื่อ ${childName} เข้าโรงเรียน\nแจ้งลาได้โดยกดเมนูแจ้งลา หรือพิมพ์ แจ้งลา เพื่อเลือกประเภทและวันที่`);
 }
 

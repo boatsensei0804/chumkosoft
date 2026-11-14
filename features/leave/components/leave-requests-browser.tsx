@@ -61,7 +61,7 @@ export default function LeaveRequestsBrowser({ items, isAdmin }: { items: LeaveI
       <div className="rounded-xl border border-line bg-card p-4"><p className="text-sm text-muted">ไม่อนุมัติ (ล่าสุด 100 รายการ)</p><p className="mt-1 text-3xl font-bold tabular text-ink-strong">{counts.rejected}</p></div>
     </div>
     <div className="rounded-xl border border-line bg-brand-soft p-4 text-sm leading-relaxed text-ink">
-      ผู้ปกครองส่งข้อความใน LINE OA เช่น <span className="font-mono font-semibold">ลา 68-0421 ป่วย 14/11/2569 ถึง 15/11/2569 มีไข้</span> · วันเดียวไม่ต้องใส่ “ถึง” · ต้องผูก LINE กับนักเรียนก่อน
+      ผู้ปกครองกดเมนู “แจ้งลา” ใน LINE OA แล้วเลือกนักเรียน ประเภท วันลา และเหตุผล ก่อนยืนยันส่งคำขอ · กด “ดูสถานะคำขอ” เพื่อติดตามผลได้ · ต้องผูก LINE กับนักเรียนก่อน
     </div>
     {message && <p role="status" className="rounded-lg bg-brand-soft px-4 py-3 text-sm font-semibold text-ink">{message}</p>}
     <section className="overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
