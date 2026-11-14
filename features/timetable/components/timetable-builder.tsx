@@ -73,7 +73,7 @@ export default function TimetableBuilder({
   function changeContext(next: { term?: string; classroom?: string }): void {
     const term = next.term ?? context?.termId ?? "";
     const classroom = next.term ? "" : next.classroom ?? context?.classroomId ?? "";
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({ view: "edit" });
     if (term) params.set("term", term);
     if (classroom) params.set("classroom", classroom);
     router.push(`/dashboard/timetable?${params.toString()}`);

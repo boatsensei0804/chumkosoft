@@ -1,5 +1,7 @@
 "use client";
 
+import RecordActions from "@/features/dashboard/components/record-actions";
+
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -7,7 +9,7 @@ import { Search, Plus, Eye, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PaginationBar from "@/components/ui/pagination-bar";
@@ -128,27 +130,7 @@ export default function CoursesBrowser({ page, query }: CoursesBrowserProps): Re
                         <span className="text-[13px] text-faint">ยังไม่เปิด</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-0.5">
-                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`ดูข้อมูล ${c.name}`} onClick={() => setViewing(c)}><Eye className="size-[18px]" /></Button></TooltipTrigger><TooltipContent>ดูข้อมูล</TooltipContent></Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`แก้ไข ${c.name}`} onClick={() => openEdit(c)}>
-                              <Pencil className="size-[18px]" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>แก้ไข</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`ลบ ${c.name}`} onClick={() => setDeleting(c)}>
-                              <Trash2 className="size-[18px]" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>ลบ</TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </TableCell>
+                    <TableCell className="text-right"><RecordActions name={c.name} onView={() => setViewing(c)} onEdit={() => openEdit(c)} onDelete={() => setDeleting(c)} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

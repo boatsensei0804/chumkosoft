@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import WorkspacePanels from "@/features/dashboard/components/workspace-panels";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -42,7 +43,7 @@ export default function AdvisorLineConnect({ linked, currentCode, friendUrl, fri
       <div className="rounded-2xl border border-line bg-card p-4 shadow-sm"><p className="text-sm text-muted">นักเรียนที่ดูแล</p><p className="mt-2 text-3xl font-bold tabular text-brand-ink">{studentCount.toLocaleString("th-TH")}</p><p className="mt-1 text-xs text-muted">{hasActiveTerm ? "คนในภาคเรียนปัจจุบัน" : "ยังไม่มีภาคเรียนที่เปิดใช้งาน"}</p></div>
       <Link href="/dashboard/leave-requests" className="group rounded-2xl border border-line bg-card p-4 shadow-sm transition-colors hover:border-brand/40 hover:bg-brand-softer"><p className="flex items-center justify-between text-sm text-muted">คำขอลารอตรวจ <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></p><p className="mt-2 text-3xl font-bold tabular text-warning">{pendingLeaveCount.toLocaleString("th-TH")}</p><p className="mt-1 text-xs text-muted">รายการจากห้องที่ปรึกษาของคุณ</p></Link>
     </section>
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+    <WorkspacePanels sections={[{ title: "บัญชีและการเชื่อมต่อ", description: "สถานะ รหัส และ QR เพิ่มเพื่อน", content: <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_260px]">
     <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-7">
       <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ${linked ? "bg-success-soft text-success" : code ? "bg-warning-soft text-warning" : "bg-surface-2 text-muted"}`}>
         {linked && <CheckCircle2 className="size-4" />}{linked ? "เชื่อม LINE แล้ว" : code ? "รอส่งรหัสใน LINE" : "ยังไม่เชื่อม LINE"}
@@ -81,8 +82,7 @@ export default function AdvisorLineConnect({ linked, currentCode, friendUrl, fri
       </div>
       {!linked && <button type="button" onClick={() => router.refresh()} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-ink"><RefreshCw className="size-4" /> ตรวจสถานะตอนนี้</button>}
     </aside>
-    </div>
-    <div className="grid gap-5 lg:grid-cols-2">
+    </div> }, { title: "การแจ้งเตือนและงานที่เกี่ยวข้อง", description: "สิ่งที่ได้รับและทางลัดงานที่ปรึกษา", content: <div className="grid gap-5 xl:grid-cols-2">
       <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">
         <h2 className="text-base font-bold text-ink-strong">LINE นี้ใช้รับอะไรบ้าง</h2>
         <ul className="mt-4 space-y-3 text-sm text-ink">
@@ -100,6 +100,6 @@ export default function AdvisorLineConnect({ linked, currentCode, friendUrl, fri
         </div>
         <p className="mt-4 text-xs leading-relaxed text-muted">หากเชื่อมแล้วแต่ไม่เห็นข้อความ ให้ตรวจว่าไม่ได้บล็อก LINE OA และเปิดการแจ้งเตือน LINE ไว้ หากยังมีปัญหาให้แจ้งผู้ดูแลระบบ</p>
       </section>
-    </div>
+    </div> }]} />
   </div>;
 }

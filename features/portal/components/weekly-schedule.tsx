@@ -1,14 +1,22 @@
+"use client";
+
+import { useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Clock, MapPin } from "lucide-react";
 import type { PortalOverview } from "@/features/portal/types";
 
 /** Read-only weekly class schedule (ตารางเรียน) for the portal viewer. */
 export default function WeeklySchedule({ overview }: { overview: PortalOverview }): React.ReactNode {
   const { days, periods } = overview;
+  const [day, setDay] = useState(days[0]?.key ?? "MON");
+  const [selected, setSelected] = useState<{ subject: string; room: string; teacher: string; time: string; day: string } | null>(null);
   const gridCols = `92px repeat(${days.length}, minmax(120px, 1fr))`;
 
   return (
+    <>
+    <section className="rounded-[22px] border border-blue-100 bg-white p-3 md:hidden"><div role="group" aria-label="เลือกวันดูตารางเรียน" className="mb-3 flex flex-wrap gap-1">{days.map((item) => <button key={item.key} type="button" aria-pressed={day === item.key} onClick={() => setDay(item.key)} className={`min-h-11 flex-1 rounded-xl px-2 text-sm font-semibold ${day === item.key ? "bg-brand text-white" : "bg-blue-50 text-muted"}`}>{item.short}</button>)}</div><div className="space-y-2">{periods.map((period) => { const cell = period.cells[day]; return period.isBreak ? <p key={period.periodId} className="rounded-xl bg-slate-100 p-3 text-xs text-muted">{period.label} · {period.start}–{period.end}</p> : <div key={period.periodId} className="flex gap-3 rounded-xl border border-line p-3"><div className="w-20 shrink-0 text-xs text-muted"><p className="font-semibold text-ink">{period.label}</p><p className="mt-1">{period.start}–{period.end}</p></div>{cell ? <button type="button" className="min-h-11 min-w-0 flex-1 text-left" onClick={() => setSelected({ ...cell, time: `${period.start}–${period.end}`, day: days.find((item) => item.key === day)?.label ?? "" })}><p className="text-sm font-semibold text-brand-ink">{cell.subject}</p><p className="mt-1 text-xs text-muted">{cell.teacher} · {cell.room}</p></button> : <p className="text-sm text-muted">ไม่มีคาบเรียน</p>}</div>; })}</div></section>
     <div
-      className="overflow-x-auto rounded-xl"
+      className="hidden overflow-x-auto rounded-[22px] md:block"
       style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)" }}
     >
       <div className="min-w-[720px]">
@@ -57,7 +65,7 @@ export default function WeeklySchedule({ overview }: { overview: PortalOverview 
                         className="h-full rounded-[10px] px-2.5 py-2"
                         style={{ backgroundColor: "var(--brand-softer)", border: "1px solid var(--brand-soft)" }}
                       >
-                        <p className="text-[12.5px] font-semibold text-ink-strong leading-snug">{cell.subject}</p>
+                        <button type="button" onClick={() => setSelected({ ...cell, time: `${p.start}–${p.end}`, day: d.label })} className="min-h-10 text-left text-[12.5px] font-semibold leading-snug text-brand-ink hover:underline">{cell.subject}</button>
                         <p className="mt-1 flex items-center gap-1 text-[11.5px] text-muted">
                           <MapPin className="size-[13px]" />
                           {cell.room}
@@ -75,5 +83,7 @@ export default function WeeklySchedule({ overview }: { overview: PortalOverview 
         )}
       </div>
     </div>
+    <Dialog open={selected !== null} onOpenChange={(open) => { if (!open) setSelected(null); }}><DialogContent><DialogHeader className="text-left"><DialogTitle>{selected?.subject}</DialogTitle><DialogDescription>{selected?.day} · {selected?.time}</DialogDescription></DialogHeader><dl className="grid gap-3 sm:grid-cols-2"><div className="rounded-xl bg-blue-50 p-4"><dt className="text-xs text-muted">ครูผู้สอน</dt><dd className="mt-2 text-sm font-semibold">{selected?.teacher || "ยังไม่กำหนด"}</dd></div><div className="rounded-xl bg-blue-50 p-4"><dt className="text-xs text-muted">สถานที่เรียน</dt><dd className="mt-2 text-sm font-semibold">{selected?.room || "ยังไม่กำหนด"}</dd></div></dl></DialogContent></Dialog>
+    </>
   );
 }

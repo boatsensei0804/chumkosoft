@@ -28,7 +28,7 @@ export default async function FacesPage({ searchParams }: FacesPageProps): Promi
   const view = params.view === "rooms" && !params.student ? "rooms" : "students";
 
   const stats = await getFaceEnrollmentStats();
-  const subtitle = `สำหรับสแกนเช็คชื่อเข้าโรงเรียน · ลงทะเบียนแล้ว ${stats.enrolledStudents.toLocaleString("th-TH")} จาก ${stats.totalStudents.toLocaleString("th-TH")} คน · ต้องได้รับความยินยอมจากผู้ปกครองก่อนเก็บข้อมูล`;
+  const subtitle = `ข้อมูลสำหรับแอปสแกนเช็คชื่อ · ลงทะเบียนแล้ว ${stats.enrolledStudents.toLocaleString("th-TH")} จาก ${stats.totalStudents.toLocaleString("th-TH")} คน · ต้องได้รับความยินยอมจากผู้ปกครองก่อนเก็บข้อมูล`;
 
   return (
     <>
@@ -42,6 +42,11 @@ export default async function FacesPage({ searchParams }: FacesPageProps): Promi
         ]}
       />
 
+      <section className="mb-5 rounded-2xl border border-blue-100 bg-white p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold text-ink-strong">ความพร้อมของข้อมูลใบหน้า</h2><span className="text-sm font-bold text-brand-ink">{stats.totalStudents ? Math.round(stats.enrolledStudents / stats.totalStudents * 100) : 0}% ลงทะเบียนแล้ว</span></div>
+        <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-blue-50"><div className="h-full rounded-full bg-brand" style={{ width: `${stats.totalStudents ? stats.enrolledStudents / stats.totalStudents * 100 : 0}%` }} /></div>
+        <p className="mt-3 text-xs leading-6 text-muted">จัดการภาพลงทะเบียนและข้อมูลนักเรียนที่นี่ ส่วนการสแกนเช็คชื่อใช้แอปสแกนใบหน้า ข้อมูลลงทะเบียนไม่ใช่สถานะยืนยันว่าแต่ละเครื่องซิงค์แล้ว</p>
+      </section>
       <div className="flex flex-col gap-4">
         <FacesViewTabs view={view} />
         {view === "rooms" ? <RoomsView /> : <StudentsView selectedId={params.student} />}

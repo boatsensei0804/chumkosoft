@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { CalendarDays, CalendarRange, Clock } from "lucide-react";
 import PageHeader from "@/features/dashboard/components/page-header";
 import StatStrip from "@/components/ui/stat-strip";
-import SettingsTabs from "@/features/settings/components/settings-tabs";
+import WorkspacePanels from "@/features/dashboard/components/workspace-panels";
+import EditorDialog from "@/features/dashboard/components/editor-dialog";
+import AcademicSettings from "@/features/settings/components/academic-settings";
+import PeriodSettings from "@/features/settings/components/period-settings";
 import AdvisorDigestTime from "@/features/settings/components/advisor-digest-time";
 import { requireRoles } from "@/lib/dal";
 import prisma from "@/lib/prisma";
@@ -38,10 +41,11 @@ export default async function SettingsPage(): Promise<React.ReactNode> {
           { label: "คาบเรียน", value: classPeriods, hint: "คาบ/วัน", icon: Clock, tone: "default" },
         ]}
       />
-      <SettingsTabs years={years} periods={periods} />
-      <div className="mt-6">
-        <AdvisorDigestTime initialTime={digestSetting?.sendTime ?? "09:00"} initialFriendUrl={digestSetting?.oaAddFriendUrl ?? ""} />
-      </div>
+      <WorkspacePanels sections={[
+        { title: "ปีการศึกษาและภาคเรียน", description: "กำหนดภาคเรียนที่ข้อมูลทั้งระบบอ้างอิง", content: <AcademicSettings years={years} /> },
+        { title: "โครงเวลาคาบเรียน", description: "ตรวจช่วงเวลาเรียนและพักในแต่ละวัน", content: <section className="rounded-[22px] border border-line bg-white p-5"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-bold">ตารางเวลาประจำวัน</h2><p className="mt-1 text-sm text-muted">ใช้กับตารางสอนและการเช็คชื่อรายวิชา</p></div><EditorDialog title="จัดการคาบเรียน" description="เพิ่ม แก้ไข เรียงลำดับ หรือลบคาบ จากนั้นกดบันทึก" label="จัดการคาบเรียน"><PeriodSettings initialPeriods={periods} /></EditorDialog></div><ol className="space-y-2">{periods.map((period, index) => <li key={period.id} className={`flex flex-wrap items-center gap-3 rounded-xl p-4 ${period.isBreak ? "bg-slate-100" : "bg-blue-50"}`}><span className="grid size-8 place-items-center rounded-full bg-white text-xs font-semibold text-brand-ink">{index + 1}</span><span className="flex-1 text-sm font-semibold">{period.label}</span><span className="text-sm tabular text-muted">{period.startTime}–{period.endTime}</span><span className="rounded-full bg-white px-2 py-1 text-xs text-muted">{period.isBreak ? "พัก" : "คาบเรียน"}</span></li>)}</ol>{periods.length === 0 && <p className="py-8 text-center text-sm text-muted">ยังไม่มีคาบเรียน กดจัดการคาบเรียนเพื่อเริ่มต้น</p>}</section> },
+        { title: "LINE และการส่งสรุป", description: "เวลาแจ้งครูและลิงก์เพิ่มเพื่อนโรงเรียน", content: <AdvisorDigestTime initialTime={digestSetting?.sendTime ?? "09:00"} initialFriendUrl={digestSetting?.oaAddFriendUrl ?? ""} /> },
+      ]} />
     </>
   );
 }

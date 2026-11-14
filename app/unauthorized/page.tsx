@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import BrandMark from "@/features/dashboard/components/brand-mark";
 import { logoutAction } from "@/features/auth/actions";
 import { getCurrentUser } from "@/lib/dal";
-import { ROLE_LABELS } from "@/features/auth/roles";
+import Link from "next/link";
+import { homePathForRole, ROLE_LABELS } from "@/features/auth/roles";
 import Mascot from "@/components/ui/mascot";
 
 export const metadata: Metadata = {
@@ -33,7 +34,8 @@ export default async function UnauthorizedPage(): Promise<React.ReactNode> {
               หากคิดว่าเป็นข้อผิดพลาด กรุณาติดต่อผู้ดูแลระบบ
             </p>
 
-            <form action={logoutAction} className="mt-6 w-full">
+            <Button asChild className="mt-6 w-full"><Link href={homePathForRole(user.role)}>กลับหน้าหลักของฉัน</Link></Button>
+            <form action={logoutAction} className="mt-3 w-full">
               <Button type="submit" variant="outline" size="lg" className="w-full">
                 <LogOut className="size-[18px]" /> ออกจากระบบ
               </Button>

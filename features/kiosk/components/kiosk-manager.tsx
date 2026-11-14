@@ -68,7 +68,7 @@ export default function KioskManager({ accounts }: { accounts: KioskAccountRow[]
         <div className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div>
             <h2 className="text-[15px] font-bold text-ink-strong">บัญชีจุดสแกน (KIOSK)</h2>
-            <p className="text-[12.5px] text-muted">บัญชีสำหรับเข้าใช้งานหน้าจอสแกนใบหน้าที่ประตูโรงเรียน</p>
+            <p className="text-[12.5px] text-muted">บัญชีสำหรับผูกแอปสแกนผ่าน QR และรับส่งข้อมูลกับโรงเรียน</p>
           </div>
           <Button onClick={openCreate} size="sm">
             <Plus className="size-4" /> เพิ่มบัญชี
@@ -135,7 +135,7 @@ export default function KioskManager({ accounts }: { accounts: KioskAccountRow[]
               <ScanFace className="size-6" />
             </span>
             <p className="text-[15px] font-semibold text-ink-strong">ยังไม่มีบัญชีจุดสแกน</p>
-            <p className="text-[13.5px] text-muted">เพิ่มบัญชีเพื่อใช้ล็อกอินที่หน้าจอสแกนใบหน้า</p>
+            <p className="text-[13.5px] text-muted">เพิ่มบัญชีเพื่อเชื่อมต่อแอปสแกนใบหน้า</p>
           </div>
         )}
       </div>
@@ -162,7 +162,7 @@ export default function KioskManager({ accounts }: { accounts: KioskAccountRow[]
           <AlertDialogHeader>
             <AlertDialogTitle>ลบบัญชีจุดสแกน</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleting ? `ต้องการลบบัญชี “${deleting.email}” ใช่หรือไม่? บัญชีนี้จะเข้าใช้งานหน้าสแกนไม่ได้อีก` : ""}
+              {deleting ? `ต้องการลบบัญชี “${deleting.email}” ใช่หรือไม่? บัญชีนี้จะเชื่อมต่อแอปสแกนไม่ได้อีก` : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

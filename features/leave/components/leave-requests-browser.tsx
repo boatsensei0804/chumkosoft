@@ -20,6 +20,9 @@ function thaiDate(iso: string): string {
 export default function LeaveRequestsBrowser({ items, isAdmin }: { items: LeaveItem[]; isAdmin: boolean }): React.ReactNode {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [classroom, setClassroom] = useState("");
+  const [kind, setKind] = useState<LeaveKind | "ALL">("ALL");
+  const classrooms = [...new Set(items.map((item) => item.classroomCode))].sort();
   const [filter, setFilter] = useState<LeaveStatus | "ALL">("PENDING");
   const [selected, setSelected] = useState<{ item: LeaveItem; decision: "APPROVED" | "REJECTED" } | null>(null);
   const [viewing, setViewing] = useState<LeaveItem | null>(null);
@@ -31,7 +34,7 @@ export default function LeaveRequestsBrowser({ items, isAdmin }: { items: LeaveI
     approved: items.filter((item) => item.status === "APPROVED").length,
     rejected: items.filter((item) => item.status === "REJECTED").length,
   };
-  const visible = items.filter((item) => (filter === "ALL" || item.status === filter) &&
+  const visible = items.filter((item) => (filter === "ALL" || item.status === filter) && (!classroom || item.classroomCode === classroom) && (kind === "ALL" || item.kind === kind) &&
     `${item.studentCode} ${item.studentName} ${item.classroomCode}`.toLowerCase().includes(query.trim().toLowerCase()));
 
   function review(): void {
@@ -64,6 +67,8 @@ export default function LeaveRequestsBrowser({ items, isAdmin }: { items: LeaveI
     <section className="overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
       <div className="flex flex-wrap gap-3 border-b border-line p-4">
         <input aria-label="ค้นหาคำขอลา" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหารหัส ชื่อนักเรียน หรือห้อง" className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
+        <select aria-label="กรองห้องเรียนคำขอลา" value={classroom} onChange={(event) => setClassroom(event.target.value)} className="min-h-10 rounded-xl border border-line bg-surface px-3 text-sm"><option value="">ทุกห้องเรียน</option>{classrooms.map((room) => <option key={room} value={room}>{room}</option>)}</select>
+        <select aria-label="ประเภทการลา" value={kind} onChange={(event) => setKind(event.target.value as LeaveKind | "ALL")} className="min-h-10 rounded-xl border border-line bg-surface px-3 text-sm"><option value="ALL">ทุกประเภท</option><option value="SICK">ลาป่วย</option><option value="PERSONAL">ลากิจ</option></select>
         <select aria-label="กรองสถานะคำขอลา" value={filter} onChange={(event) => setFilter(event.target.value as LeaveStatus | "ALL")} className="rounded-lg border border-line bg-surface px-3 py-2 text-sm">
           <option value="PENDING">รอพิจารณา</option><option value="APPROVED">อนุมัติแล้ว</option><option value="REJECTED">ไม่อนุมัติ</option><option value="ALL">ทั้งหมด</option>
         </select>

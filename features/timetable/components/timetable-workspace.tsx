@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CalendarDays, Clock3, GraduationCap, Users, type LucideIcon } from "lucide-react";
 import { NativeSelect } from "@/components/ui/native-select";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ type MainView = "overview" | "edit";
 type OverviewView = "all" | "classroom" | "teacher";
 
 interface TimetableWorkspaceProps {
+  initialView?: MainView;
   context: { termId: string; termName: string; classroomId: string; classroomCode: string } | null;
   terms: ContextOption[];
   classrooms: ContextOption[];
@@ -28,7 +30,7 @@ interface TimetableWorkspaceProps {
 }
 
 export default function TimetableWorkspace(props: TimetableWorkspaceProps): React.ReactNode {
-  const [mainView, setMainView] = useState<MainView>("overview");
+  const [mainView, setMainView] = useState<MainView>(props.initialView ?? "overview");
 
   return (
     <div className="flex flex-col gap-4">
@@ -210,6 +212,8 @@ function ReadOnlyGrid({
   colorByOffering: Map<string, keyof typeof subjectColors>;
   secondary: "teacher" | "classroom";
 }): React.ReactNode {
+  const [selected, setSelected] = useState<{ slot: ScheduleOverviewSlot; time: string; day: string } | null>(null);
+  const selectSlot = (slot: ScheduleOverviewSlot, time: string, day: string) => setSelected({ slot, time, day });
   const byCell = new Map(slots.map((slot) => [`${slot.day}:${slot.periodId}`, slot]));
   if (periods.length === 0) return <EmptySchedule message="ยังไม่มีข้อมูลคาบเรียน" />;
   return (
@@ -223,7 +227,7 @@ function ReadOnlyGrid({
             <div className="divide-y divide-line border-t border-line">{periods.map((period) => {
               if (period.kind === "break") return <p key={period.id} className="bg-surface-2 px-3 py-2 text-xs text-muted">{period.label} · {period.start}–{period.end}</p>;
               const slot = byCell.get(`${day.key}:${period.id}`);
-              return <div key={period.id} className="flex gap-3 px-3 py-2.5"><span className="w-20 shrink-0 text-xs text-muted">{period.label}<br />{period.start}–{period.end}</span><div className="min-w-0 text-sm">{slot ? <><p className="font-semibold text-ink-strong">{slot.courseName}</p><p className="text-xs text-muted">{secondary === "teacher" ? slot.teacherName : slot.classroomCode} · {slot.roomName}</p></> : <p className="text-muted">ว่าง</p>}</div></div>;
+              return <div key={period.id} className="flex gap-3 px-3 py-2.5"><span className="w-20 shrink-0 text-xs text-muted">{period.label}<br />{period.start}–{period.end}</span><div className="min-w-0 text-sm">{slot ? <><button type="button" onClick={() => selectSlot(slot, `${period.start}–${period.end}`, day.label)} className="min-h-10 text-left font-semibold text-brand-ink hover:underline">{slot.courseName}</button><p className="text-xs text-muted">{secondary === "teacher" ? slot.teacherName : slot.classroomCode} · {slot.roomName}</p></> : <p className="text-muted">ว่าง</p>}</div></div>;
             })}</div>
           </details>)}
         </div>
@@ -235,18 +239,20 @@ function ReadOnlyGrid({
               {periods.map((period) => period.kind === "break" ? (
                 <div key={period.id} className="col-span-6 bg-surface-2 px-3 py-2 text-center text-xs font-medium text-muted">{period.label} · {period.start}–{period.end}</div>
               ) : (
-                <PeriodRowCells key={period.id} period={period} days={days} byCell={byCell} colorByOffering={colorByOffering} secondary={secondary} />
+                <PeriodRowCells key={period.id} period={period} days={days} byCell={byCell} colorByOffering={colorByOffering} secondary={secondary} onSelect={selectSlot} />
               ))}
             </div>
           </div>
         </div>
         </>
       )}
+    <Dialog open={selected !== null} onOpenChange={(open) => { if (!open) setSelected(null); }}><DialogContent><DialogHeader className="text-left"><DialogTitle>{selected?.slot.courseName}</DialogTitle><DialogDescription>{selected?.day} · {selected?.time}</DialogDescription></DialogHeader><dl className="grid gap-3 sm:grid-cols-2">{[{ label: "ครูผู้สอน", value: selected?.slot.teacherName }, { label: "ห้องเรียน", value: selected?.slot.classroomCode }, { label: "สถานที่เรียน", value: selected?.slot.roomName }].map((field) => <div key={field.label} className="rounded-xl bg-blue-50 p-4"><dt className="text-xs text-muted">{field.label}</dt><dd className="mt-2 text-sm font-semibold">{field.value || "ยังไม่กำหนด"}</dd></div>)}</dl></DialogContent></Dialog>
     </section>
   );
 }
 
-function PeriodRowCells({ period, days, byCell, colorByOffering, secondary }: {
+function PeriodRowCells({ period, days, byCell, colorByOffering, secondary, onSelect }: {
+  onSelect: (slot: ScheduleOverviewSlot, time: string, day: string) => void;
   period: PeriodRow;
   days: DayInfo[];
   byCell: Map<string, ScheduleOverviewSlot>;
@@ -260,11 +266,11 @@ function PeriodRowCells({ period, days, byCell, colorByOffering, secondary }: {
       const palette = slot ? subjectColors[colorByOffering.get(slot.offeringId) ?? "blue"] : null;
       return (
         <div key={`${day.key}:${period.id}`} className="min-h-[68px] bg-bg p-1.5">
-          {slot && palette && <div className="flex h-full min-h-[58px] flex-col gap-0.5 overflow-hidden rounded-md px-2 py-1.5" style={{ backgroundColor: palette.bg, color: palette.ink, border: `1px solid color-mix(in oklch, ${palette.bar} 30%, transparent)` }}>
+          {slot && palette && <button type="button" onClick={() => onSelect(slot, `${period.start}–${period.end}`, day.label)} className="flex w-full h-full min-h-[58px] text-left flex-col gap-0.5 overflow-hidden rounded-md px-2 py-1.5" style={{ backgroundColor: palette.bg, color: palette.ink, border: `1px solid color-mix(in oklch, ${palette.bar} 30%, transparent)` }}>
             <p className="truncate text-[11.5px] font-bold">{slot.courseName}</p>
             <p className="truncate text-[10.5px] opacity-80">{secondary === "teacher" ? slot.teacherName : slot.classroomCode}</p>
             <p className="truncate text-[10px] opacity-70">{slot.roomName}</p>
-          </div>}
+          </button>}
         </div>
       );
     })}

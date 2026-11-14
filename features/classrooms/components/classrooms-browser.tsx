@@ -1,5 +1,7 @@
 "use client";
 
+import RecordActions from "@/features/dashboard/components/record-actions";
+
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -7,7 +9,7 @@ import { toast } from "sonner";
 import { Search, Plus, Pencil, Trash2, ArrowRight, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import ClassroomFormDialog from "./classroom-form-dialog";
 import MobileRecordCard from "@/features/dashboard/components/mobile-record-card";
@@ -136,36 +138,7 @@ export default function ClassroomsBrowser({ classrooms, teachers }: ClassroomsBr
                       <span className="tabular text-[13.5px] text-ink">{c.offeringCount}</span>
                       <span className="text-[12.5px] text-muted"> วิชา</span>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-0.5">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button asChild variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`รายละเอียด ${c.code}`}>
-                              <Link href={`/dashboard/classrooms/${c.id}`}>
-                                <ArrowRight className="size-[18px]" />
-                              </Link>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>รายละเอียด</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`แก้ไข ${c.code}`} onClick={() => openEdit(c)}>
-                              <Pencil className="size-[18px]" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>แก้ไข</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`ลบ ${c.code}`} onClick={() => setDeleting(c)}>
-                              <Trash2 className="size-[18px]" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>ลบ</TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </TableCell>
+                    <TableCell className="text-right"><RecordActions name={c.code} href={`/dashboard/classrooms/${c.id}`} onEdit={() => openEdit(c)} onDelete={() => setDeleting(c)} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

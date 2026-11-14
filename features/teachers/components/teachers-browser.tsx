@@ -1,5 +1,7 @@
 "use client";
 
+import RecordActions from "@/features/dashboard/components/record-actions";
+
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -8,7 +10,7 @@ import { Search, Plus, Eye, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PaginationBar from "@/components/ui/pagination-bar";
@@ -174,36 +176,7 @@ export default function TeachersBrowser({ page, query, filter, canManageAccounts
                         <span className="text-[12.5px] text-muted"> วิชา</span>
                       </TableCell>
                       <TableCell className="text-[13px] text-muted">{s.email ?? "—"}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-0.5">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button asChild variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`ดูข้อมูล ${s.firstName} ${s.lastName}`}>
-                                <Link href={`/dashboard/teachers/${s.id}`}>
-                                  <Eye className="size-[18px]" />
-                                </Link>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>ดูข้อมูล</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`แก้ไข ${s.firstName} ${s.lastName}`} onClick={() => openEdit(s)}>
-                                <Pencil className="size-[18px]" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>แก้ไข</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`ลบ ${s.firstName} ${s.lastName}`} onClick={() => setDeleting(s)}>
-                                <Trash2 className="size-[18px]" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>ลบ</TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </TableCell>
+                      <TableCell className="text-right"><RecordActions name={`${s.firstName} ${s.lastName}`} href={`/dashboard/teachers/${s.id}`} onEdit={() => openEdit(s)} onDelete={() => setDeleting(s)} /></TableCell>
                     </TableRow>
                   );
                 })}

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ScanFace } from "lucide-react";
+import { Settings2 } from "lucide-react";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { Button } from "@/components/ui/button";
 import ScanSettingForm from "@/features/kiosk/components/scan-setting-form";
@@ -22,12 +22,12 @@ export default async function KioskPage(): Promise<React.ReactNode> {
     <>
       <PageHeader
         title="จุดสแกนใบหน้า"
-        subtitle="ตั้งค่าเวลาการสแกนเข้าโรงเรียน และจัดการบัญชีสำหรับหน้าจอสแกน"
+        subtitle="ตั้งค่าเวลาการสแกนเข้าโรงเรียน และจัดการบัญชีสำหรับเชื่อมต่อแอปสแกน"
         actions={
           <Button asChild variant="outline">
-            <Link href="/scan">
-              <ScanFace className="size-[18px]" />
-              เปิดหน้าจอสแกน
+            <Link href="/scanner-devices">
+              <Settings2 className="size-[18px]" />
+              ดูอุปกรณ์และตั้งค่ากล้อง
             </Link>
           </Button>
         }

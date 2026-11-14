@@ -1,3 +1,4 @@
+import WorkspacePanels from "@/features/dashboard/components/workspace-panels";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -70,7 +71,7 @@ export default async function ClassroomDetailPage({ params }: ClassroomDetailPag
         </div>
       </section>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+      <WorkspacePanels sections={[{ title: "นักเรียนในห้อง", description: "รายชื่อและสถานะภาคเรียนปัจจุบัน", content: <>
         {/* Roster: students in this homeroom this term */}
         <SectionCard title="รายชื่อนักเรียนในห้อง" caption={`${detail.roster.length.toLocaleString("th-TH")} คน · ภาคเรียนปัจจุบัน`} bodyClassName="p-0">
           {detail.roster.length > 0 ? (
@@ -91,7 +92,7 @@ export default async function ClassroomDetailPage({ params }: ClassroomDetailPag
                             <AvatarFallback className="bg-brand-soft text-[12px] font-semibold text-brand-ink">{s.name.charAt(0)}</AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
-                            <p className="truncate text-[13.5px] font-medium text-ink-strong">{s.name}</p>
+                            <Link href={`/dashboard/students/${s.id}`} className="block min-h-10 text-[13.5px] font-semibold text-brand-ink hover:underline">{s.name}</Link>
                             <p className="tabular text-[12px] text-muted">รหัส {s.code}</p>
                           </div>
                         </div>
@@ -109,9 +110,9 @@ export default async function ClassroomDetailPage({ params }: ClassroomDetailPag
           )}
         </SectionCard>
 
-        {/* Offerings: subjects taught to this class + who teaches them (editable) */}
+        </> }, { title: "รายวิชาของห้อง", description: "วิชาที่เปิดสอนและครูผู้รับผิดชอบ", content: <>
         <ClassroomOfferings classroomId={detail.id} offerings={detail.offerings} options={offeringOptions} />
-      </div>
+      </> }]} />
     </div>
   );
 }

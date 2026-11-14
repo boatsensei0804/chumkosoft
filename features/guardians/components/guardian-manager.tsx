@@ -7,13 +7,14 @@ import { Search, Plus, Eye, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PaginationBar from "@/components/ui/pagination-bar";
 import ClassroomFilter from "./classroom-filter";
 import GuardianFormDialog from "./guardian-form-dialog";
 import MobileRecordCard from "@/features/dashboard/components/mobile-record-card";
+import RecordActions from "@/features/dashboard/components/record-actions";
 import RecordPreviewDialog from "@/features/dashboard/components/record-preview-dialog";
 import { useListParams } from "@/features/dashboard/hooks/use-list-params";
 import { deleteGuardianAction } from "@/features/guardians/actions";
@@ -162,27 +163,7 @@ export default function GuardianManager({ page, query, classrooms, classroomId }
                         <Button variant="ghost" size="sm" className="text-brand-ink" onClick={() => setEditing({ studentId: student.studentId, studentName: student.name, guardian: null })}>
                           <Plus className="size-4" /> เพิ่ม
                         </Button>
-                        {student.guardians.map((g) => (
-                          <div key={g.id} className="flex min-h-8 items-center gap-0.5">
-                            <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`ดูข้อมูล ${g.fullName}`} onClick={() => setViewing({ studentId: student.studentId, studentName: student.name, guardian: g })}><Eye className="size-[17px]" /></Button></TooltipTrigger><TooltipContent>ดูข้อมูล</TooltipContent></Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`แก้ไข ${g.fullName}`} onClick={() => setEditing({ studentId: student.studentId, studentName: student.name, guardian: g })}>
-                                  <Pencil className="size-[17px]" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>แก้ไข</TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="size-8 text-muted hover:text-destructive" aria-label={`ลบ ${g.fullName}`} onClick={() => setDeleting(g)}>
-                                  <Trash2 className="size-[17px]" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>ลบ</TooltipContent>
-                            </Tooltip>
-                          </div>
-                        ))}
+                        {student.guardians.map((g) => <div key={g.id} className="py-1"><RecordActions name={g.fullName} onView={() => setViewing({ studentId: student.studentId, studentName: student.name, guardian: g })} onEdit={() => setEditing({ studentId: student.studentId, studentName: student.name, guardian: g })} onDelete={() => setDeleting(g)} /></div>)}
                       </div>
                     </TableCell>
                   </TableRow>

@@ -1,3 +1,4 @@
+import StatStrip from "@/components/ui/stat-strip";
 import type { Metadata } from "next";
 import { GraduationCap, CalendarDays } from "lucide-react";
 import WeeklySchedule from "@/features/portal/components/weekly-schedule";
@@ -41,6 +42,11 @@ export default async function PortalPage(): Promise<React.ReactNode> {
         <Mascot pose="welcome" size={132} decorative priority className="hidden sm:block" />
       </section>
 
+      <StatStrip items={[
+        { label: "นักเรียน", value: overview.studentName ?? "ยังไม่ได้เชื่อมข้อมูล", tone: "brand" },
+        { label: "ห้องเรียน", value: overview.classroomCode ?? "ยังไม่กำหนด" },
+        { label: "ภาคเรียน", value: overview.termLabel ?? "ยังไม่กำหนด" },
+      ]} />
       <section className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
           <CalendarDays className="size-5 text-brand-strong" />

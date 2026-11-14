@@ -1,5 +1,7 @@
 "use client";
 
+import RecordActions from "@/features/dashboard/components/record-actions";
+
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -7,7 +9,7 @@ import { Search, Plus, Eye, Pencil, Trash2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import RoomFormDialog from "./room-form-dialog";
 import MobileRecordCard from "@/features/dashboard/components/mobile-record-card";
@@ -114,27 +116,7 @@ export default function RoomsBrowser({ rooms }: { rooms: RoomRow[] }): React.Rea
                         <span className="text-[13px] text-faint">ว่าง</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-0.5">
-                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`ดูข้อมูล ${r.code}`} onClick={() => setViewing(r)}><Eye className="size-[18px]" /></Button></TooltipTrigger><TooltipContent>ดูข้อมูล</TooltipContent></Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`แก้ไข ${r.code}`} onClick={() => openEdit(r)}>
-                              <Pencil className="size-[18px]" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>แก้ไข</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-8 text-muted hover:text-ink" aria-label={`ลบ ${r.code}`} onClick={() => setDeleting(r)}>
-                              <Trash2 className="size-[18px]" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>ลบ</TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </TableCell>
+                    <TableCell className="text-right"><RecordActions name={r.code} onView={() => setViewing(r)} onEdit={() => openEdit(r)} onDelete={() => setDeleting(r)} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

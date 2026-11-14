@@ -1,3 +1,4 @@
+import Mascot from "@/components/ui/mascot";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { approvePairingAction } from "./actions";
@@ -23,7 +24,8 @@ export default async function PairScannerPage({ params, searchParams }: PageProp
 
   return (
     <main className="grid min-h-dvh place-items-center bg-slate-50 px-4 py-8 text-slate-900">
-      <section className="w-full max-w-md rounded-2xl border border-sky-100 bg-white p-7 shadow-lg shadow-sky-100/60">
+      <section className="w-full max-w-md rounded-[28px] border border-sky-100 bg-white p-6 sm:p-8 shadow-lg shadow-sky-100/60">
+        <Mascot pose={connected ? "success" : state === "pending" ? "scan" : "error"} size={110} decorative className="mx-auto mb-4" />
         <p className="text-sm font-bold text-sky-700">Chumkosoft · จุดสแกนใบหน้า</p>
         <h1 className="mt-3 text-2xl font-bold">เชื่อมโปรแกรมสแกน</h1>
         <p className="mt-2 text-sm text-slate-600">ตรวจว่ารหัสนี้ตรงกับที่แสดงบนโปรแกรมในเครื่อง แล้วจึงกดยืนยัน</p>

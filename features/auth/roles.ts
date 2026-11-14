@@ -23,9 +23,9 @@ export function hasRole(role: Role, allowed: readonly Role[]): boolean {
   return allowed.includes(role);
 }
 
-/** The landing surface for a role: staff → dashboard, kiosk → scan station, families → portal. */
+/** The landing surface for a role: staff → dashboard, kiosk → scanner devices, families → portal. */
 export function homePathForRole(role: Role): string {
   if (STAFF_ROLES.includes(role)) return "/dashboard";
-  if (role === "KIOSK") return "/scan";
+  if (role === "KIOSK") return "/scanner-devices";
   return "/portal";
 }

@@ -46,7 +46,7 @@ export async function listLineAnnouncements() {
     orderBy: { createdAt: "desc" },
     take: 20,
     select: {
-      id: true, kind: true, title: true, recipientCount: true, createdAt: true,
+      id: true, kind: true, title: true, body: true, recipientCount: true, createdAt: true,
       batches: { select: { id: true, status: true, recipientCount: true, errorCode: true } },
     },
   });

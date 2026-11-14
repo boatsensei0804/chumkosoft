@@ -11,11 +11,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 interface TimetablePageProps {
-  searchParams: Promise<{ term?: string; classroom?: string }>;
+  searchParams: Promise<{ term?: string; classroom?: string; view?: string }>;
 }
 
 export default async function TimetablePage({ searchParams }: TimetablePageProps): Promise<React.ReactNode> {
-  const { term, classroom } = await searchParams;
+  const { term, classroom, view } = await searchParams;
   const [board, offeringOptions] = await Promise.all([
     getTimetableBoard({ termId: term, classroomId: classroom }),
     listOfferingOptions(),
@@ -30,6 +30,7 @@ export default async function TimetablePage({ searchParams }: TimetablePageProps
         subtitle="ดูภาพรวมคาบเรียนแยกตามห้องและวัน เปิดตารางรายห้องหรือรายครู แล้วสลับไปจัดหรือแก้คาบสอนได้จากหน้าเดียว"
       />
       <TimetableWorkspace
+        initialView={view === "edit" ? "edit" : "overview"}
         key={`${board.context?.termId ?? "none"}:${board.context?.classroomId ?? "none"}`}
         context={board.context}
         terms={board.terms}
