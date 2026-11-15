@@ -16,7 +16,6 @@ const DEFAULT_AUTHED_PATH = "/dashboard";
 
 function isProtected(pathname: string): boolean {
   return (
-    pathname === "/" ||
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/portal") ||
     pathname.startsWith("/scan")
@@ -26,6 +25,8 @@ function isProtected(pathname: string): boolean {
 
 export default async function proxy(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
+  // The public home page never requires a session or database access.
+  if (pathname === "/") return NextResponse.next();
   const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
   const session = await decryptSession(token);
 
