@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import LeaveSummaryCharts from "@/features/leave/components/leave-summary-charts";
 import { requestKindLabel } from "@/features/leave/request-kind";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -16,7 +17,6 @@ function thaiDate(iso: string): string {
 export default function LeaveRequestsBrowser({ report, isAdmin }: { report: LeaveDailyReport; isAdmin: boolean }): React.ReactNode {
   const { items } = report;
   const summary = summarizeDailyLeave(items.filter(item => item.startDate <= report.date && item.endDate >= report.date), report.totalStudents);
-  const percentage = (value: number | null) => value === null ? "—" : `${value.toLocaleString("th-TH", { maximumFractionDigits: 1 })}%`;
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [classroom, setClassroom] = useState("");
@@ -69,11 +69,7 @@ export default function LeaveRequestsBrowser({ report, isAdmin }: { report: Leav
         <form action="/dashboard/leave-requests" method="get" className="flex flex-wrap items-end gap-2">{report.allDates && <input type="hidden" name="view" value="all" />}<label className="text-xs font-semibold text-muted">วันที่ลา / ขอมาสาย<input aria-label="วันที่รายงานคำขอลา" type="date" name="date" defaultValue={report.date} required className="mt-1 block min-h-10 rounded-lg border border-line bg-surface px-3 text-sm text-ink" /></label><button type="submit" className="min-h-10 rounded-lg bg-brand px-4 text-sm font-semibold text-white">ดูสรุป</button><Link href="/dashboard/leave-requests" className="min-h-10 rounded-lg border border-line px-3 py-2 text-sm font-semibold">วันนี้</Link></form>
       </div>
       {report.teacherScoped && <p className="rounded-lg bg-brand-soft p-3 text-sm text-brand-ink">แสดงเฉพาะคำขอในห้องที่คุณเป็นครูที่ปรึกษา · เปอร์เซ็นต์เทียบกับนักเรียนทั้งโรงเรียน</p>}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className="rounded-xl bg-brand-soft p-4"><p className="text-sm text-muted">นักเรียนที่ยื่นคำขอ</p><p className="mt-1 text-2xl font-bold text-brand-ink">{summary.students} คน <span className="text-base">({percentage(summary.percentage)})</span></p></div>
-        {([['PENDING', 'รอพิจารณา'], ['APPROVED', 'อนุมัติแล้ว'], ['REJECTED', 'ไม่อนุมัติ']] as const).map(([status, label]) => <div key={status} className="rounded-xl border border-line p-4"><p className="text-sm text-muted">{label}</p><p className="mt-1 text-2xl font-bold text-ink-strong">{summary.statuses[status]} <span className="text-sm font-normal">คำขอ</span></p></div>)}
-      </div>
-      <div className="grid gap-3 sm:grid-cols-3">{summary.kinds.map(row => <button key={row.kind} type="button" onClick={() => { setKind(row.kind); setFilter("ALL"); setPage(1); }} className={`rounded-xl border p-4 text-left ${kind === row.kind ? "border-brand bg-brand-soft" : "border-line bg-surface"}`}><p className="font-semibold text-ink-strong">{requestKindLabel(row.kind)}</p><p className="mt-2 text-2xl font-bold text-brand-ink">{row.students} คน <span className="text-base">{percentage(row.percentage)}</span></p><p className="mt-1 text-xs text-muted">{row.requests} คำขอ · รอ {row.pending} · อนุมัติ {row.approved}</p></button>)}</div>
+      <LeaveSummaryCharts summary={summary} totalStudents={report.totalStudents} selectedKind={kind} onSelectKind={(value) => { setKind(value); setFilter("ALL"); setPage(1); }} />
       <p className="text-xs leading-relaxed text-muted">นับวันที่อยู่ในช่วงคำขอ ไม่ใช่วันที่ส่ง · จำนวนนักเรียนและเปอร์เซ็นต์นับคนไม่ซ้ำ รวมรอพิจารณาและอนุมัติ ไม่รวมคำขอที่ไม่อนุมัติหรือลบแล้ว · นักเรียนอาจอยู่ได้หลายประเภท จึงไม่ควรบวกเปอร์เซ็นต์แต่ละประเภท · สรุปไม่เปลี่ยนตามตัวกรองรายชื่อ</p>
     </section>
     <div className="rounded-xl border border-line bg-brand-soft p-4 text-sm leading-relaxed text-ink">
