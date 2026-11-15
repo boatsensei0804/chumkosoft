@@ -20,6 +20,7 @@ import MobileRecordCard from "./mobile-record-card";
 import { deleteStudentAction, deleteStudentsAction } from "@/features/students/actions";
 import { useListParams } from "@/features/dashboard/hooks/use-list-params";
 import type { EnrolmentStatus, StudentSummary, ClassroomOption } from "../types";
+import { studentGender, type StudentGender } from "@/features/students/overview";
 import type { Paginated } from "@/types/pagination";
 
 type Filter = "all" | EnrolmentStatus;
@@ -29,6 +30,10 @@ interface StudentsBrowserProps {
   query: string;
   filter: Filter;
   classrooms: ClassroomOption[];
+  classroom?: string;
+  gender?: "all" | StudentGender;
+  grade?: string;
+  grades?: string[];
 }
 
 const filters: { key: Filter; label: string }[] = [
@@ -38,9 +43,9 @@ const filters: { key: Filter; label: string }[] = [
   { key: "leave", label: "ลาพัก" },
 ];
 
-export default function StudentsBrowser({ page, query, filter, classrooms }: StudentsBrowserProps): React.ReactNode {
+export default function StudentsBrowser({ page, query, filter, classrooms, classroom = "", gender = "all", grade = "", grades = [] }: StudentsBrowserProps): React.ReactNode {
   const router = useRouter();
-  const { navigate, isPending } = useListParams("/dashboard/students", { q: query, page: page.page, filter });
+  const { navigate, isPending } = useListParams("/dashboard/students", { q: query, page: page.page, filter, classroom, gender, grade });
   const [search, setSearch] = useState(query);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<StudentSummary | null>(null);
@@ -128,7 +133,8 @@ export default function StudentsBrowser({ page, query, filter, classrooms }: Stu
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
+      <div className="flex flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm" id="student-roster">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-4"><div><h2 className="font-bold text-ink-strong">รายชื่อนักเรียน</h2><p className="mt-1 text-xs text-muted">พบ {page.total.toLocaleString("th-TH")} คนตามเงื่อนไข · ดูข้อมูล แก้ไข หรือจัดห้องได้จากรายการ</p></div>{(query || filter !== "all" || classroom || gender !== "all" || grade) && <Button variant="outline" size="sm" onClick={() => navigate({ q: "", filter: "all", classroom: "", gender: "all", grade: "", page: 1 })}>ล้างตัวกรองทั้งหมด</Button>}</div>
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div role="tablist" aria-label="กรองตามสถานะ" className="flex flex-wrap items-center gap-1">
             {filters.map((f) => {
@@ -167,6 +173,11 @@ export default function StudentsBrowser({ page, query, filter, classrooms }: Stu
           </div>
         </div>
 
+        <div className="grid gap-3 border-t border-line bg-surface/50 px-4 py-3 sm:grid-cols-3">
+          <label className="text-xs font-semibold text-muted">ห้องเรียน<select aria-label="กรองห้องเรียนนักเรียน" value={classroom} onChange={event => navigate({ classroom: event.target.value, grade: classrooms.find(room => room.id === event.target.value)?.gradeLevel ?? "", page: 1 })} className="mt-1 block min-h-11 w-full rounded-xl border border-line bg-card px-3 text-sm font-normal text-ink"><option value="">ทุกห้อง</option><option value="unassigned">ยังไม่จัดห้อง</option>{classrooms.map(room => <option key={room.id} value={room.id}>{room.code}</option>)}</select></label>
+          <label className="text-xs font-semibold text-muted">ระดับชั้น<select aria-label="กรองระดับชั้นนักเรียน" value={grade} onChange={event => navigate({ grade: event.target.value, classroom: "", page: 1 })} className="mt-1 block min-h-11 w-full rounded-xl border border-line bg-card px-3 text-sm font-normal text-ink"><option value="">ทุกระดับ</option>{grades.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+          <label className="text-xs font-semibold text-muted">เพศ<select aria-label="กรองเพศนักเรียน" value={gender} onChange={event => navigate({ gender: event.target.value, page: 1 })} className="mt-1 block min-h-11 w-full rounded-xl border border-line bg-card px-3 text-sm font-normal text-ink"><option value="all">ทุกเพศ</option><option value="male">ชาย</option><option value="female">หญิง</option><option value="other">อื่น ๆ / ยังไม่ระบุ</option></select></label>
+        </div>
         {selectedOnPage.length > 0 && (
           <div className="flex items-center justify-between gap-3 border-t border-line bg-brand-soft px-4 py-2.5">
             <span className="text-[13.5px] font-semibold text-brand-ink">เลือกแล้ว {selectedOnPage.length} คน</span>
@@ -187,8 +198,8 @@ export default function StudentsBrowser({ page, query, filter, classrooms }: Stu
             {students.map((s) => <MobileRecordCard key={s.id}
               title={<span className="flex items-start gap-2"><Checkbox checked={selected.has(s.id)} onCheckedChange={() => toggleOne(s.id)} aria-label={`เลือก ${s.firstName} ${s.lastName}`} /><span>{[s.prefix, `${s.firstName} ${s.lastName}`].filter(Boolean).join(" ")}</span></span>}
               subtitle={`รหัส ${s.code} · ${s.classroom}`}
-              badge={<StatusChip status={s.status} />}
-              fields={[{ label: "ระดับ", value: s.grade }, { label: "วันที่ลงทะเบียน", value: s.enrolledAt }]}
+              badge={<StudentStatus student={s} />}
+              fields={[{ label: "เพศ", value: genderLabel(s.gender) }, { label: "ระดับ", value: s.grade }, { label: "วันที่ลงทะเบียน", value: s.enrolledAt }]}
               actions={<><Button asChild variant="outline" size="sm" className="min-h-10"><Link href={`/dashboard/students/${s.id}`}><Eye className="size-4" /> ดูข้อมูล</Link></Button><Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(s)}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(s)}><Trash2 className="size-4" /> ลบ</Button></>}
             />)}
           </div>
@@ -205,7 +216,7 @@ export default function StudentsBrowser({ page, query, filter, classrooms }: Stu
                   </TableHead>
                   <TableHead>นักเรียน</TableHead>
                   <TableHead>ชั้นเรียน</TableHead>
-                  <TableHead>ระดับ</TableHead>
+                  <TableHead>เพศ</TableHead>
                   <TableHead>วันที่ลงทะเบียน</TableHead>
                   <TableHead>สถานะ</TableHead>
                   <TableHead className="text-right">จัดการ</TableHead>
@@ -231,11 +242,11 @@ export default function StudentsBrowser({ page, query, filter, classrooms }: Stu
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-[14px] font-medium text-ink">{s.classroom}</TableCell>
-                      <TableCell className="text-[13.5px] text-muted">{s.grade}</TableCell>
+                      <TableCell className="text-[14px] font-medium text-ink">{s.currentClassroomId ? s.classroom : "ยังไม่จัดห้อง"}{s.currentClassroomId && <p className="mt-1 text-xs font-normal text-muted">{s.grade}</p>}</TableCell>
+                      <TableCell className="text-[13.5px] text-muted">{genderLabel(s.gender)}</TableCell>
                       <TableCell className="tabular text-[13.5px] text-muted">{s.enrolledAt}</TableCell>
                       <TableCell>
-                        <StatusChip status={s.status} />
+                        <StudentStatus student={s} />
                       </TableCell>
                       <TableCell className="text-right"><RecordActions name={`${s.firstName} ${s.lastName}`} href={`/dashboard/students/${s.id}`} onEdit={() => openEdit(s)} onDelete={() => setDeleting(s)} /></TableCell>
                     </TableRow>
@@ -252,7 +263,7 @@ export default function StudentsBrowser({ page, query, filter, classrooms }: Stu
             </span>
             <div>
               <p className="text-[15px] font-semibold text-ink-strong">
-                {query || filter !== "all" ? "ไม่พบนักเรียนที่ตรงกับเงื่อนไข" : "ยังไม่มีนักเรียน เริ่มด้วยการเพิ่มนักเรียนคนแรก"}
+                {query || filter !== "all" || classroom || gender !== "all" || grade ? "ไม่พบนักเรียนที่ตรงกับเงื่อนไข" : "ยังไม่มีนักเรียน เริ่มด้วยการเพิ่มนักเรียนคนแรก"}
               </p>
               <p className="mt-1 text-[13.5px] text-muted">ลองปรับคำค้นหา หรือเลือกสถานะอื่น</p>
             </div>
@@ -295,3 +306,6 @@ export default function StudentsBrowser({ page, query, filter, classrooms }: Stu
     </TooltipProvider>
   );
 }
+
+function genderLabel(value: string | null): string { const gender = studentGender(value); return gender === "male" ? "ชาย" : gender === "female" ? "หญิง" : value?.trim() || "ยังไม่ระบุ"; }
+function StudentStatus({ student }: { student: StudentSummary }): React.ReactNode { return student.currentClassroomId ? <StatusChip status={student.status} /> : <span className="inline-flex rounded-full bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning">ยังไม่จัดห้อง</span>; }

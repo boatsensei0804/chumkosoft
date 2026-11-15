@@ -251,3 +251,20 @@ export async function softDeleteStudent(id: string): Promise<void> {
     data: { isDeleted: true, deletedAt: new Date(), studentCode: `${row.studentCode}::deleted::${id}` },
   });
 }
+
+/** Minimal registry snapshot; only current-term placement contributes to the overview. */
+export async function findStudentWorkspaceSnapshot() {
+  const term = await prisma.term.findFirst({ where: { isActive: true, isDeleted: false, academicYear: { isActive: true, isDeleted: false } }, select: { id: true, name: true, academicYearId: true } });
+  const [students, classrooms] = await Promise.all([
+    prisma.student.findMany({ where: { isDeleted: false }, select: { id: true, studentCode: true, firstName: true, lastName: true, gender: true,
+      enrollments: { where: { isDeleted: false, termId: { in: term ? [term.id] : [] }, classroom: { isDeleted: false, ...(term ? { academicYearId: term.academicYearId } : {}) } }, select: { classroomId: true, status: true }, take: 1 } } }),
+    term ? prisma.classroom.findMany({ where: { isDeleted: false, academicYearId: term.academicYearId }, select: { id: true, code: true, gradeLevel: true } }) : Promise.resolve([]),
+  ]);
+  return { term, students, classrooms };
+}
+
+/** Only the requested page loads the full editing fields; the overview stays aggregate-only. */
+export async function findStudentWorkspacePage(params: { ids: string[]; termId: string | null; skip: number; take: number }) {
+  const select = studentSelect(params.termId ?? undefined);
+  return prisma.student.findMany({ where: { isDeleted: false, id: { in: params.ids } }, select: { ...select, enrollments: { ...select.enrollments, where: { isDeleted: false, termId: { in: params.termId ? [params.termId] : [] }, classroom: { isDeleted: false } } } }, orderBy: { studentCode: "desc" }, skip: params.skip, take: params.take });
+}

@@ -1,51 +1,26 @@
 import type { Metadata } from "next";
-import { GraduationCap, CircleCheck, Clock, PauseCircle } from "lucide-react";
 import PageHeader from "@/features/dashboard/components/page-header";
-import StatStrip from "@/components/ui/stat-strip";
 import StudentsBrowser from "@/features/dashboard/components/students-browser";
-import { listStudentsPaginated, listClassroomOptions, getStudentStats } from "@/services/student-service";
+import StudentOverviewPanel from "@/features/students/components/student-overview";
+import { getStudentsWorkspace } from "@/services/student-service";
 import { parsePage } from "@/types/pagination";
 import type { EnrolmentStatus } from "@/features/dashboard/types";
-import { getActiveTermLabel } from "@/services/dashboard-service";
-
-export const metadata: Metadata = {
-  title: "นักเรียน · chumkosoft",
-};
-
+import type { StudentGender } from "@/features/students/overview";
+import { requireRoles } from "@/lib/dal";
+export const metadata: Metadata = { title: "นักเรียน · chumkosoft" };
 export const dynamic = "force-dynamic";
-
-const FILTERS: ("all" | EnrolmentStatus)[] = ["all", "active", "pending", "leave"];
-
-interface StudentsPageProps {
-  searchParams: Promise<{ page?: string; q?: string; filter?: string }>;
-}
-
-export default async function StudentsPage({ searchParams }: StudentsPageProps): Promise<React.ReactNode> {
+export default async function StudentsPage({ searchParams }: { searchParams: Promise<{ page?: string; q?: string; filter?: string; classroom?: string; gender?: string; grade?: string }> }): Promise<React.ReactNode> {
+  await requireRoles(["ADMIN", "TEACHER"]);
   const params = await searchParams;
-  const query = params.q ?? "";
-  const filter = FILTERS.includes(params.filter as EnrolmentStatus) ? (params.filter as "all" | EnrolmentStatus) : "all";
-  const [result, classrooms, stats, termLabel] = await Promise.all([
-    listStudentsPaginated({ page: parsePage(params.page), search: query, filter }),
-    listClassroomOptions(),
-    getStudentStats(),
-    getActiveTermLabel(),
-  ]);
-
-  return (
-    <>
-      <PageHeader
-        title="นักเรียน"
-        subtitle={`ทะเบียนนักเรียนทั้งหมด ${stats.total.toLocaleString("th-TH")} คน · ${termLabel}`}
-      />
-      {stats.total > 0 && <StatStrip
-        items={[
-          { label: "นักเรียนทั้งหมด", value: stats.total, hint: "คน", icon: GraduationCap, tone: "brand" },
-          { label: "กำลังศึกษา", value: stats.active, hint: "คน", icon: CircleCheck, tone: "success" },
-          { label: "รออนุมัติ", value: stats.pending, hint: "คน", icon: Clock, tone: "warning" },
-          { label: "ลาพัก", value: stats.leave, hint: "คน", icon: PauseCircle, tone: "default" },
-        ]}
-      />}
-      <StudentsBrowser page={result} query={query} filter={filter} classrooms={classrooms} />
-    </>
-  );
+  const query = typeof params.q === "string" ? params.q.slice(0, 100) : "";
+  const filter = ["active", "pending", "leave"].includes(params.filter ?? "") ? params.filter as EnrolmentStatus : "all";
+  const gender = ["male", "female", "other"].includes(params.gender ?? "") ? params.gender as StudentGender : "all";
+  const classroom = typeof params.classroom === "string" ? params.classroom.slice(0, 150) : "";
+  const grade = typeof params.grade === "string" ? params.grade.slice(0, 100) : "";
+  const result = await getStudentsWorkspace({ page: parsePage(params.page), search: query, filter, classroom, gender, grade });
+  return <>
+    <PageHeader title="นักเรียน" subtitle={`ทะเบียน ${result.overview.overall.total.toLocaleString("th-TH")} คน · ${result.overview.term ?? "ยังไม่มีภาคเรียนปัจจุบัน"}`} />
+    <StudentOverviewPanel overview={result.overview} classroom={classroom} />
+    <div className="mt-6"><StudentsBrowser key={JSON.stringify([query, filter, classroom, gender, grade])} page={result.page} query={query} filter={filter} classrooms={result.classrooms} classroom={classroom} gender={gender} grade={grade} grades={result.overview.grades} /></div>
+  </>;
 }

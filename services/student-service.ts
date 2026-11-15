@@ -1,6 +1,9 @@
+import { buildStudentOverview, filterRoster, type StudentListFilters } from "@/features/students/overview";
 import type { EnrollmentStatus } from "@prisma/client";
 import {
   findStudentsForActiveTerm,
+  findStudentWorkspaceSnapshot,
+  findStudentWorkspacePage,
   findStudentById,
   findStudentsPaginated,
   countStudentsFiltered,
@@ -226,4 +229,15 @@ export async function deleteStudentRecords(ids: string[]): Promise<ActionResult>
     await softDeleteStudent(id);
   }
   return { ok: true, message: `ลบนักเรียน ${ids.length} คนเรียบร้อย` };
+}
+
+/** Overview and filtered IDs share one current-term registry snapshot. */
+export async function getStudentsWorkspace(params: StudentListFilters & { page: number }) {
+  const snapshot = await findStudentWorkspaceSnapshot();
+  const students = snapshot.students.map(student => ({ id: student.id, code: student.studentCode, firstName: student.firstName, lastName: student.lastName, gender: student.gender, classroomId: student.enrollments[0]?.classroomId ?? null, status: student.enrollments[0]?.status ?? null }));
+  const overview = buildStudentOverview(students, snapshot.classrooms, snapshot.term?.name ?? null);
+  const filtered = filterRoster(students, snapshot.classrooms, params);
+  const page = Math.min(Math.max(1, params.page), Math.max(1, Math.ceil(filtered.length / DEFAULT_PAGE_SIZE)));
+  const rows = await findStudentWorkspacePage({ ids: filtered.map(student => student.id), termId: snapshot.term?.id ?? null, skip: (page - 1) * DEFAULT_PAGE_SIZE, take: DEFAULT_PAGE_SIZE });
+  return { overview, classrooms: [...snapshot.classrooms].sort((a, b) => a.code.localeCompare(b.code, "th", { numeric: true })), page: paginate(rows.map(toSummary), filtered.length, page, DEFAULT_PAGE_SIZE) };
 }
