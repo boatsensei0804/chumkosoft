@@ -157,6 +157,7 @@ export async function saveDailyRollCall(
   if (entries.some((entry) => !enrolledIds.has(entry.studentId))) {
     return { ok: false, message: "รายชื่อนักเรียนไม่ตรงกับห้องที่เลือก กรุณาโหลดหน้าใหม่" };
   }
+  // Approved effects remain in force even when a request is hidden from the request list.
   const approvedLeave = await prisma.leaveRequest.findFirst({ where: {
     termId: term.id, classroomId, status: "APPROVED", startDate: { lte: date }, endDate: { gte: date },
     studentId: { in: entries.filter((entry) => entry.status !== "SICK_LEAVE" && entry.status !== "PERSONAL_LEAVE").map((entry) => entry.studentId) },

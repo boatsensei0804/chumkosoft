@@ -87,7 +87,7 @@ async function chooseKind(replyToken: string, student: { id: string; firstName: 
 
 export async function showLineLeaveHistory(lineUserId: string, replyToken: string): Promise<boolean> {
   const rows = await prisma.leaveRequest.findMany({
-    where: { parentLineUserId: lineUserId, student: { isDeleted: false, OR: [
+    where: { isDeleted: false, parentLineUserId: lineUserId, student: { isDeleted: false, OR: [
       { guardians: { some: { lineUserId, isDeleted: false } } }, { lineAccounts: { some: { lineUserId } } },
     ] } },
     select: { kind: true, expectedArrivalTime: true, startDate: true, endDate: true, status: true, reviewNote: true, student: { select: { firstName: true, lastName: true } } },

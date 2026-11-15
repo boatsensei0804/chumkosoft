@@ -16,6 +16,7 @@ export async function syncLateBehaviorPoints(tx: Prisma.TransactionClient, termI
   await lockLateBehaviorDay(tx, termId, studentId, date);
   const sourceKey = dayKey(termId, studentId, date);
   const current = await tx.behaviorPointEntry.findUnique({ where: { sourceKey }, select: { delta: true } });
+  // Deleting a request hides it from reports; its approved exemption remains in force.
   const permission = isLate ? await tx.leaveRequest.findFirst({ where: { termId, studentId, kind: "LATE", status: "APPROVED", startDate: date, endDate: date }, select: { id: true } }) : null;
   const exempt = Boolean(permission);
   const delta = isLate && !exempt ? -10 : 0;

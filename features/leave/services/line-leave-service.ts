@@ -79,7 +79,8 @@ export async function handleLeaveLineMessage(lineUserId: string, text: string, r
   const enrollment = student.enrollments[0];
   if (!enrollment) { await replyText(replyToken, "นักเรียนยังไม่ได้ลงทะเบียนในภาคเรียนที่ใช้งาน"); return true; }
 
-  const priorMessage = await prisma.leaveRequest.findUnique({ where: { lineMessageId }, select: { id: true } });
+  const priorMessage = await prisma.leaveRequest.findUnique({ where: { lineMessageId }, select: { id: true, isDeleted: true } });
+  if (priorMessage?.isDeleted) { await replyText(replyToken, "คำขอนี้ถูกนำออกจากรายการแล้ว กรุณาแจ้งคำขอใหม่หรือติดต่อโรงเรียน"); return true; }
   if (priorMessage) { await replyText(replyToken, "ระบบได้รับคำขอลานี้แล้ว กรุณารอครูที่ปรึกษาตรวจสอบ"); await notifyAdvisorsOfLeaveRequest(priorMessage.id); return true; }
   if (kind === "LATE") {
     const expectedAt = new Date(`${startDate.toISOString().slice(0, 10)}T${expectedArrivalTime}:00+07:00`);
@@ -88,7 +89,7 @@ export async function handleLeaveLineMessage(lineUserId: string, text: string, r
     if (arrived) { await replyText(replyToken, "มีบันทึกเข้าโรงเรียนแล้วในวันที่ขอ กรุณาติดต่อครูที่ปรึกษาเพื่อพิจารณา"); return true; }
   }
   const overlap = await prisma.leaveRequest.findFirst({ where: {
-    studentId: student.id, status: { in: ["PENDING", "APPROVED"] }, startDate: { lte: endDate }, endDate: { gte: startDate },
+    studentId: student.id, OR: [{ status: "PENDING", isDeleted: false }, { status: "APPROVED" }], startDate: { lte: endDate }, endDate: { gte: startDate },
   }, select: { id: true } });
   if (overlap) { await replyText(replyToken, "มีคำขอลาของนักเรียนคนนี้ในช่วงวันที่เลือกอยู่แล้ว กรุณาติดต่อครูที่ปรึกษา"); return true; }
 
@@ -122,11 +123,11 @@ export async function handleLeaveLineMessage(lineUserId: string, text: string, r
 export async function notifyAdvisorsOfLeaveRequest(id: string): Promise<{ accepted: boolean; code: string }> {
   const request = await prisma.leaveRequest.findUnique({ where: { id }, select: {
     id: true, classroomId: true, kind: true, expectedArrivalTime: true, startDate: true, endDate: true, reason: true,
-    advisorLineTargets: true, advisorNotifyRetryKey: true, advisorNotifiedCount: true,
+    advisorLineTargets: true, advisorNotifyRetryKey: true, advisorNotifiedCount: true, isDeleted: true,
     student: { select: { firstName: true, lastName: true, studentCode: true } },
     classroom: { select: { code: true } },
   } });
-  if (!request) return { accepted: false, code: "NOT_FOUND" };
+  if (!request || request.isDeleted) return { accepted: false, code: "NOT_FOUND" };
   if (request.advisorNotifiedCount > 0) return { accepted: true, code: "ALREADY_ACCEPTED" };
   let targets = request.advisorLineTargets;
   let retryKey = request.advisorNotifyRetryKey;

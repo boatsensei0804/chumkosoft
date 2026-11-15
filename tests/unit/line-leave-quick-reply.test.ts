@@ -8,7 +8,7 @@ vi.mock("@/lib/prisma", () => ({ default: { leaveRequest: { findMany: mocks.leav
 vi.mock("@/lib/line", () => ({ replyLineMessage: mocks.replyLineMessage, replyText: mocks.replyText }));
 vi.mock("@/features/leave/services/line-leave-service", () => ({ handleLeaveLineMessage: mocks.handleLeaveLineMessage }));
 
-import { handleLeavePostback, startLineLeaveChoices } from "@/features/leave/services/line-leave-quick-reply";
+import { handleLeavePostback, startLineLeaveChoices, showLineLeaveHistory } from "@/features/leave/services/line-leave-quick-reply";
 
 function actionItems(message: unknown): { action: { type: string; data?: string; label: string; max?: string } }[] {
   if (!message || typeof message !== "object") return [];
@@ -31,6 +31,11 @@ describe("LINE leave menu", () => {
     mocks.replyText.mockResolvedValue(true);
     mocks.leaveFindMany.mockResolvedValue([]);
     mocks.handleLeaveLineMessage.mockResolvedValue(true);
+  });
+
+  it("hides deleted test requests from the parent's LINE history", async () => {
+    await showLineLeaveHistory("Uparent", "reply");
+    expect(mocks.leaveFindMany.mock.calls[0][0].where).toMatchObject({ isDeleted: false, parentLineUserId: "Uparent" });
   });
 
   it("starts with only students linked to this LINE user", async () => {
