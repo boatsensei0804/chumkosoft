@@ -9,3 +9,5 @@ Staff can open `/dashboard/line/report` from the LINE management page. Reports c
 - PDF uses bundled Prompt fonts. Every classroom begins on a new page, with repeated table headings on continuation pages.
 - Profile names use the existing cache and a bounded lookup budget. An unavailable display name does not change the stored binding state. Raw LINE user IDs are never exported or passed to the report client.
 - Export routes require the same staff roles as LINE management and return private, no-store responses.
+
+A separate “ดาวน์โหลด PDF กราฟสรุป” download (`format=pdf&view=charts`) renders vector donut and stacked classroom charts with Prompt fonts. The graph scope follows the selected classroom, or the entire school when all classrooms are selected. Search/status filters and pagination do not change chart counts. It contains aggregate statistics only, without student/parent names, LINE identities, or binding codes. Classroom rows repeat their heading on continuation pages; empty denominators display a dash. Existing CSV and detailed classroom PDF downloads retain their behavior.

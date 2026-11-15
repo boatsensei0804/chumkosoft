@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ requireRoles: vi.fn(), report: vi.fn(), pdf: vi.fn() }));
+const mocks = vi.hoisted(() => ({ requireRoles: vi.fn(), report: vi.fn(), pdf: vi.fn(), charts: vi.fn() }));
 vi.mock("@/lib/dal", () => ({ requireRoles: mocks.requireRoles }));
 vi.mock("@/features/line/services/line-link-report-service", () => ({ getLineLinkReport: mocks.report, InvalidReportClassroom: class extends Error {} }));
 vi.mock("@/features/line/services/line-link-report-pdf", () => ({ createLineLinkReportPdf: mocks.pdf }));
+vi.mock("@/features/line/services/line-link-charts-pdf", () => ({ createLineLinkChartsPdf: mocks.charts }));
 import { GET } from "@/app/dashboard/line/report/export/route";
 beforeEach(() => { vi.resetAllMocks(); mocks.requireRoles.mockResolvedValue({ role: "ADMIN" }); });
 describe("binding report exports", () => {
@@ -21,5 +22,17 @@ describe("binding report exports", () => {
     const response = await GET(new Request("https://chumkosoft.com/dashboard/line/report/export?format=csv&classroom=room&filter=pending"));
     expect(mocks.report).toHaveBeenCalledWith("room"); expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(await response.text()).toContain('"=""001234"""'); expect(mocks.pdf).not.toHaveBeenCalled();
+  });  it("exports charts from the full selected scope independently of name and status filters", async () => {
+    const report = { term: "2/2569", hasActiveTerm: true, generatedAt: "2026-11-15T00:00:00Z", rooms: [], selectedId: "all", students: [] };
+    mocks.report.mockResolvedValue(report); mocks.charts.mockResolvedValue(new Uint8Array([37, 80, 68, 70]));
+    const response = await GET(new Request("https://chumkosoft.com/dashboard/line/report/export?format=pdf&view=charts&filter=pending&q=nonmatching"));
+    expect(mocks.report).toHaveBeenCalledWith("all"); expect(mocks.charts).toHaveBeenCalledWith(report);
+    expect(mocks.pdf).not.toHaveBeenCalled(); expect(response.headers.get("Content-Type")).toBe("application/pdf");
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store"); expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array([37,80,68,70]));
   });
+  it("rejects unsupported chart formats before reading any student data", async () => {
+    const response = await GET(new Request("https://chumkosoft.com/dashboard/line/report/export?format=csv&view=charts"));
+    expect(response.status).toBe(400); expect(mocks.report).not.toHaveBeenCalled();
+  });
+
 });
