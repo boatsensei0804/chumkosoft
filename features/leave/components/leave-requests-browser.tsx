@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import LeaveSummaryShare from "@/features/leave/components/leave-summary-share";
 import LeaveSummaryCharts from "@/features/leave/components/leave-summary-charts";
 import { requestKindLabel } from "@/features/leave/request-kind";
 import { useRouter } from "next/navigation";
@@ -68,6 +69,7 @@ export default function LeaveRequestsBrowser({ report, isAdmin }: { report: Leav
         <div><h2 className="text-lg font-bold text-ink-strong">สรุปประจำวันที่ {thaiDate(report.date)}</h2><p className="mt-1 text-sm text-muted">{report.term ?? "ยังไม่มีภาคเรียนปัจจุบัน"} · นักเรียนทั้งหมดในโรงเรียน {report.totalStudents.toLocaleString("th-TH")} คน</p></div>
         <form action="/dashboard/leave-requests" method="get" className="flex flex-wrap items-end gap-2">{report.allDates && <input type="hidden" name="view" value="all" />}<label className="text-xs font-semibold text-muted">วันที่ลา / ขอมาสาย<input aria-label="วันที่รายงานคำขอลา" type="date" name="date" defaultValue={report.date} required className="mt-1 block min-h-10 rounded-lg border border-line bg-surface px-3 text-sm text-ink" /></label><button type="submit" className="min-h-10 rounded-lg bg-brand px-4 text-sm font-semibold text-white">ดูสรุป</button><Link href="/dashboard/leave-requests" className="min-h-10 rounded-lg border border-line px-3 py-2 text-sm font-semibold">วันนี้</Link></form>
       </div>
+      <LeaveSummaryShare report={report} />
       {report.teacherScoped && <p className="rounded-lg bg-brand-soft p-3 text-sm text-brand-ink">แสดงเฉพาะคำขอในห้องที่คุณเป็นครูที่ปรึกษา · เปอร์เซ็นต์เทียบกับนักเรียนทั้งโรงเรียน</p>}
       <LeaveSummaryCharts summary={summary} totalStudents={report.totalStudents} selectedKind={kind} onSelectKind={(value) => { setKind(value); setFilter("ALL"); setPage(1); }} />
       <p className="text-xs leading-relaxed text-muted">นับวันที่อยู่ในช่วงคำขอ ไม่ใช่วันที่ส่ง · จำนวนนักเรียนและเปอร์เซ็นต์นับคนไม่ซ้ำ รวมรอพิจารณาและอนุมัติ ไม่รวมคำขอที่ไม่อนุมัติหรือลบแล้ว · นักเรียนอาจอยู่ได้หลายประเภท จึงไม่ควรบวกเปอร์เซ็นต์แต่ละประเภท · สรุปไม่เปลี่ยนตามตัวกรองรายชื่อ</p>
