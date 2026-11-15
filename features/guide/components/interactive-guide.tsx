@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronLeft, ChevronRight, GraduationCap, HeartHandshake, Info, MessageCircle, ShieldCheck } from "lucide-react";
 import Mascot from "@/components/ui/mascot";
+import IllustratedGuide from "./illustrated-guide";
 import { guides, type GuideRole, type GuideStep } from "@/features/guide/content";
 
 export default function InteractiveGuide({ initialRole }: { initialRole: GuideRole }): React.ReactNode {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
   const [role, setRole] = useState<GuideRole>(initialRole);
   const [topicId, setTopicId] = useState(guides[initialRole][0].id);
   const [stepIndex, setStepIndex] = useState(0);
@@ -20,13 +22,23 @@ export default function InteractiveGuide({ initialRole }: { initialRole: GuideRo
     setRole(next); setTopicId(guides[next][0].id); setStepIndex(0);
   }
   function changeTopic(id: string) { setTopicId(id); setStepIndex(0); }
+  function openTopicDetails(id: string) {
+    changeTopic(id);
+    if (detailsRef.current) {
+      detailsRef.current.open = true;
+      detailsRef.current.scrollIntoView({ block: "start" });
+    }
+  }
 
   return <div className="min-h-dvh bg-[#f4f8fe] text-ink">
     <header className="border-b border-line bg-white"><div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-8"><Link href="/" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand-ink"><ArrowLeft className="size-4" aria-hidden="true" />หน้าแรก</Link><span className="hidden text-sm font-bold text-brand-ink sm:block">chumkosoft<span className="text-sky-500">.</span> คู่มือใช้งาน</span><Link href="/login" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong">เข้าสู่ระบบ<ArrowRight className="size-4" aria-hidden="true" /></Link></div></header>
     <main className="mx-auto max-w-6xl px-4 py-7 sm:px-8 sm:py-10">
-      <div className="mb-6 flex items-center justify-between gap-4"><div><p className="text-xs font-semibold text-brand">ค่อย ๆ ทำไปด้วยกัน</p><h1 className="mt-2 text-2xl font-bold text-ink-strong sm:text-3xl">คู่มือครูและผู้ปกครอง</h1><p className="mt-2 max-w-2xl text-sm leading-7 text-muted">เลือกบทเรียน แล้วกดแต่ละขั้นเพื่อดูภาพจำลองหน้าจอและคำอธิบาย โดยไม่ต้องล็อกอิน</p></div><Mascot pose="learning" size={104} decorative className="hidden shrink-0 sm:block" /></div>
+      <div className="mb-6 flex items-center justify-between gap-4"><div><p className="text-xs font-semibold text-brand">ค่อย ๆ ทำไปด้วยกัน</p><h1 className="mt-2 text-2xl font-bold text-ink-strong sm:text-3xl">คู่มือครูและผู้ปกครอง</h1><p className="mt-2 max-w-2xl text-sm leading-7 text-muted">ดูคู่มือภาพขนาดใหญ่ แยกสำหรับครูและผู้ปกครอง พร้อมเรื่องขอมาสายล่าสุด เปิดอ่านได้โดยไม่ต้องล็อกอิน</p></div><Mascot pose="learning" size={104} decorative className="hidden shrink-0 sm:block" /></div>
       <div aria-label="เลือกคู่มือสำหรับ" className="mb-6 grid grid-cols-2 gap-2 rounded-2xl border border-line bg-white p-1.5 sm:max-w-lg">{([{ value: "parent", label: "ผู้ปกครอง", icon: HeartHandshake }, { value: "teacher", label: "ครู", icon: GraduationCap }] as const).map(({ value, label, icon: Icon }) => <button key={value} type="button" aria-pressed={role === value} onClick={() => changeRole(value)} className={`flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold ${role === value ? "bg-brand text-white shadow-sm" : "text-muted hover:bg-blue-50"}`}><Icon className="size-5" aria-hidden="true" />สำหรับ{label}</button>)}</div>
-      <div className="grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
+      <IllustratedGuide key={role} role={role} onOpenTopic={openTopicDetails} />
+      <details ref={detailsRef} className="scroll-mt-5 rounded-2xl border border-line bg-white p-4 sm:p-5">
+        <summary className="min-h-12 cursor-pointer py-3 text-base font-semibold text-brand-ink">คู่มือแบบทีละขั้นทั้งหมด · {topics.length} บท<span className="mt-1 block text-xs font-normal leading-6 text-muted">มีคำอธิบาย ข้อควรรู้ และวิธีแก้ปัญหา แยกตามงานที่ต้องการทำ</span></summary>
+      <div className="mt-4 grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
         <div className="lg:hidden"><label htmlFor="guide-topic" className="mb-2 block text-xs font-semibold text-muted">เลือกเรื่องที่ต้องการเรียนรู้</label><select id="guide-topic" value={topic.id} onChange={event => changeTopic(event.target.value)} className="min-h-12 w-full rounded-xl border border-line bg-white px-3 text-sm font-semibold text-brand-ink">{topics.map((item, i) => <option key={item.id} value={item.id}>{i + 1}. {item.title}</option>)}</select></div>
         <aside className="hidden rounded-2xl border border-line bg-white p-3 lg:sticky lg:top-5 lg:block"><h2 className="px-2 pb-3 pt-1 text-xs font-semibold text-muted">เลือกเรื่องที่ต้องการเรียนรู้ · {topics.length} บท</h2><nav aria-label="บทเรียน" className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-1">{topics.map((item, i) => <button key={item.id} type="button" aria-current={topic.id === item.id ? "step" : undefined} onClick={() => changeTopic(item.id)} className={`flex min-h-12 items-start gap-2 rounded-xl px-3 py-3 text-left text-sm ${topic.id === item.id ? "bg-blue-50 font-semibold text-brand-ink" : "text-muted hover:bg-surface"}`}><span className="mt-0.5 shrink-0 text-xs opacity-70">{String(i + 1).padStart(2, "0")}</span><span>{item.title}</span></button>)}</nav></aside>
         <div className="min-w-0">
@@ -44,6 +56,7 @@ export default function InteractiveGuide({ initialRole }: { initialRole: GuideRo
           <div className="mt-4 rounded-2xl border border-blue-100 bg-white p-5"><h3 className="flex items-center gap-2 text-sm font-bold text-brand-ink"><Info className="size-4" aria-hidden="true" />ข้อควรรู้</h3><p className="mt-2 text-sm leading-7 text-muted">{topic.note}</p><details className="mt-4 border-t border-line pt-3"><summary className="min-h-10 cursor-pointer py-2 text-sm font-semibold text-ink-strong">ถ้าทำไม่สำเร็จ ต้องตรวจอะไร?</summary><p className="mt-1 text-sm leading-7 text-muted">{topic.help}</p></details></div>
         </div>
       </div>
+      </details>
       <footer className="mt-8 flex items-start gap-2 border-t border-line pt-5 text-xs leading-6 text-muted"><ShieldCheck className="mt-1 size-4 shrink-0" aria-hidden="true" /><p>คู่มือนี้ไม่มีข้อมูลนักเรียนจริง ไม่ต้องกรอกรหัสผ่าน รหัส OTP หรือรหัสเชื่อม LINE ในหน้านี้ หากพบปัญหาบัญชีให้ติดต่อโรงเรียนผ่านช่องทางที่ได้รับโดยตรง</p></footer>
     </main>
   </div>;
