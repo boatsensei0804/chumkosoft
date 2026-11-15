@@ -7,7 +7,7 @@ import AttendanceRoster from "@/features/attendance/components/attendance-roster
 import SchoolEntryControls from "@/features/attendance/components/school-entry-controls";
 import SchoolEntryRoster from "@/features/attendance/components/school-entry-roster";
 import SchoolEntrySummary from "@/features/attendance/components/school-entry-summary";
-import AttendanceCalendar from "@/features/attendance/components/attendance-calendar";
+import AttendanceDateOverview from "@/features/attendance/components/attendance-date-overview";
 import DailyRollCallOverview from "@/features/attendance/components/daily-roll-call-overview";
 import DailyRollCallRoster from "@/features/attendance/components/daily-roll-call-roster";
 import { listAttendanceOfferings, getAttendanceCalendar, getRoster } from "@/features/attendance/services/attendance-service";
@@ -48,12 +48,12 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
 
   return (
     <>
-      <PageHeader title="เช็คชื่อ" subtitle="เช็คชื่อรายวิชา เช็คชื่อประจำห้อง และบันทึกเวลาเข้า–ออกโรงเรียน" />
+      <PageHeader compact title="เช็คชื่อ" subtitle="เช็คชื่อรายวิชา เช็คชื่อประจำห้อง และบันทึกเวลาเข้า–ออกโรงเรียน" />
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <AttendanceModeTabs mode={mode} />
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1.5 text-[12.5px] font-semibold text-brand-ink">
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted">
             <UserCheck className="size-[15px]" />
             {scopeNote}
           </span>
@@ -82,8 +82,8 @@ async function HomeroomMode({
   teacherScope: string | null;
 }): Promise<React.ReactNode> {
   if (classroomId) {
-    const roster = await getDailyClassRoster(date, classroomId, teacherScope);
-    return roster ? <DailyRollCallRoster roster={roster} /> : <PromptCard title="ไม่พบห้องเรียน" message="ห้องเรียนนี้ไม่มีในภาคเรียนปัจจุบัน หรือคุณไม่มีสิทธิ์เข้าถึง" />;
+    const [roster, calendar] = await Promise.all([getDailyClassRoster(date, classroomId, teacherScope), getDailyRollCallCalendar(month, teacherScope, classroomId)]);
+    return roster ? <>{calendar && <AttendanceDateOverview mode="homeroom" month={month} selectedDate={date} days={calendar} classroomId={classroomId} />}<DailyRollCallRoster roster={roster} /></> : <PromptCard title="ไม่พบห้องเรียน" message="ห้องเรียนนี้ไม่มีในภาคเรียนปัจจุบัน หรือคุณไม่มีสิทธิ์เข้าถึง" />;
   }
 
   const [calendar, rooms] = await Promise.all([
@@ -92,7 +92,7 @@ async function HomeroomMode({
   ]);
   return (
     <>
-      {calendar && <AttendanceCalendar mode="homeroom" month={month} selectedDate={date} days={calendar} />}
+      {calendar && <AttendanceDateOverview mode="homeroom" month={month} selectedDate={date} days={calendar} />}
       {rooms && <DailyRollCallOverview date={date} rooms={rooms} />}
     </>
   );
@@ -117,7 +117,7 @@ async function ClassMode({
   return (
     <>
       <AttendanceControls offerings={offerings} selectedOfferingId={selectedOfferingId} date={date} />
-      {calendar && <AttendanceCalendar mode="class" month={month} selectedDate={date} days={calendar} offeringId={selectedOfferingId} />}
+      {calendar && <AttendanceDateOverview mode="class" month={month} selectedDate={date} days={calendar} offeringId={selectedOfferingId} />}
       {offerings.length === 0 ? (
         <PromptCard title="ยังไม่มีรายวิชาที่เปิดสอน" message="กรุณาเปิดรายวิชาและจัดตารางสอนในภาคเรียนปัจจุบันก่อนเริ่มเช็คชื่อ" />
       ) : !selectedOfferingId ? (
@@ -151,8 +151,8 @@ async function SchoolMode({
   return (
     <>
       <SchoolEntryControls classrooms={classrooms} classroomId={classroomId} date={date} />
+      {calendar && <AttendanceDateOverview mode="school" month={month} selectedDate={date} days={calendar} classroomId={classroomId} />}
       {roster && <SchoolEntrySummary roster={roster} classrooms={classrooms.filter((room) => !classroomId || room.id === classroomId)} />}
-      {calendar && <AttendanceCalendar mode="school" month={month} selectedDate={date} days={calendar} classroomId={classroomId} />}
       {roster ? (
         <SchoolEntryRoster roster={roster} />
       ) : (

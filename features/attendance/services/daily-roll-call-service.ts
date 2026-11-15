@@ -17,7 +17,7 @@ function formatName(student: { prefix: string | null; firstName: string; lastNam
   return [student.prefix, `${student.firstName} ${student.lastName}`].filter(Boolean).join(" ");
 }
 
-export async function getDailyRollCallCalendar(month: string, advisorStaffId?: string | null): Promise<AttendanceCalendarDay[] | null> {
+export async function getDailyRollCallCalendar(month: string, advisorStaffId?: string | null, classroomId?: string): Promise<AttendanceCalendarDay[] | null> {
   const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(month);
   if (!match) return null;
   const year = Number(match[1]);
@@ -26,7 +26,7 @@ export async function getDailyRollCallCalendar(month: string, advisorStaffId?: s
   const end = new Date(Date.UTC(year, monthIndex + 1, 1));
   const term = await repo.getActiveTerm();
   if (!term) return [];
-  const classrooms = await repo.findClassrooms(term.id, term.academicYearId, advisorStaffId);
+  const classrooms = (await repo.findClassrooms(term.id, term.academicYearId, advisorStaffId)).filter((room) => !classroomId || room.id === classroomId);
   const classroomIds = classrooms.map((classroom) => classroom.id);
   if (classroomIds.length === 0) return [];
   const [enrollments, records] = await Promise.all([

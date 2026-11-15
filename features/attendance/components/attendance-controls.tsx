@@ -23,7 +23,7 @@ export default function AttendanceControls({ offerings, selectedOfferingId, date
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-line bg-card p-4 shadow-sm sm:flex-row sm:items-end">
+    <div className="flex flex-col gap-3 rounded-2xl border border-line bg-card p-3 shadow-sm sm:flex-row sm:items-end">
       <div className="flex flex-col gap-1.5 sm:max-w-[360px] sm:flex-1">
         <Label htmlFor="attendance-offering">ชั้นเรียน / รายวิชา</Label>
         <NativeSelect id="attendance-offering" value={selectedOfferingId} onChange={(e) => navigate(e.target.value, date)}>

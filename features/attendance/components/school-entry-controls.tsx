@@ -23,7 +23,7 @@ export default function SchoolEntryControls({ classrooms, classroomId, date }: S
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-line bg-card p-4 shadow-sm sm:flex-row sm:items-end">
+    <div className="flex flex-col gap-3 rounded-2xl border border-line bg-card p-3 shadow-sm sm:flex-row sm:items-end">
       <div className="flex flex-col gap-1.5 sm:max-w-[300px] sm:flex-1">
         <Label htmlFor="entry-classroom">ชั้นเรียน</Label>
         <NativeSelect id="entry-classroom" value={classroomId} onChange={(e) => navigate(e.target.value, date)}>

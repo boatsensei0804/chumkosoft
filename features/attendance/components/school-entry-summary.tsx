@@ -17,33 +17,13 @@ export default function SchoolEntrySummary({ roster, classrooms }: {
       awaiting: students.filter((student) => student.state === "ABSENT"),
     };
   });
-  const totals = rooms.reduce((result, room) => ({
-    students: result.students + room.total,
-    present: result.present + room.present,
-    late: result.late + room.late,
-    awaiting: result.awaiting + room.awaiting.length,
-  }), { students: 0, present: 0, late: 0, awaiting: 0 });
 
   return (
     <section className="rounded-2xl border border-line bg-card p-4 shadow-sm sm:p-5" aria-label="สรุปการเข้าโรงเรียน">
-      <div className="mb-4">
-        <h2 className="text-lg font-bold text-ink-strong">สรุปการเข้าโรงเรียน · {roster.date}</h2>
-        <p className="text-sm text-muted">ข้อมูลจากจุดสแกนและรายการที่ครูบันทึก ณ เวลาที่เปิดหน้านี้</p>
-      </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {([
-          ["นักเรียนทั้งหมด", totals.students], ["มาแล้ว", totals.present],
-          ["มาสาย", totals.late], ["ยังไม่เข้า", totals.awaiting],
-        ] as const).map(([title, value]) => (
-          <div key={title} className="rounded-xl bg-surface px-3 py-3">
-            <p className="text-xs text-muted">{title}</p>
-            <p className="mt-1 text-2xl font-bold tabular text-ink-strong">{value.toLocaleString("th-TH")}</p>
-          </div>
-        ))}
-      </div>
-      {rooms.length > 0 && <div className="mt-4 grid gap-3 lg:grid-cols-2">
+      <div className="mb-3"><h2 className="text-sm font-bold text-ink-strong">สรุปแยกตามห้องเรียน</h2><p className="mt-1 text-xs text-muted">ข้อมูลจากจุดสแกนและรายการที่ครูบันทึก ณ เวลาที่เปิดหน้านี้</p></div>
+      {rooms.length > 0 && <div className="grid gap-2 lg:grid-cols-2">
         {rooms.map((room) => (
-          <article key={room.id} className="rounded-xl border border-line p-4">
+          <article key={room.id} className="rounded-xl border border-line p-3">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="font-semibold text-ink-strong">ห้อง {room.code}</h3>
@@ -53,7 +33,7 @@ export default function SchoolEntrySummary({ roster, classrooms }: {
                 ดูรายชื่อ
               </Link>
             </div>
-            {room.awaiting.length > 0 && <p className="mt-3 text-sm text-muted">ยังไม่เข้า: {room.awaiting.slice(0, 5).map((student) => student.name).join(", ")}{room.awaiting.length > 5 ? ` และอีก ${room.awaiting.length - 5} คน` : ""}</p>}
+            {room.awaiting.length > 0 && <details className="mt-2 text-xs text-muted"><summary className="min-h-9 cursor-pointer py-2">ดูชื่อที่ยังไม่มีบันทึกเข้า ({room.awaiting.length} คน)</summary><p className="leading-6">{room.awaiting.slice(0, 5).map((student) => student.name).join(", ")}{room.awaiting.length > 5 ? ` และอีก ${room.awaiting.length - 5} คน · เปิดดูรายชื่อทั้งหมดได้จากปุ่มด้านบน` : ""}</p></details>}
           </article>
         ))}
       </div>}
