@@ -19,6 +19,7 @@ describe("parent requests advance late arrival", () => {
     expect(mocks.create).toHaveBeenCalledWith({ data: expect.objectContaining({ studentId: "child2", kind: "LATE", expectedArrivalTime: "09:30", startDate: new Date("2026-11-16"), endDate: new Date("2026-11-16"), parentLineUserId: "parent" }) });
     expect(mocks.create.mock.calls[0][0].data.status).toBeUndefined();
     expect(mocks.send).toHaveBeenCalledWith(["teacherLine"], expect.stringContaining("09:30"), "retry");
+    expect(mocks.send).toHaveBeenCalledWith(["teacherLine"], expect.stringContaining("/dashboard/leave-requests?date=2026-11-16"), "retry");
     expect(JSON.stringify(mocks.reply.mock.calls)).toContain("รอครูที่ปรึกษาอนุมัติ");
   });
   it("checks parent ownership before creating any request", async () => {
@@ -45,6 +46,12 @@ describe("parent requests advance late arrival", () => {
     await handleLeaveLineMessage("parent", text, "r", "same-event");
     expect(mocks.create).not.toHaveBeenCalled();
     expect(mocks.send).toHaveBeenCalled();
+  });
+  it("does not recreate or notify a deleted request when its webhook is replayed", async () => {
+    mocks.prior.mockReset().mockResolvedValue({ ...request(), isDeleted: true });
+    await handleLeaveLineMessage("parent", text, "r", "same-event");
+    expect(mocks.create).not.toHaveBeenCalled(); expect(mocks.send).not.toHaveBeenCalled();
+    expect(mocks.replyText).toHaveBeenCalledWith("r", expect.stringContaining("ถูกนำออกจากรายการ"));
   });
   it("blocks an overlapping leave or late request", async () => {
     mocks.overlap.mockResolvedValue({ id: "existing" });

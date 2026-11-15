@@ -139,7 +139,7 @@ export async function notifyAdvisorsOfLeaveRequest(id: string): Promise<{ accept
     retryKey = randomUUID();
     await prisma.leaveRequest.update({ where: { id }, data: { advisorLineTargets: targets, advisorNotifyRetryKey: retryKey } });
   }
-  const text = `${requestTitle(request.kind)}ใหม่ · รออนุมัติ\n${request.student.studentCode} ${request.student.firstName} ${request.student.lastName} · ห้อง ${request.classroom.code}\n${requestKindLabel(request.kind)} ${thaiDate(request.startDate)}${request.startDate.getTime() === request.endDate.getTime() ? "" : ` ถึง ${thaiDate(request.endDate)}`}${request.expectedArrivalTime ? `\nคาดว่าจะถึง ${request.expectedArrivalTime} น.\nอนุมัติแล้วจะยกเว้นหัก 10 คะแนนในวันที่ขอ` : ""}\nเหตุผล: ${request.reason}\nตรวจคำขอ: https://chumkosoft.com/dashboard/leave-requests`;
+  const text = `${requestTitle(request.kind)}ใหม่ · รออนุมัติ\n${request.student.studentCode} ${request.student.firstName} ${request.student.lastName} · ห้อง ${request.classroom.code}\n${requestKindLabel(request.kind)} ${thaiDate(request.startDate)}${request.startDate.getTime() === request.endDate.getTime() ? "" : ` ถึง ${thaiDate(request.endDate)}`}${request.expectedArrivalTime ? `\nคาดว่าจะถึง ${request.expectedArrivalTime} น.\nอนุมัติแล้วจะยกเว้นหัก 10 คะแนนในวันที่ขอ` : ""}\nเหตุผล: ${request.reason}\nตรวจคำขอ: https://chumkosoft.com/dashboard/leave-requests?date=${request.startDate.toISOString().slice(0, 10)}`;
   const result = await sendLineTextToUsers(targets, text, retryKey);
   if (result.accepted) await prisma.leaveRequest.update({ where: { id }, data: { advisorNotifiedCount: targets.length } });
   return result;
