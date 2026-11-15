@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CalendarCheck2, Check, ChevronDown, GraduationCap, HeartHandshake, MessageCircle, ShieldCheck } from "lucide-react";
 import Mascot from "@/components/ui/mascot";
+import HomeGuide from "@/features/guide/components/home-guide";
 
 export const metadata: Metadata = {
   title: "Chumkosoft — เชื่อมโรงเรียนกับครอบครัว",
@@ -37,7 +38,7 @@ export default function Home(): React.ReactNode {
             <span><span className="block text-lg font-bold tracking-tight text-brand-ink">chumkosoft<span className="text-sky-500">.</span></span><span className="block text-[10px] text-muted">โรงเรียนที่เชื่อมถึงกัน</span></span>
           </Link>
           <nav aria-label="เมนูหลัก" className="flex items-center gap-5 text-sm font-medium">
-            <Link href="/guide" className="text-muted hover:text-brand">คู่มือ<span className="hidden sm:inline">ใช้งาน</span></Link>
+            <a href="#manual" className="text-muted hover:text-brand">คู่มือ<span className="hidden sm:inline">ใช้งาน</span></a>
             <a href="#families" className="hidden text-muted hover:text-brand md:block">สำหรับผู้ปกครอง</a>
             <Link href="/login" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong">เข้าสู่ระบบ <ArrowRight className="size-4" aria-hidden="true" /></Link>
           </nav>
@@ -52,7 +53,7 @@ export default function Home(): React.ReactNode {
               <p className="mt-5 max-w-lg text-base leading-8 text-muted sm:text-lg">พื้นที่กลางของโรงเรียน ครู และครอบครัว<br className="hidden sm:block" /> ให้การเช็คชื่อ การแจ้งข่าว และการดูแลนักเรียน<br className="hidden lg:block" /> เป็นเรื่องที่ติดตามได้ง่ายขึ้น</p>
               <div className="mt-7 flex flex-wrap gap-3">
                 <Link href="/login" className={primaryButton}>เข้าสู่ระบบโรงเรียน <ArrowRight className="size-4" aria-hidden="true" /></Link>
-                <a href="/guide?role=parent" className="inline-flex min-h-12 items-center gap-2 rounded-full border border-blue-200 bg-white px-6 text-sm font-semibold text-brand-ink hover:bg-blue-50">ฉันเป็นผู้ปกครอง <ChevronDown className="size-4" aria-hidden="true" /></a>
+                <a href="#manual" className="inline-flex min-h-12 items-center gap-2 rounded-full border border-blue-200 bg-white px-6 text-sm font-semibold text-brand-ink hover:bg-blue-50">ฉันเป็นผู้ปกครอง <ChevronDown className="size-4" aria-hidden="true" /></a>
               </div>
               <p className="mt-5 text-xs leading-6 text-muted">ครูและเจ้าหน้าที่ใช้บัญชีที่โรงเรียนออกให้</p>
             </div>
@@ -70,10 +71,7 @@ export default function Home(): React.ReactNode {
             </div>
           </div>
         </section>
-        <section aria-label="คู่มือการใช้งาน" className="mx-auto grid max-w-6xl gap-3 px-5 pt-8 sm:grid-cols-2 sm:px-8">
-          <Link href="/guide?role=parent" className="flex min-h-20 items-center justify-between gap-4 rounded-2xl border border-blue-100 bg-white p-5 text-brand-ink hover:bg-blue-50"><span><strong className="block text-sm">คู่มือสำหรับผู้ปกครอง</strong><span className="mt-1 block text-xs text-muted">ผูก LINE · แจ้งลา · ขอมาสาย พร้อมภาพทีละขั้น</span></span><ArrowRight className="size-5 shrink-0" aria-hidden="true" /></Link>
-          <Link href="/guide?role=teacher" className="flex min-h-20 items-center justify-between gap-4 rounded-2xl border border-blue-100 bg-white p-5 text-brand-ink hover:bg-blue-50"><span><strong className="block text-sm">คู่มือสำหรับครู</strong><span className="mt-1 block text-xs text-muted">เชื่อม LINE · เช็คชื่อ · พิจารณาคำขอ · คะแนน</span></span><ArrowRight className="size-5 shrink-0" aria-hidden="true" /></Link>
-        </section>
+        <HomeGuide />
         <section id="features" aria-labelledby="features-title" className="mx-auto max-w-6xl scroll-mt-6 px-5 py-14 sm:px-8 sm:py-20">
           <div className="mb-8 max-w-2xl"><p className="text-xs font-semibold text-brand">เข้าใจโรงเรียน เข้าใจครอบครัว</p><h2 id="features-title" className="mt-2 text-2xl font-bold leading-relaxed text-ink-strong sm:text-3xl">เรื่องสำคัญของนักเรียน<br className="sm:hidden" /> อยู่ในที่เดียว</h2><p className="mt-3 text-sm leading-7 text-muted">ลดขั้นตอนที่กระจัดกระจาย ให้ครูมีเวลาดูแล และผู้ปกครองติดตามได้สะดวก</p></div>
           <div className="grid gap-5 md:grid-cols-3">{features.map(({ icon: Icon, title, description, tags }, i) => <article key={title} className="rounded-2xl border border-blue-100 bg-white p-6"><div className="mb-5 flex items-center justify-between"><span className="grid size-11 place-items-center rounded-xl bg-blue-50 text-brand"><Icon className="size-6" aria-hidden="true" /></span><span aria-hidden="true" className="text-xs font-semibold text-blue-300">0{i + 1}</span></div><h3 className="text-lg font-bold text-ink-strong">{title}</h3><p className="mt-3 text-sm leading-7 text-muted">{description}</p><p className="mt-5 border-t border-blue-100 pt-4 text-xs leading-6 text-brand-ink">{tags}</p></article>)}</div>
