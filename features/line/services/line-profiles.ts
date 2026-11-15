@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { getRedis } from "@/lib/redis";
 
 /** LINE display names can change. Cache briefly and keep raw user IDs on the server. */
-export async function getLineDisplayNames(userIds: string[]): Promise<Map<string, string>> {
+export async function getLineDisplayNames(userIds: string[], options?: { lookupBudgetMs?: number }): Promise<Map<string, string>> {
   const names = new Map<string, string>();
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!token) return names;
@@ -22,7 +22,9 @@ export async function getLineDisplayNames(userIds: string[]): Promise<Map<string
     return false;
   });
 
+  const deadline = Date.now() + (options?.lookupBudgetMs ?? Number.POSITIVE_INFINITY);
   for (let start = 0; start < missing.length; start += 8) {
+    if (Date.now() >= deadline) break;
     await Promise.all(missing.slice(start, start + 8).map(async (id) => {
       let displayName: string | null = null;
       try {

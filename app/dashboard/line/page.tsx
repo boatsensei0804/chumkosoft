@@ -1,3 +1,4 @@
+import { formatLinkPercentage, lineLinkPercentage } from "@/features/line/line-link-report";
 import LineWorkspace from "@/features/line/components/line-workspace";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -41,8 +42,9 @@ export default async function LinePage({ searchParams }: LinePageProps): Promise
       <PageHeader
         title="LINE / แจ้งเตือนผู้ปกครอง"
         subtitle="ผูกบัญชี LINE ของผู้ปกครองเข้ากับนักเรียน เพื่อส่งแจ้งเตือนอัตโนมัติเมื่อนักเรียนเข้าโรงเรียน"
-        actions={user.role === "ADMIN" ? <div className="flex flex-wrap gap-2"><Link href="/dashboard/line/teachers" className="rounded-lg border border-line bg-card px-4 py-2 text-sm font-semibold text-brand-ink">ดูสถานะ LINE ครู</Link><Link href="/dashboard/line-announcements" className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">ส่งประกาศ LINE</Link></div> : undefined}
+        actions={<div className="flex flex-wrap gap-2"><Link href="/dashboard/line/report" className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">สรุปเปอร์เซ็นต์ / ส่งออกรายห้อง</Link>{user.role === "ADMIN" && <><Link href="/dashboard/line/teachers" className="rounded-lg border border-line bg-card px-4 py-2 text-sm font-semibold text-brand-ink">ดูสถานะ LINE ครู</Link><Link href="/dashboard/line-announcements" className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">ส่งประกาศ LINE</Link></>}</div>}
       />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-100 bg-white px-5 py-4"><p className="text-sm text-muted">ผูก LINE แล้ว <strong className="text-2xl text-brand-ink">{formatLinkPercentage(lineLinkPercentage(stats.linked, stats.total))}</strong> · {stats.linked}/{stats.total} คนในขอบเขตที่เลือก</p><Link href={`/dashboard/line/report${classroomId ? `?classroom=${encodeURIComponent(classroomId)}` : ""}`} className="min-h-10 py-2 text-sm font-semibold text-brand-ink">ดูรายชื่อ รหัส และส่งออก →</Link></div>
       <StatStrip
         items={[
           { label: "นักเรียนในรายการ", value: stats.total, hint: "คน", icon: UsersRound, tone: "brand" },
