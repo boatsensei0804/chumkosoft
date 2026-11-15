@@ -640,6 +640,10 @@ model LineAnnouncement {
   kind           LineAnnouncementKind
   title          String
   body           String               @db.Text
+  imageId        String?              @unique
+  imageKey       String?
+  imagePreviewKey String?
+  imageSha256    String?
   recipientCount Int
   createdById    String
   createdAt      DateTime             @default(now())

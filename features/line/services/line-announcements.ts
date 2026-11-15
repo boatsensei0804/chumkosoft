@@ -8,6 +8,9 @@ import { logAudit } from "@/lib/audit";
 import { announcementText } from "@/features/line/announcement-text";
 import type { AnnouncementAudience } from "@/features/line/announcement-audience";
 import { resolveAnnouncementAudience, recipientFingerprint } from "./announcement-audience-service";
+import { putObject, removeObject } from "@/lib/minio";
+import { prepareAnnouncementImage } from "./announcement-image-service";
+import { announcementImageMessage } from "@/features/line/announcement-image";
 import { announcementCard } from "@/features/line/announcement-card";
 
 const BATCH_SIZE = 500;
@@ -51,13 +54,13 @@ export async function listLineAnnouncements() {
     orderBy: { createdAt: "desc" },
     take: 20,
     select: {
-      id: true, kind: true, title: true, body: true, recipientCount: true, createdAt: true,
+      id: true, kind: true, title: true, body: true, imageId: true, recipientCount: true, createdAt: true,
       batches: { select: { id: true, status: true, recipientCount: true, errorCode: true } },
     },
   });
 }
 
-export async function createAndSendLineAnnouncement(input: AnnouncementInput, actorId: string): Promise<AnnouncementResult> {
+export async function createAndSendLineAnnouncement(input: AnnouncementInput, actorId: string, imageFile?: File): Promise<AnnouncementResult> {
   const title = input.title.trim();
   const body = input.body.trim();
   if (!/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(input.requestKey) ||
@@ -68,13 +71,19 @@ export async function createAndSendLineAnnouncement(input: AnnouncementInput, ac
   }
   if (!isLineConfigured()) return { ok: false, message: "ยังไม่ได้ตั้งค่า LINE Channel access token บนเซิร์ฟเวอร์" };
 
-  const existing = await prisma.lineAnnouncement.findUnique({ where: { requestKey: input.requestKey }, select: { id: true, kind: true, title: true, body: true, isDeleted: true, batches: { select: { recipients: true } } } });
+  let image: Awaited<ReturnType<typeof prepareAnnouncementImage>> | null = null;
+  if (imageFile) {
+    try { image = await prepareAnnouncementImage(imageFile); }
+    catch (error) { return { ok: false, message: error instanceof Error ? error.message : "ตรวจรูปไม่สำเร็จ" }; }
+  }
+
+  const existing = await prisma.lineAnnouncement.findUnique({ where: { requestKey: input.requestKey }, select: { id: true, kind: true, title: true, body: true, imageSha256: true, isDeleted: true, batches: { select: { recipients: true } } } });
   if (existing) {
     if (existing.isDeleted) return { ok: false, message: "ประกาศนี้ถูกลบแล้ว ไม่สามารถส่งซ้ำได้" };
     const savedRecipients = existing.batches.flatMap((batch) => Array.isArray(batch.recipients) ? batch.recipients.filter((value): value is string => typeof value === "string") : []);
     if (recipientFingerprint(savedRecipients) !== input.expectedRecipientFingerprint) return { ok: false, message: "กลุ่มผู้รับไม่ตรงกับประกาศเดิม กรุณาตรวจรายการส่งก่อนสร้างใหม่" };
-    if (existing.kind !== input.kind || existing.title !== title || existing.body !== body) {
-      return { ok: false, message: "ข้อความประกาศเปลี่ยนไป กรุณาตรวจรายการส่งเดิมก่อนสร้างประกาศใหม่" };
+    if (existing.kind !== input.kind || existing.title !== title || existing.body !== body || existing.imageSha256 !== (image?.digest ?? null)) {
+      return { ok: false, message: "ข้อความหรือรูปประกาศเปลี่ยนไป กรุณาตรวจรายการส่งเดิมก่อนสร้างประกาศใหม่" };
     }
     return deliverLineAnnouncement(existing.id, actorId);
   }
@@ -86,18 +95,41 @@ export async function createAndSendLineAnnouncement(input: AnnouncementInput, ac
     return { ok: false, message: "จำนวนผู้รับเปลี่ยนไป กรุณาโหลดหน้านี้ใหม่เพื่อตรวจจำนวนก่อนส่ง" };
   }
   const chunks = Array.from({ length: Math.ceil(recipients.length / BATCH_SIZE) }, (_, index) => recipients.slice(index * BATCH_SIZE, (index + 1) * BATCH_SIZE));
-  const announcement = await prisma.lineAnnouncement.create({
-    data: {
-      requestKey: input.requestKey,
-      kind: input.kind,
-      title,
-      body,
-      recipientCount: recipients.length,
-      createdById: actorId,
-      batches: { create: chunks.map((to, batchNumber) => ({ batchNumber, recipients: to, recipientCount: to.length, retryKey: randomUUID() })) },
-    },
-    select: { id: true },
-  });
+  const imageId = image ? randomUUID() : null;
+  const imageKey = imageId ? `announcements/${imageId}/original.jpg` : null;
+  const imagePreviewKey = imageId ? `announcements/${imageId}/preview.jpg` : null;
+  if (image && imageKey && imagePreviewKey) {
+    try {
+      await putObject(imageKey, image.original, "image/jpeg");
+      await putObject(imagePreviewKey, image.preview, "image/jpeg");
+    } catch {
+      await Promise.all([removeObject(imageKey), removeObject(imagePreviewKey)]);
+      return { ok: false, message: "อัปโหลดรูปไม่สำเร็จ ยังไม่ได้ส่งประกาศ กรุณาลองใหม่" };
+    }
+  }
+  let announcement: { id: string };
+  try {
+    announcement = await prisma.lineAnnouncement.create({
+      data: {
+        requestKey: input.requestKey,
+        kind: input.kind,
+        title,
+        body,
+        imageId, imageKey, imagePreviewKey, imageSha256: image?.digest ?? null,
+        recipientCount: recipients.length,
+        createdById: actorId,
+        batches: { create: chunks.map((to, batchNumber) => ({ batchNumber, recipients: to, recipientCount: to.length, retryKey: randomUUID() })) },
+      },
+      select: { id: true },
+    });
+  } catch (error) {
+    // Resolve a concurrent retry before deleting media. If the DB is unreachable,
+    // retain the objects rather than risk removing media from a committed row.
+    const saved = await prisma.lineAnnouncement.findUnique({ where: { requestKey: input.requestKey }, select: { imageKey: true } });
+    if (imageKey && imagePreviewKey && saved?.imageKey !== imageKey) await Promise.all([removeObject(imageKey), removeObject(imagePreviewKey)]);
+    if (saved) return createAndSendLineAnnouncement(input, actorId, imageFile);
+    throw error;
+  }
   await logAudit({ actorId, action: "line.announcement.create", targetType: "lineAnnouncement", targetId: announcement.id, detail: `${input.kind} · ${recipients.length} recipients` });
   return deliverLineAnnouncement(announcement.id, actorId);
 }
@@ -115,7 +147,7 @@ export async function deliverLineAnnouncement(id: string, actorId: string): Prom
     const current = await prisma.lineAnnouncement.findUnique({ where: { id }, select: { isDeleted: true } });
     if (!current || current.isDeleted) return { ok: false, message: "ประกาศถูกลบแล้ว ไม่ส่งรายการที่เหลือต่อ" };
     const recipients = Array.isArray(batch.recipients) ? batch.recipients.filter((value): value is string => typeof value === "string") : [];
-    const result = await sendLineMessageToUsers(recipients, card, batch.retryKey);
+    const result = await sendLineMessageToUsers(recipients, announcement.imageId ? [card, announcementImageMessage(announcement.imageId)] : card, batch.retryKey);
     await prisma.lineAnnouncementBatch.update({
       where: { id: batch.id },
       data: { status: result.accepted ? "ACCEPTED" : "FAILED", errorCode: result.accepted ? null : result.code },

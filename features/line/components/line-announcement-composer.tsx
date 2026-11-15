@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition, type ChangeEvent } from "react";
+import Image from "next/image";
+import { announcementImagePath, ANNOUNCEMENT_IMAGE_TYPES, MAX_ANNOUNCEMENT_IMAGE_BYTES } from "@/features/line/announcement-image";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Megaphone, Send, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Megaphone, Send, Trash2, ImagePlus, X } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { sendLineAnnouncementAction, retryLineAnnouncementAction, previewLineAudienceAction, deleteLineAnnouncementAction } from "@/features/line/announcement-actions";
 import { announcementText } from "@/features/line/announcement-text";
@@ -16,6 +18,7 @@ interface HistoryItem {
   kind: LineAnnouncementKind;
   title: string;
   body: string;
+  imageId?: string | null;
   recipientCount: number;
   accepted: number;
   failed: boolean;
@@ -42,6 +45,21 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
   const [kind, setKind] = useState<LineAnnouncementKind>("NEWS");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageError, setImageError] = useState("");
+  useEffect(() => () => { if (imageUrl) URL.revokeObjectURL(imageUrl); }, [imageUrl]);
+
+  function chooseImage(event: ChangeEvent<HTMLInputElement>): void {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file) return;
+    if (!ANNOUNCEMENT_IMAGE_TYPES.includes(file.type as typeof ANNOUNCEMENT_IMAGE_TYPES[number]) || file.size === 0 || file.size > MAX_ANNOUNCEMENT_IMAGE_BYTES) {
+      setImageError("เลือกรูป JPG, PNG หรือ WebP ขนาดไม่เกิน 3 MB"); return;
+    }
+    setImageFile(file); setImageUrl(URL.createObjectURL(file)); setImageError("");
+  }
+  function clearImage(): void { setImageFile(null); setImageUrl(null); setImageError(""); }
   const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
   const [reviewOpen, setReviewOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
@@ -55,21 +73,25 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
   const [feedback, setFeedback] = useState("");
   const [pending, startTransition] = useTransition();
   const preview = announcementText(kind, title.trim(), body.trim());
-  const valid = title.trim().length > 0 && title.trim().length <= 120 && body.trim().length > 0 && body.trim().length <= 3000 && preview.length <= 5000;
+  const valid = title.trim().length > 0 && title.trim().length <= 120 && body.trim().length > 0 && body.trim().length <= 3000 && preview.length <= 5000 && !imageError;
 
   function submit(): void {
     if (!confirmed || !valid || pending || !audiencePreview) return;
     startTransition(async () => {
-      const result = await sendLineAnnouncementAction({ requestKey, kind, title, body, expectedRecipients: audiencePreview.count, audience, expectedRecipientFingerprint: audiencePreview.fingerprint });
+      const attachment = new FormData();
+      if (imageFile) attachment.set("image", imageFile);
+      const result = await sendLineAnnouncementAction({ requestKey, kind, title, body, expectedRecipients: audiencePreview.count, audience, expectedRecipientFingerprint: audiencePreview.fingerprint }, attachment);
       setFeedback(result.message);
       setReviewOpen(false);
       setConfirmed(false);
       if (result.id) {
         setTitle("");
         setBody("");
+        clearImage();
         setKind("NEWS");
         setRequestKey(crypto.randomUUID());
       }
+      if (!result.id) setComposerOpen(true);
       router.refresh();
     });
   }
@@ -113,7 +135,7 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
       {[{ label: "ผู้รับที่เชื่อม LINE ปัจจุบัน", value: recipientCount, hint: "บัญชีไม่ซ้ำ" }, { label: "ประกาศล่าสุดที่แสดง", value: history.length, hint: "สูงสุด 20 รายการ" }, { label: "รายการล่าสุดที่ส่งยังไม่ครบ", value: history.filter((item) => item.accepted < item.recipientCount).length, hint: "ตรวจรายละเอียดก่อนลองส่งต่อ" }].map((item) => <div key={item.label} className="rounded-[22px] border border-blue-100 bg-white p-5"><p className="text-xs text-muted">{item.label}</p><p className="mt-3 text-3xl font-bold text-brand-ink">{item.value.toLocaleString("th-TH")}</p><p className="mt-2 text-xs text-muted">{item.hint}</p></div>)}
     </section>
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-bold text-ink-strong">ศูนย์ประกาศโรงเรียน</h2><p className="mt-1 text-sm text-muted">สร้างประกาศ ตรวจข้อความ แล้วจึงยืนยันส่งถึงบัญชีที่ผูกไว้</p></div><button type="button" onClick={() => setComposerOpen(true)} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-white"><Megaphone className="size-4" />เขียนประกาศใหม่</button></div>
-    <Dialog open={composerOpen} onOpenChange={setComposerOpen}><DialogContent className="sm:max-w-5xl"><DialogHeader className="text-left"><DialogTitle>สร้างประกาศ</DialogTitle><DialogDescription>เลือกประเภท กรอกข้อความ และตรวจจำนวนผู้รับก่อนส่ง</DialogDescription></DialogHeader>
+    <Dialog open={composerOpen} onOpenChange={setComposerOpen}><DialogContent className="sm:max-w-5xl"><DialogHeader className="text-left"><DialogTitle>สร้างประกาศ</DialogTitle><DialogDescription>เลือกผู้รับ กรอกข้อความ แนบรูปได้ 1 รูป และตรวจสอบก่อนส่ง</DialogDescription></DialogHeader>
     <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_260px]">
       <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">
         <h2 className="text-lg font-bold text-ink-strong">เขียนประกาศ</h2>
@@ -139,6 +161,13 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
         </div>
         <textarea id="line-announcement-body" value={body} onChange={(event) => setBody(event.target.value)} maxLength={3000} rows={7}
           placeholder="ระบุสิ่งที่เกิดขึ้น เวลา สถานที่ และสิ่งที่ผู้รับควรทำ" className="mt-1.5 w-full resize-y rounded-xl border border-line bg-surface px-4 py-3 text-sm leading-relaxed text-ink outline-none focus:border-brand" />
+        <section className="mt-4 rounded-xl border border-line bg-surface/50 p-4" aria-label="รูปภาพแนบประกาศ">
+          <div className="flex flex-wrap items-center justify-between gap-2"><label htmlFor="line-announcement-image" className="inline-flex items-center gap-2 text-sm font-semibold text-ink"><ImagePlus className="size-4" aria-hidden="true" />แนบรูปประกาศ (ไม่บังคับ)</label>{imageFile && <button type="button" disabled={pending} onClick={clearImage} className="inline-flex min-h-10 items-center gap-1 rounded-lg px-3 text-xs font-semibold text-danger"><X className="size-4" aria-hidden="true" />นำรูปออก</button>}</div>
+          <input id="line-announcement-image" type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseImage} disabled={pending || preparing} className="mt-2 block w-full min-w-0 text-sm text-muted file:mr-3 file:min-h-10 file:rounded-lg file:border-0 file:bg-brand-soft file:px-3 file:font-semibold file:text-brand-ink" />
+          <p className="mt-2 text-xs leading-6 text-muted">JPG, PNG หรือ WebP ไม่เกิน 3 MB · ส่งรูปพร้อมการ์ดข้อความถึงผู้รับที่เลือก</p>
+          {imageUrl && <div className="mt-3"><Image src={imageUrl} alt="ตัวอย่างรูปที่จะส่งพร้อมประกาศ" width={1200} height={800} unoptimized className="max-h-64 w-full rounded-lg bg-white object-contain" onError={() => setImageError("อ่านรูปไม่สำเร็จ กรุณาเลือกรูปใหม่")} /><p className="mt-2 break-all text-xs text-muted">{imageFile?.name}</p></div>}
+          {imageError && <p role="alert" className="mt-2 text-sm text-danger">{imageError} <button type="button" onClick={clearImage} className="min-h-10 underline">ล้างรูปที่เลือก</button></p>}
+        </section>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted">ส่งถึงบัญชี LINE ที่ผูกกับระบบเท่านั้น · นับบัญชีที่ซ้ำเพียงครั้งเดียว</p>
           <button type="button" disabled={!configured || !audienceValid || !valid || pending || preparing} onClick={prepareReview}
@@ -176,6 +205,7 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${item.kind === "EMERGENCY" ? "bg-danger-soft text-danger" : "bg-brand-soft text-brand-ink"}`}>{item.kind === "EMERGENCY" ? "เหตุฉุกเฉิน" : "ข่าวสาร"}</span>
+                {item.imageId && <span className="inline-flex items-center gap-1 text-xs text-muted"><ImagePlus className="size-3.5" aria-hidden="true" />มีรูปแนบ</span>}
                 <button type="button" onClick={() => setViewing(item)} className="min-h-10 text-left font-semibold text-brand-ink underline-offset-4 hover:underline">{item.title}</button>
               </div>
               <p className="mt-1 text-xs text-muted">{new Date(item.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "medium", timeStyle: "short" })}{remaining > 0 ? ` · ${failureLabel(item.errorCode)}` : ""}</p>
@@ -191,7 +221,7 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
 
     <ConfirmDialog open={deleting !== null} title="ลบประกาศ" message={`ต้องการลบ “${deleting?.title ?? ""}” ออกจากประวัติบนเว็บใช่ไหม? ข้อความที่ส่งถึง LINE แล้วจะยังอยู่ และคำขอส่งที่กำลังดำเนินการอาจส่งถึงผู้รับได้${deleteError ? `\n${deleteError}` : ""}`} confirmLabel="ยืนยันลบประกาศ" destructive pending={pending} onConfirm={remove} onClose={() => { setDeleting(null); setDeleteError(""); }} />
     {history.length > 0 && visibleHistory.length === 0 && <p className="py-4 text-center text-sm text-muted">ไม่พบประกาศที่ตรงกับตัวกรอง</p>}
-    <Dialog open={viewing !== null} onOpenChange={(open) => { if (!open) setViewing(null); }}><DialogContent className="sm:max-w-xl"><DialogHeader className="text-left"><DialogTitle>{viewing?.title}</DialogTitle><DialogDescription>รายละเอียดข้อความที่ส่ง · LINE รับคำขอแล้ว {viewing?.accepted}/{viewing?.recipientCount} บัญชี</DialogDescription></DialogHeader><p className="whitespace-pre-wrap break-words rounded-xl bg-blue-50 p-4 text-sm leading-7">{viewing?.body}</p><p className="text-xs leading-5 text-muted">การรับคำขอของ LINE ไม่ใช่สถานะว่าผู้รับอ่านข้อความแล้ว</p></DialogContent></Dialog>
+    <Dialog open={viewing !== null} onOpenChange={(open) => { if (!open) setViewing(null); }}><DialogContent className="sm:max-w-xl"><DialogHeader className="text-left"><DialogTitle>{viewing?.title}</DialogTitle><DialogDescription>รายละเอียดข้อความที่ส่ง · LINE รับคำขอแล้ว {viewing?.accepted}/{viewing?.recipientCount} บัญชี</DialogDescription></DialogHeader><p className="whitespace-pre-wrap break-words rounded-xl bg-blue-50 p-4 text-sm leading-7">{viewing?.body}</p>{viewing?.imageId && <a href={announcementImagePath(viewing.imageId)} target="_blank" rel="noreferrer" className="block"><Image src={announcementImagePath(viewing.imageId)} alt={`รูปแนบประกาศ ${viewing.title}`} width={1200} height={800} unoptimized className="max-h-80 w-full rounded-xl object-contain" /><span className="mt-1 block text-center text-xs text-brand-ink">เปิดรูปเต็มในแท็บใหม่</span></a>}<p className="text-xs leading-5 text-muted">การรับคำขอของ LINE ไม่ใช่สถานะว่าผู้รับอ่านข้อความแล้ว</p></DialogContent></Dialog>
     <Dialog open={reviewOpen} onOpenChange={(open) => { if (!pending) { setReviewOpen(open); if (!open) setComposerOpen(true); } }}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
@@ -205,10 +235,11 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
             <p className="px-4 pb-3 text-right text-[11px] font-semibold tracking-wide text-muted">CHUMKOSOFT SCHOOL</p>
           </div>
         </div>
+        {imageUrl && <div className="rounded-xl border border-line bg-white p-2"><a href={imageUrl} target="_blank" rel="noreferrer"><Image src={imageUrl} alt="รูปแนบที่จะส่งเป็นข้อความรูปภาพใน LINE" width={1200} height={800} unoptimized className="max-h-64 w-full rounded-lg object-contain" /><span className="mt-2 block text-center text-xs text-brand-ink">เปิดรูปเต็มเพื่อตรวจสอบก่อนส่ง</span></a><p className="mt-1 text-center text-xs text-muted">รูปภาพแนบ · ส่งต่อจากการ์ดข้อความด้านบน</p></div>}
         <section className="rounded-xl border border-line p-3"><h3 className="text-sm font-semibold">ผู้รับจริง {selectedCount.toLocaleString("th-TH")} บัญชี</h3><p className="mt-1 text-xs text-muted">แสดงชื่อจากข้อมูลที่ผูกในระบบ บัญชีเดียวที่ผูกหลายรายการจะรวมไว้ในบรรทัดเดียว</p><ol className="mt-2 max-h-48 list-inside list-decimal space-y-2 overflow-y-auto text-xs leading-6">{audiencePreview?.labels.map((label, index) => <li key={index}>{label}</li>)}</ol></section>
         <label className="flex items-start gap-2 text-sm text-ink">
           <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} className="mt-1" />
-          <span>ฉันตรวจข้อความและจำนวนผู้รับแล้ว</span>
+          <span>ฉันตรวจข้อความ รูปแนบ และจำนวนผู้รับแล้ว</span>
         </label>
         <DialogFooter>
           <button type="button" disabled={pending} onClick={() => { setReviewOpen(false); setComposerOpen(true); }} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-ink">กลับไปแก้ไข</button>

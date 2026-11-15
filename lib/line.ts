@@ -25,6 +25,12 @@ export interface LineTextMessage {
   quickReply?: { items: { type: "action"; action: LineQuickReplyAction }[] };
 }
 
+export interface LineImageMessage {
+  type: "image";
+  originalContentUrl: string;
+  previewImageUrl: string;
+}
+
 type LineAnnouncementCard = ReturnType<typeof announcementCard>;
 
 export function isLineConfigured(): boolean {
@@ -33,10 +39,12 @@ export function isLineConfigured(): boolean {
 
 /** LINE accepts up to 500 IDs per multicast request. A stable retry key keeps
  * a retried request from sending the same announcement twice. */
-export async function sendLineMessageToUsers(to: string[], message: LineTextMessage | LineAnnouncementCard | LineFlexMessage, retryKey: string): Promise<{ accepted: boolean; code: string }> {
+export async function sendLineMessageToUsers(to: string[], message: LineTextMessage | LineAnnouncementCard | LineFlexMessage | LineImageMessage | (LineTextMessage | LineAnnouncementCard | LineFlexMessage | LineImageMessage)[], retryKey: string): Promise<{ accepted: boolean; code: string }> {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!token) return { accepted: false, code: "NOT_CONFIGURED" };
   if (to.length < 1 || to.length > 500) return { accepted: false, code: "INVALID_RECIPIENT_COUNT" };
+  const messages = Array.isArray(message) ? message : [message];
+  if (messages.length < 1 || messages.length > 5) return { accepted: false, code: "INVALID_MESSAGE_COUNT" };
   try {
     const response = await fetch(to.length === 1 ? PUSH_URL : MULTICAST_URL, {
       method: "POST",
@@ -45,7 +53,7 @@ export async function sendLineMessageToUsers(to: string[], message: LineTextMess
         Authorization: `Bearer ${token}`,
         "X-Line-Retry-Key": retryKey,
       },
-      body: JSON.stringify({ ...(to.length === 1 ? { to: to[0] } : { to }), messages: [message] }),
+      body: JSON.stringify({ ...(to.length === 1 ? { to: to[0] } : { to }), messages }),
       signal: AbortSignal.timeout(15_000),
     });
     // LINE returns 409 when this retry key was already accepted.

@@ -20,6 +20,7 @@ export default async function LineAnnouncementsPage(): Promise<React.ReactNode> 
       kind: row.kind,
       title: row.title,
       body: row.body,
+      imageId: row.imageId,
       recipientCount: row.recipientCount,
       accepted,
       failed: row.batches.some((batch) => batch.status === "FAILED"),

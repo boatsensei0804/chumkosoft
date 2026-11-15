@@ -7,10 +7,12 @@ import { createAndSendLineAnnouncement, deliverLineAnnouncement, deleteLineAnnou
 
 const PATH = "/dashboard/line-announcements";
 
-export async function sendLineAnnouncementAction(input: AnnouncementInput): Promise<AnnouncementResult> {
+export async function sendLineAnnouncementAction(input: AnnouncementInput, attachment?: FormData): Promise<AnnouncementResult> {
   const user = await requireRoles(["ADMIN"]);
   try {
-    const result = await createAndSendLineAnnouncement(input, user.id);
+    const image = attachment?.get("image");
+    if (image !== null && image !== undefined && !(image instanceof File)) return { ok: false, message: "รูปแนบไม่ถูกต้อง" };
+    const result = await createAndSendLineAnnouncement(input, user.id, image instanceof File ? image : undefined);
     revalidatePath(PATH);
     return result;
   } catch (error) {

@@ -103,3 +103,19 @@ export async function removeObject(key: string): Promise<void> {
     console.error("[minio] failed to remove object", key, error);
   }
 }
+
+/** Read a bounded private object through the internal compose endpoint. */
+export async function getObjectBytes(key: string, maxBytes: number): Promise<Buffer> {
+  const stream = await getClient().getObject(getBucket(), key);
+  const chunks: Buffer[] = [];
+  let size = 0;
+  try {
+    for await (const chunk of stream) {
+      const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      size += bytes.length;
+      if (size > maxBytes) throw new Error("Stored object exceeds limit");
+      chunks.push(bytes);
+    }
+    return Buffer.concat(chunks);
+  } finally { stream.destroy(); }
+}

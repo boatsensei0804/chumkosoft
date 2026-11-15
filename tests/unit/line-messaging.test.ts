@@ -79,6 +79,18 @@ describe("LINE message delivery", () => {
     expect(payload.messages[0].contents.header.contents[1].url).toBe("https://chumkosoft.com/mascot/error.png");
   });
 
+  it("sends the card and image in one retryable request", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+    const messages = [announcementCard("NEWS", "หัวข้อ", "ข้อความ"), { type: "image" as const, originalContentUrl: "https://chumkosoft.com/image.jpg", previewImageUrl: "https://chumkosoft.com/preview.jpg" }];
+    expect((await sendLineMessageToUsers(["Uexample"], messages, "stable-key")).accepted).toBe(true);
+    const payload = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(payload.messages).toEqual(messages);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][1].headers["X-Line-Retry-Key"]).toBe("stable-key");
+    expect((await sendLineMessageToUsers(["Uexample"], [], "empty")).accepted).toBe(false);
+  });
+
   it("delivers leave Flex cards through reply and parent push without altering actions", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     vi.stubGlobal("fetch", fetchMock);
