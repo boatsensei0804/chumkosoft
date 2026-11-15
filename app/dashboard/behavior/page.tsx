@@ -12,7 +12,7 @@ export default async function BehaviorPage({ searchParams }: { searchParams: Pro
   const params = await searchParams;
   const data = await getBehaviorOverview(params.student, user);
   return <>
-    <PageHeader title="คะแนนความประพฤติ" subtitle="เริ่มต้น 100 คะแนนต่อภาคเรียน มาสายเข้าโรงเรียนหัก 10 คะแนน และครูสามารถเพิ่มหรือหักพร้อมหัวข้อ" />
+    <PageHeader title="คะแนนความประพฤติ" subtitle="เริ่มต้น 100 คะแนนต่อภาคเรียน มาสายเข้าโรงเรียนหัก 10 คะแนน ยกเว้นวันที่อนุมัติขอมาสาย · ครูเพิ่มหรือหักคะแนนพร้อมเหตุผลได้" />
     <BehaviorBrowser key={data.selectedStudent?.id ?? "none"} data={data} />
   </>;
 }

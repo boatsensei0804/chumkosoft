@@ -94,6 +94,7 @@ enum LineAnnouncementBatchStatus {
 enum LeaveKind {
   SICK
   PERSONAL
+  LATE
 }
 
 enum LeaveRequestStatus {
@@ -745,6 +746,7 @@ model LeaveRequest {
   parentLineUserId     String
   lineMessageId        String             @unique
   kind                 LeaveKind
+  expectedArrivalTime  String? // HH:mm Asia/Bangkok; required for LATE requests
   startDate            DateTime
   endDate              DateTime
   reason               String             @db.Text

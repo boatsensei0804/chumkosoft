@@ -4,7 +4,7 @@ import LeaveRequestsBrowser from "@/features/leave/components/leave-requests-bro
 import { listLeaveRequests } from "@/features/leave/services/leave-review-service";
 import { requireRoles } from "@/lib/dal";
 
-export const metadata: Metadata = { title: "คำขอลา · chumkosoft" };
+export const metadata: Metadata = { title: "คำขอลา / ขอมาสาย · chumkosoft" };
 export const dynamic = "force-dynamic";
 
 export default async function LeaveRequestsPage(): Promise<React.ReactNode> {
@@ -16,6 +16,7 @@ export default async function LeaveRequestsPage(): Promise<React.ReactNode> {
     studentName: `${row.student.firstName} ${row.student.lastName}`,
     classroomCode: row.classroom.code,
     kind: row.kind,
+    expectedArrivalTime: row.expectedArrivalTime,
     startDate: row.startDate.toISOString().slice(0, 10),
     endDate: row.endDate.toISOString().slice(0, 10),
     reason: row.reason,
@@ -26,7 +27,7 @@ export default async function LeaveRequestsPage(): Promise<React.ReactNode> {
     createdAt: row.createdAt.toISOString(),
   }));
   return <>
-    <PageHeader title="คำขอลาจากผู้ปกครอง" subtitle="ตรวจคำขอที่ผู้ปกครองส่งทาง LINE และพิจารณาสถานะลาในระบบ" />
+    <PageHeader title="คำขอลา / ขอมาสายจากผู้ปกครอง" subtitle="ตรวจคำขอลาและขอมาสายจาก LINE · อนุมัติขอมาสายเพื่อยกเว้นหักคะแนนในวันที่ขอ" />
     <LeaveRequestsBrowser items={items} isAdmin={user.role === "ADMIN"} />
   </>;
 }

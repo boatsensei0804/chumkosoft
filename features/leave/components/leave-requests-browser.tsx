@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { requestKindLabel } from "@/features/leave/request-kind";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { reviewLeaveRequestAction, retryLeaveAdvisorNotificationAction } from "@/features/leave/actions";
 
 type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED";
-type LeaveKind = "SICK" | "PERSONAL";
+type LeaveKind = "SICK" | "PERSONAL" | "LATE";
 interface LeaveItem {
-  id: string; studentCode: string; studentName: string; classroomCode: string; kind: LeaveKind;
+  id: string; studentCode: string; studentName: string; classroomCode: string; kind: LeaveKind; expectedArrivalTime: string | null;
   startDate: string; endDate: string; reason: string; status: LeaveStatus; reviewNote: string | null;
   advisorNotifiedCount: number; advisorTargetCount: number; createdAt: string;
 }
@@ -68,7 +69,7 @@ export default function LeaveRequestsBrowser({ items, isAdmin }: { items: LeaveI
       <div className="flex flex-wrap gap-3 border-b border-line p-4">
         <input aria-label="ค้นหาคำขอลา" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหารหัส ชื่อนักเรียน หรือห้อง" className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
         <select aria-label="กรองห้องเรียนคำขอลา" value={classroom} onChange={(event) => setClassroom(event.target.value)} className="min-h-10 rounded-xl border border-line bg-surface px-3 text-sm"><option value="">ทุกห้องเรียน</option>{classrooms.map((room) => <option key={room} value={room}>{room}</option>)}</select>
-        <select aria-label="ประเภทการลา" value={kind} onChange={(event) => setKind(event.target.value as LeaveKind | "ALL")} className="min-h-10 rounded-xl border border-line bg-surface px-3 text-sm"><option value="ALL">ทุกประเภท</option><option value="SICK">ลาป่วย</option><option value="PERSONAL">ลากิจ</option></select>
+        <select aria-label="ประเภทการลา" value={kind} onChange={(event) => setKind(event.target.value as LeaveKind | "ALL")} className="min-h-10 rounded-xl border border-line bg-surface px-3 text-sm"><option value="ALL">ทุกประเภท</option><option value="SICK">ลาป่วย</option><option value="PERSONAL">ลากิจ</option><option value="LATE">ขอมาสาย</option></select>
         <select aria-label="กรองสถานะคำขอลา" value={filter} onChange={(event) => setFilter(event.target.value as LeaveStatus | "ALL")} className="rounded-lg border border-line bg-surface px-3 py-2 text-sm">
           <option value="PENDING">รอพิจารณา</option><option value="APPROVED">อนุมัติแล้ว</option><option value="REJECTED">ไม่อนุมัติ</option><option value="ALL">ทั้งหมด</option>
         </select>
@@ -79,7 +80,8 @@ export default function LeaveRequestsBrowser({ items, isAdmin }: { items: LeaveI
             <span className="font-semibold text-ink-strong">{item.studentName}</span><span className="text-xs text-muted">{item.studentCode} · ห้อง {item.classroomCode}</span>
             <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${item.status === "PENDING" ? "bg-warning-soft text-warning" : item.status === "APPROVED" ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}>{item.status === "PENDING" ? "รอพิจารณา" : item.status === "APPROVED" ? "อนุมัติ" : "ไม่อนุมัติ"}</span>
           </div>
-          <p className="mt-2 text-sm text-ink">{item.kind === "SICK" ? "ลาป่วย" : "ลากิจ"} · {thaiDate(item.startDate)}{item.endDate === item.startDate ? "" : ` ถึง ${thaiDate(item.endDate)}`}</p>
+          <p className="mt-2 text-sm text-ink">{requestKindLabel(item.kind)} · {thaiDate(item.startDate)}{item.endDate === item.startDate ? "" : ` ถึง ${thaiDate(item.endDate)}`}</p>
+          {item.kind === "LATE" && <p className="mt-1 text-sm font-semibold text-brand-ink">คาดว่าจะถึง {item.expectedArrivalTime ?? "—"} น. · อนุมัติแล้วจะยกเว้นหัก 10 คะแนนในวันที่ขอ</p>}
           <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-sm text-muted">เหตุผล: {item.reason}</p>
           <p className="mt-2 text-xs text-muted">แจ้งครูที่ปรึกษาทาง LINE: {item.advisorNotifiedCount ? `${item.advisorNotifiedCount} บัญชี` : "ยังไม่สำเร็จ"} · ส่งคำขอ {new Date(item.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "medium", timeStyle: "short" })}</p>
         </div>
@@ -93,7 +95,7 @@ export default function LeaveRequestsBrowser({ items, isAdmin }: { items: LeaveI
     <Dialog open={viewing !== null} onOpenChange={(open) => !open && setViewing(null)}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader><DialogTitle>รายละเอียดคำขอลา</DialogTitle><DialogDescription>{viewing ? `${viewing.studentName} · ${viewing.studentCode} · ห้อง ${viewing.classroomCode}` : ""}</DialogDescription></DialogHeader>
-        {viewing && <div className="space-y-3 text-sm text-ink"><p className="rounded-lg bg-surface-2 p-3 font-semibold">{viewing.kind === "SICK" ? "ลาป่วย" : "ลากิจ"} · {thaiDate(viewing.startDate)}{viewing.endDate === viewing.startDate ? "" : ` ถึง ${thaiDate(viewing.endDate)}`}</p><div><p className="text-xs text-muted">เหตุผลที่ผู้ปกครองแจ้ง</p><p className="mt-1 whitespace-pre-wrap">{viewing.reason}</p></div>{viewing.reviewNote && <div><p className="text-xs text-muted">หมายเหตุจากผู้พิจารณา</p><p className="mt-1 whitespace-pre-wrap">{viewing.reviewNote}</p></div>}<p className="text-xs text-muted">แจ้งครูที่ปรึกษาทาง LINE {viewing.advisorNotifiedCount}/{viewing.advisorTargetCount} บัญชี</p></div>}
+        {viewing && <div className="space-y-3 text-sm text-ink"><p className="rounded-lg bg-surface-2 p-3 font-semibold">{requestKindLabel(viewing.kind)} · {thaiDate(viewing.startDate)}{viewing.endDate === viewing.startDate ? "" : ` ถึง ${thaiDate(viewing.endDate)}`}</p>{viewing.kind === "LATE" && <p className="rounded-xl bg-brand-soft p-3">คาดว่าจะถึง {viewing.expectedArrivalTime ?? "—"} น. (เวลาไทย) · อนุมัติแล้วยกเว้นหัก 10 คะแนนเฉพาะวันที่ขอ โดยไม่แก้เวลาเข้าโรงเรียนจริง</p>}<div><p className="text-xs text-muted">เหตุผลที่ผู้ปกครองแจ้ง</p><p className="mt-1 whitespace-pre-wrap">{viewing.reason}</p></div>{viewing.reviewNote && <div><p className="text-xs text-muted">หมายเหตุจากผู้พิจารณา</p><p className="mt-1 whitespace-pre-wrap">{viewing.reviewNote}</p></div>}<p className="text-xs text-muted">แจ้งครูที่ปรึกษาทาง LINE {viewing.advisorNotifiedCount}/{viewing.advisorTargetCount} บัญชี</p></div>}
         <DialogFooter><button type="button" onClick={() => setViewing(null)} className="min-h-10 rounded-lg border border-line px-4 py-2 text-sm font-semibold">ปิด</button>{viewing?.status === "PENDING" && <><button type="button" onClick={() => { setSelected({ item: viewing, decision: "REJECTED" }); setViewing(null); setNote(""); }} className="min-h-10 rounded-lg border border-line px-4 py-2 text-sm font-semibold">ไม่อนุมัติ</button><button type="button" onClick={() => { setSelected({ item: viewing, decision: "APPROVED" }); setViewing(null); setNote(""); }} className="min-h-10 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">อนุมัติ</button></>}</DialogFooter>
       </DialogContent>
     </Dialog>

@@ -149,4 +149,34 @@ describe("LINE leave menu", () => {
     expect(mocks.handleLeaveLineMessage).not.toHaveBeenCalled();
   });
 
+  it("walks through an explicitly selected child's late request with a time picker and separate confirmation", async () => {
+    await handleLeavePostback("Uparent", "leave|student|student1", undefined, "r", "event");
+    expect(actionItems(mocks.replyLineMessage.mock.lastCall?.[1]).some((item) => item.action.data === "leave|kind|student1|LATE")).toBe(true);
+    await handleLeavePostback("Uparent", "leave|quick|student1|LATE|2026-11-14", undefined, "r", "event");
+    expect(mocks.replyLineMessage.mock.lastCall?.[1].contents.footer.contents[0].action.mode).toBe("time");
+    await handleLeavePostback("Uparent", "leave|time|student1|LATE|2026-11-14", undefined, "r", "event", "10:30");
+    const reason = actionItems(mocks.replyLineMessage.mock.lastCall?.[1])[0].action.data;
+    expect(reason).toBe("leave|reason|student1|LATE|2026-11-14|10:30|traffic");
+    await handleLeavePostback("Uparent", reason!, undefined, "r", "event");
+    expect(cardText(mocks.replyLineMessage.mock.lastCall?.[1])).toContain("10:30");
+    expect(cardText(mocks.replyLineMessage.mock.lastCall?.[1])).toContain("5/5");
+    expect(mocks.handleLeaveLineMessage).not.toHaveBeenCalled();
+    await handleLeavePostback("Uparent", "leave|confirm|student1|LATE|2026-11-14|10:30|traffic", undefined, "r", "event");
+    expect(mocks.handleLeaveLineMessage).toHaveBeenCalledWith("Uparent", "ขอมาสาย 68-0421 2026-11-14 10:30 การเดินทางล่าช้า", "r", "event");
+  });
+  it("never creates a late request for a time that has already passed", async () => {
+    await handleLeavePostback("Uparent", "leave|time|student1|LATE|2026-11-14", undefined, "r", "event", "08:30");
+    expect(mocks.handleLeaveLineMessage).not.toHaveBeenCalled();
+    expect(mocks.replyText).toHaveBeenCalledWith("r", expect.stringContaining("ล่วงหน้า"));
+  });
+  it("does not offer multi-day or past dates for late permissions", async () => {
+    await handleLeavePostback("Uparent", "leave|kind|student1|LATE", undefined, "r", "event");
+    const json = cardText(mocks.replyLineMessage.mock.lastCall?.[1]);
+    expect(json).not.toContain("หลายวัน");
+    expect(json).toContain('"min":"2026-11-14"');
+    await handleLeavePostback("Uparent", "leave|quick|student1|LATE|2026-11-13", undefined, "r", "event");
+    expect(mocks.handleLeaveLineMessage).not.toHaveBeenCalled();
+    expect(mocks.replyText).toHaveBeenCalled();
+  });
+
 });

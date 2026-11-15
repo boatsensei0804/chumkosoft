@@ -17,11 +17,11 @@ interface LineTextMessageEvent {
   replyToken?: string;
   source?: { userId?: string };
   message?: { id?: string; type?: string; text?: string };
-  postback?: { data?: string; params?: { date?: string } };
+  postback?: { data?: string; params?: { date?: string; time?: string } };
 }
 
 function isLeavePostback(event: unknown): event is LineTextMessageEvent & {
-  webhookEventId: string; replyToken: string; source: { userId: string }; postback: { data: string; params?: { date?: string } };
+  webhookEventId: string; replyToken: string; source: { userId: string }; postback: { data: string; params?: { date?: string; time?: string } };
 } {
   if (typeof event !== "object" || event === null) return false;
   const e = event as LineTextMessageEvent;
@@ -69,7 +69,7 @@ export async function POST(request: Request): Promise<Response> {
     events.map(async (event) => {
       if (isTextMessage(event)) {
         try {
-          if (["แจ้งลา", "ลา"].includes(event.message.text.trim())) {
+          if (["แจ้งลา", "ลา", "แจ้งมาสาย", "ขอมาสาย"].includes(event.message.text.trim())) {
             await startLineLeaveChoices(event.source.userId, event.replyToken);
           } else if (["สถานะการลา", "คำขอล่าสุด"].includes(event.message.text.trim())) {
             await showLineLeaveHistory(event.source.userId, event.replyToken);
@@ -78,11 +78,11 @@ export async function POST(request: Request): Promise<Response> {
           }
         } catch (error) {
           console.error("[line webhook] message processing failed", error);
-          if (/^(?:แจ้งลา|ลา)(?:\s|$)/u.test(event.message.text.trim())) leaveProcessingFailed = true;
+          if (/^(?:แจ้งลา|ลา|แจ้งมาสาย|ขอมาสาย)(?:\s|$)/u.test(event.message.text.trim())) leaveProcessingFailed = true;
         }
       } else if (isLeavePostback(event)) {
         try {
-          await handleLeavePostback(event.source.userId, event.postback.data, event.postback.params?.date, event.replyToken, event.webhookEventId);
+          await handleLeavePostback(event.source.userId, event.postback.data, event.postback.params?.date, event.replyToken, event.webhookEventId, event.postback.params?.time);
         } catch (error) {
           console.error("[line webhook] leave postback processing failed", error);
           leaveProcessingFailed = true;

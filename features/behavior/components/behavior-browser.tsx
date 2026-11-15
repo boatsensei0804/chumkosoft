@@ -61,7 +61,7 @@ export default function BehaviorBrowser({ data }: { data: Data }): React.ReactNo
   }
 
   return <div className="space-y-5">
-    <div className="rounded-xl border border-line bg-brand-soft p-4 text-sm text-ink">คะแนนเริ่มต้น <strong>100</strong> ต่อภาคเรียน · การเข้าโรงเรียนสายหัก <strong>10</strong> คะแนนต่อวัน ไม่หักซ้ำเมื่อสแกนหลายครั้ง</div>
+    <div className="rounded-xl border border-line bg-brand-soft p-4 text-sm text-ink">คะแนนเริ่มต้น <strong>100</strong> ต่อภาคเรียน · การเข้าโรงเรียนสายหัก <strong>10</strong> คะแนนต่อวัน ไม่หักซ้ำเมื่อสแกนหลายครั้ง · ยกเว้นวันที่ครูอนุมัติขอมาสาย</div>
     {!data.term ? <p className="rounded-xl border border-line bg-card p-8 text-center text-sm text-muted">ยังไม่มีภาคเรียนที่ใช้งาน</p> : <>
       <p className="text-sm font-semibold text-muted">{data.term.name}</p>
       {message && <p role="status" className="rounded-lg bg-brand-soft px-4 py-3 text-sm text-ink">{message}</p>}

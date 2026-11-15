@@ -1,5 +1,7 @@
 import "server-only";
 
+import { lockLateBehaviorDay, refundApprovedLatePoints } from "@/features/behavior/services/late-points";
+import { requestTitle, validArrivalTime } from "@/features/leave/request-kind";
 import prisma from "@/lib/prisma";
 import { leaveCard } from "@/features/leave/leave-card";
 import { pushLineMessage } from "@/lib/line";
@@ -16,7 +18,7 @@ function daysInRange(start: Date, end: Date): Date[] {
 export async function listLeaveRequests(user: CurrentUser) {
   const scope = user.role === "ADMIN" ? {} : { classroom: { advisors: { some: { staffId: user.staffId ?? "__no_staff__" } } } };
   const select = {
-      id: true, kind: true, startDate: true, endDate: true, reason: true, status: true,
+      id: true, kind: true, expectedArrivalTime: true, startDate: true, endDate: true, reason: true, status: true,
       advisorNotifiedCount: true, advisorLineTargets: true, reviewNote: true, createdAt: true,
       student: { select: { studentCode: true, firstName: true, lastName: true } },
       classroom: { select: { code: true } },
@@ -38,8 +40,10 @@ export async function reviewLeaveRequest(id: string, decision: "APPROVED" | "REJ
   if (request.status !== "PENDING") return { ok: false, message: "คำขอนี้ถูกพิจารณาแล้ว กรุณาโหลดหน้าใหม่" };
   const dates = daysInRange(request.startDate, request.endDate);
   if (dates.length < 1 || dates.length > 31) return { ok: false, message: "ช่วงวันที่ลาไม่ถูกต้อง" };
+  if (request.kind === "LATE" && (dates.length !== 1 || !validArrivalTime(request.expectedArrivalTime ?? ""))) return { ok: false, message: "ข้อมูลวันที่หรือเวลาขอมาสายไม่ถูกต้อง" };
   const result = await prisma.$transaction(async (tx) => {
-    if (decision === "APPROVED") {
+    if (request.kind === "LATE" && decision === "APPROVED") await lockLateBehaviorDay(tx, request.termId, request.studentId, request.startDate);
+    if (decision === "APPROVED" && request.kind !== "LATE") {
       const [entries, rollCalls] = await Promise.all([
         tx.schoolEntry.findMany({ where: { studentId: request.studentId, date: { gte: request.startDate, lte: request.endDate }, checkInAt: { not: null }, isDeleted: false }, select: { date: true } }),
         tx.dailyAttendance.findMany({ where: { studentId: request.studentId, termId: request.termId, date: { gte: request.startDate, lte: request.endDate }, status: { in: ["PRESENT", "LATE"] }, isDeleted: false }, select: { date: true } }),
@@ -50,7 +54,7 @@ export async function reviewLeaveRequest(id: string, decision: "APPROVED" | "REJ
       status: decision, reviewNote: note.trim() || null, reviewedByUserId: user.id, reviewedAt: new Date(),
     } });
     if (!changed.count) return { ok: false, message: "คำขอนี้ถูกพิจารณาแล้ว กรุณาโหลดหน้าใหม่" };
-    if (decision === "APPROVED") {
+    if (decision === "APPROVED" && request.kind !== "LATE") {
       for (const date of dates) {
         await tx.dailyAttendance.upsert({
           where: { termId_studentId_date: { termId: request.termId, studentId: request.studentId, date } },
@@ -61,14 +65,15 @@ export async function reviewLeaveRequest(id: string, decision: "APPROVED" | "REJ
         });
       }
     }
-    return { ok: true, message: decision === "APPROVED" ? "อนุมัติและบันทึกสถานะลาแล้ว" : "ไม่อนุมัติคำขอลาแล้ว" };
+    if (decision === "APPROVED" && request.kind === "LATE") await refundApprovedLatePoints(tx, request.termId, request.studentId, request.startDate, user.id);
+    return { ok: true, message: decision === "APPROVED" ? request.kind === "LATE" ? "อนุมัติขอมาสายและยกเว้นการหัก 10 คะแนนในวันที่ขอแล้ว" : "อนุมัติและบันทึกสถานะลาแล้ว" : "ไม่อนุมัติคำขอแล้ว" };
   });
   if (!result.ok) return result;
   await logAudit({ actorId: user.id, action: decision === "APPROVED" ? "leave.request.approve" : "leave.request.reject", targetType: "leaveRequest", targetId: id });
   const student = await prisma.student.findUnique({ where: { id: request.studentId }, select: { firstName: true, lastName: true } });
   const statusText = decision === "APPROVED" ? "อนุมัติแล้ว" : "ไม่อนุมัติ";
   const dateLabel = (date: Date) => new Intl.DateTimeFormat("th-TH", { timeZone: "UTC", dateStyle: "medium" }).format(date);
-  const reply = `คำขอลา ${student?.firstName ?? "นักเรียน"} ${student?.lastName ?? ""}: ${statusText}\n${dateLabel(request.startDate)}${request.startDate.getTime() === request.endDate.getTime() ? "" : ` ถึง ${dateLabel(request.endDate)}`}${note.trim() ? `\nหมายเหตุ: ${note.trim()}` : ""}`;
+  const reply = `${requestTitle(request.kind)} ${student?.firstName ?? "นักเรียน"} ${student?.lastName ?? ""}: ${statusText}\n${dateLabel(request.startDate)}${request.startDate.getTime() === request.endDate.getTime() ? "" : ` ถึง ${dateLabel(request.endDate)}`}${request.kind === "LATE" ? `\nคาดว่าจะถึง ${request.expectedArrivalTime} น.${decision === "APPROVED" ? "\nยกเว้นการหักคะแนนมาสายเฉพาะวันที่ขอ เวลามาถึงจริงยังบันทึกตามการสแกน" : ""}` : ""}${note.trim() ? `\nหมายเหตุ: ${note.trim()}` : ""}`;
   const sent = await pushLineMessage(request.parentLineUserId, leaveCard(statusText, reply, [{ type: "postback", label: "ดูคำขอล่าสุด", data: "leave|history", displayText: "ดูคำขอล่าสุด" }], decision === "APPROVED" ? "success" : "danger", decision === "APPROVED" ? "approved" : "rejected"));
   return sent ? result : { ...result, message: `${result.message} แต่แจ้งผู้ปกครองทาง LINE ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อ` };
 }

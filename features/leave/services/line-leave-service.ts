@@ -1,5 +1,6 @@
 import "server-only";
 
+import { requestKindLabel, requestTitle, validArrivalTime, type AttendanceRequestKind } from "@/features/leave/request-kind";
 import { randomUUID } from "node:crypto";
 import { leaveCard } from "@/features/leave/leave-card";
 import prisma from "@/lib/prisma";
@@ -39,12 +40,15 @@ async function linkedStudentHelp(lineUserId: string): Promise<string> {
 /** Returns true when the message was a leave command and has been handled. */
 export async function handleLeaveLineMessage(lineUserId: string, text: string, replyToken: string, lineMessageId: string): Promise<boolean> {
   const trimmed = text.trim();
-  if (!/^ลา(?:\s|$)/u.test(trimmed)) return false;
+  if (!/^(?:ลา|ขอมาสาย)(?:\s|$)/u.test(trimmed)) return false;
+  const lateMatch = /^ขอมาสาย\s+(\S+)\s+(\S+)\s+(\S+)\s+([\s\S]+)$/u.exec(trimmed);
   const match = /^ลา\s+(\S+)\s+(ป่วย|กิจ|ลาป่วย|ลากิจ)\s+(\S+)(?:\s+ถึง\s+(\S+))?\s+([\s\S]+)$/u.exec(trimmed);
-  if (!match) { await replyText(replyToken, HELP + await linkedStudentHelp(lineUserId)); return true; }
+  if (!match && !lateMatch) { await replyText(replyToken, HELP + await linkedStudentHelp(lineUserId)); return true; }
 
-  const [, studentCode, kindText, startText, endText, rawReason] = match;
-  const kind = kindText.includes("ป่วย") ? "SICK" as const : "PERSONAL" as const;
+  const [, studentCode, kindText, startText, endText, rawReason] = match ?? ["", lateMatch![1], "LATE", lateMatch![2], undefined, lateMatch![4]];
+  const kind: AttendanceRequestKind = lateMatch ? "LATE" : kindText.includes("ป่วย") ? "SICK" : "PERSONAL";
+  const expectedArrivalTime = lateMatch?.[3] ?? null;
+  if (kind === "LATE" && !validArrivalTime(expectedArrivalTime ?? "")) { await replyText(replyToken, "กรุณาเลือกเวลาถึงโรงเรียนให้ถูกต้องในรูปแบบ HH:mm"); return true; }
   const startDate = parseDate(startText);
   const endDate = parseDate(endText ?? startText);
   const reason = rawReason.trim();
@@ -77,6 +81,12 @@ export async function handleLeaveLineMessage(lineUserId: string, text: string, r
 
   const priorMessage = await prisma.leaveRequest.findUnique({ where: { lineMessageId }, select: { id: true } });
   if (priorMessage) { await replyText(replyToken, "ระบบได้รับคำขอลานี้แล้ว กรุณารอครูที่ปรึกษาตรวจสอบ"); await notifyAdvisorsOfLeaveRequest(priorMessage.id); return true; }
+  if (kind === "LATE") {
+    const expectedAt = new Date(`${startDate.toISOString().slice(0, 10)}T${expectedArrivalTime}:00+07:00`);
+    if (expectedAt.getTime() <= Date.now()) { await replyText(replyToken, "ต้องแจ้งขอมาสายล่วงหน้า กรุณาเลือกวันที่และเวลาที่คาดว่าจะถึงใหม่"); return true; }
+    const arrived = await prisma.schoolEntry.findFirst({ where: { studentId: student.id, date: startDate, checkInAt: { not: null }, isDeleted: false }, select: { id: true } });
+    if (arrived) { await replyText(replyToken, "มีบันทึกเข้าโรงเรียนแล้วในวันที่ขอ กรุณาติดต่อครูที่ปรึกษาเพื่อพิจารณา"); return true; }
+  }
   const overlap = await prisma.leaveRequest.findFirst({ where: {
     studentId: student.id, status: { in: ["PENDING", "APPROVED"] }, startDate: { lte: endDate }, endDate: { gte: startDate },
   }, select: { id: true } });
@@ -88,7 +98,7 @@ export async function handleLeaveLineMessage(lineUserId: string, text: string, r
   try {
     request = await prisma.leaveRequest.create({ data: {
       studentId: student.id, termId: term.id, classroomId: enrollment.classroomId,
-      parentLineUserId: lineUserId, lineMessageId, kind, startDate, endDate, reason,
+      parentLineUserId: lineUserId, lineMessageId, kind, expectedArrivalTime, startDate, endDate, reason,
       advisorLineTargets, advisorNotifyRetryKey: randomUUID(),
     } });
   } catch (error) {
@@ -101,7 +111,7 @@ export async function handleLeaveLineMessage(lineUserId: string, text: string, r
     throw error;
   }
   await logAudit({ action: "leave.request.create", targetType: "leaveRequest", targetId: request.id, detail: `${student.studentCode ?? studentCode} · ${kind}` });
-  await replyLineMessage(replyToken, leaveCard("รับคำขอลาแล้ว", `${student.firstName} ${student.lastName}\n${kind === "SICK" ? "ลาป่วย" : "ลากิจ"} ${thaiDate(startDate)}${startDate.getTime() === endDate.getTime() ? "" : ` ถึง ${thaiDate(endDate)}`}\nเหตุผล: ${reason}\n\nสถานะ: รอครูที่ปรึกษาอนุมัติ`, [
+  await replyLineMessage(replyToken, leaveCard(kind === "LATE" ? "รับคำขอมาสายแล้ว" : "รับคำขอลาแล้ว", `${student.firstName} ${student.lastName}\n${requestKindLabel(kind)} ${thaiDate(startDate)}${startDate.getTime() === endDate.getTime() ? "" : ` ถึง ${thaiDate(endDate)}`}${expectedArrivalTime ? `\nคาดว่าจะถึง ${expectedArrivalTime} น.` : ""}\nเหตุผล: ${reason}\n\nสถานะ: รอครูที่ปรึกษาอนุมัติ${kind === "LATE" ? "\nเมื่ออนุมัติจะยกเว้นหัก 10 คะแนนเฉพาะวันที่ขอ และยังต้องสแกนเวลาเข้าโรงเรียนจริง" : ""}`, [
     { type: "postback", label: "ดูสถานะคำขอ", data: "leave|history", displayText: "ดูสถานะคำขอ" },
     { type: "postback", label: "แจ้งลาให้นักเรียนอีกคน", data: "leave|start", displayText: "แจ้งลาให้นักเรียนอีกคน" },
   ], "brand", "pending"));
@@ -111,7 +121,7 @@ export async function handleLeaveLineMessage(lineUserId: string, text: string, r
 
 export async function notifyAdvisorsOfLeaveRequest(id: string): Promise<{ accepted: boolean; code: string }> {
   const request = await prisma.leaveRequest.findUnique({ where: { id }, select: {
-    id: true, classroomId: true, kind: true, startDate: true, endDate: true, reason: true,
+    id: true, classroomId: true, kind: true, expectedArrivalTime: true, startDate: true, endDate: true, reason: true,
     advisorLineTargets: true, advisorNotifyRetryKey: true, advisorNotifiedCount: true,
     student: { select: { firstName: true, lastName: true, studentCode: true } },
     classroom: { select: { code: true } },
@@ -128,7 +138,7 @@ export async function notifyAdvisorsOfLeaveRequest(id: string): Promise<{ accept
     retryKey = randomUUID();
     await prisma.leaveRequest.update({ where: { id }, data: { advisorLineTargets: targets, advisorNotifyRetryKey: retryKey } });
   }
-  const text = `คำขอลาใหม่ · รออนุมัติ\n${request.student.studentCode} ${request.student.firstName} ${request.student.lastName} · ห้อง ${request.classroom.code}\n${request.kind === "SICK" ? "ลาป่วย" : "ลากิจ"} ${thaiDate(request.startDate)}${request.startDate.getTime() === request.endDate.getTime() ? "" : ` ถึง ${thaiDate(request.endDate)}`}\nเหตุผล: ${request.reason}\nตรวจคำขอ: https://chumkosoft.com/dashboard/leave-requests`;
+  const text = `${requestTitle(request.kind)}ใหม่ · รออนุมัติ\n${request.student.studentCode} ${request.student.firstName} ${request.student.lastName} · ห้อง ${request.classroom.code}\n${requestKindLabel(request.kind)} ${thaiDate(request.startDate)}${request.startDate.getTime() === request.endDate.getTime() ? "" : ` ถึง ${thaiDate(request.endDate)}`}${request.expectedArrivalTime ? `\nคาดว่าจะถึง ${request.expectedArrivalTime} น.\nอนุมัติแล้วจะยกเว้นหัก 10 คะแนนในวันที่ขอ` : ""}\nเหตุผล: ${request.reason}\nตรวจคำขอ: https://chumkosoft.com/dashboard/leave-requests`;
   const result = await sendLineTextToUsers(targets, text, retryKey);
   if (result.accepted) await prisma.leaveRequest.update({ where: { id }, data: { advisorNotifiedCount: targets.length } });
   return result;

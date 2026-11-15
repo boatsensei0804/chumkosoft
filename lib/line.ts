@@ -17,7 +17,7 @@ const MULTICAST_URL = "https://api.line.me/v2/bot/message/multicast";
 
 export type LineQuickReplyAction =
   | { type: "postback"; label: string; data: string; displayText?: string }
-  | { type: "datetimepicker"; label: string; data: string; mode: "date"; initial?: string; min?: string; max?: string };
+  | { type: "datetimepicker"; label: string; data: string; mode: "date" | "time"; initial?: string; min?: string; max?: string };
 
 export interface LineTextMessage {
   type: "text";
