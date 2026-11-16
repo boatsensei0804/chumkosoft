@@ -40,7 +40,7 @@ export async function sendAdvisorDigests(): Promise<{ sent: number; failed: numb
       const message = `สรุปการเข้าโรงเรียน ${date}\n${lines.join("\n\n")}\n\nดูรายละเอียด: https://chumkosoft.com/dashboard/attendance?mode=school&date=${date}`;
       const retryKey = randomUUID();
       const delivery = await sendLineTextToUsers([advisor.lineUserId], message, retryKey);
-      await prisma.lineOutboundMessage.create({ data: { kind: "TEACHER_DIGEST", title: `สรุปเข้าเรียนครู · ${date}`, body: message, recipientId: advisor.lineUserId, status: delivery.accepted ? "ACCEPTED" : "FAILED", errorCode: delivery.accepted ? null : delivery.code, retryKey } });
+      await prisma.lineOutboundMessage.create({ data: { kind: "TEACHER_DIGEST", title: `สรุปเข้าเรียนครู · ${date}`, body: message, recipientId: advisor.lineUserId, status: delivery.accepted ? "ACCEPTED" : "FAILED", errorCode: delivery.accepted ? null : delivery.code, retryKey, requestId: delivery.requestId, acceptedRequestId: delivery.acceptedRequestId } });
       if (!delivery.accepted) throw new Error("LINE push failed");
       await redis.set(key, "sent", "EX", 60 * 60 * 36);
       sent += 1;

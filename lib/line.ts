@@ -40,13 +40,13 @@ export function isLineConfigured(): boolean {
 
 /** LINE accepts up to 500 IDs per multicast request. A stable retry key keeps
  * a retried request from sending the same announcement twice. */
-export async function sendLineMessageToUsers(to: string[], message: LineTextMessage | LineAnnouncementCard | LineFlexMessage | LineImageMessage | (LineTextMessage | LineAnnouncementCard | LineFlexMessage | LineImageMessage)[], retryKey: string): Promise<{ accepted: boolean; code: string }> {
+export async function sendLineMessageToUsers(to: string[], message: LineTextMessage | LineAnnouncementCard | LineFlexMessage | LineImageMessage | (LineTextMessage | LineAnnouncementCard | LineFlexMessage | LineImageMessage)[], retryKey: string): Promise<{ accepted: boolean; code: string; requestId: string | null; acceptedRequestId: string | null }> {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-  if (!token) return { accepted: false, code: "NOT_CONFIGURED" };
-  if (to.length < 1 || to.length > 500) return { accepted: false, code: "INVALID_RECIPIENT_COUNT" };
+  if (!token) return { accepted: false, code: "NOT_CONFIGURED", requestId: null, acceptedRequestId: null };
+  if (to.length < 1 || to.length > 500) return { accepted: false, code: "INVALID_RECIPIENT_COUNT", requestId: null, acceptedRequestId: null };
   const messages = Array.isArray(message) ? message : [message];
-  if (messages.length < 1 || messages.length > 5) return { accepted: false, code: "INVALID_MESSAGE_COUNT" };
-  if (!(await isLinePushEnabled())) return { accepted: false, code: "SENDING_PAUSED" };
+  if (messages.length < 1 || messages.length > 5) return { accepted: false, code: "INVALID_MESSAGE_COUNT", requestId: null, acceptedRequestId: null };
+  if (!(await isLinePushEnabled())) return { accepted: false, code: "SENDING_PAUSED", requestId: null, acceptedRequestId: null };
   try {
     const response = await fetch(to.length === 1 ? PUSH_URL : MULTICAST_URL, {
       method: "POST",
@@ -59,13 +59,13 @@ export async function sendLineMessageToUsers(to: string[], message: LineTextMess
       signal: AbortSignal.timeout(15_000),
     });
     // LINE returns 409 when this retry key was already accepted.
-    return { accepted: response.ok || response.status === 409, code: `HTTP_${response.status}` };
+    return { accepted: response.ok || response.status === 409, code: `HTTP_${response.status}`, requestId: response.headers.get("x-line-request-id"), acceptedRequestId: response.headers.get("x-line-accepted-request-id") };
   } catch {
-    return { accepted: false, code: "NETWORK_ERROR" };
+    return { accepted: false, code: "NETWORK_ERROR", requestId: null, acceptedRequestId: null };
   }
 }
 
-export async function sendLineTextToUsers(to: string[], text: string, retryKey: string): Promise<{ accepted: boolean; code: string }> {
+export async function sendLineTextToUsers(to: string[], text: string, retryKey: string): Promise<{ accepted: boolean; code: string; requestId: string | null; acceptedRequestId: string | null }> {
   return sendLineMessageToUsers(to, { type: "text", text }, retryKey);
 }
 

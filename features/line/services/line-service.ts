@@ -23,7 +23,7 @@ export async function notifyGuardiansOfCheckIn(studentId: string, studentName: s
   await Promise.all(targets.map(async (to) => {
     const retryKey = randomUUID();
     const result = await sendLineTextToUsers([to], message, retryKey);
-    await prisma.lineOutboundMessage.create({ data: { kind: "ATTENDANCE", title: `เข้าเรียน · ${studentName}`, body: message, recipientId: to, status: result.accepted ? "ACCEPTED" : "FAILED", errorCode: result.accepted ? null : result.code, retryKey } });
+    await prisma.lineOutboundMessage.create({ data: { kind: "ATTENDANCE", title: `เข้าเรียน · ${studentName}`, body: message, recipientId: to, status: result.accepted ? "ACCEPTED" : "FAILED", errorCode: result.accepted ? null : result.code, retryKey, requestId: result.requestId, acceptedRequestId: result.acceptedRequestId } });
   }));
 }
 

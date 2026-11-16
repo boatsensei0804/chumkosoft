@@ -24,12 +24,11 @@ export async function getLineApiSummary() {
 export async function retryFailedLineDelivery(id: string) {
   const row = await prisma.lineOutboundMessage.findUnique({ where: { id } });
   if (!row || row.status !== "FAILED") return { ok: false, message: "รายการนี้ไม่อยู่ในสถานะส่งไม่สำเร็จ" };
+  if (Date.now() - row.createdAt.getTime() > 24 * 60 * 60 * 1000) return { ok: false, message: "LINE retry key มีอายุ 24 ชั่วโมง กรุณาสร้างข้อความใหม่แทนการส่งซ้ำรายการเก่า" };
   const { isLinePushEnabled } = await import("@/features/line/services/line-delivery-settings");
   if (!(await isLinePushEnabled())) return { ok: false, message: "กำลังพักการส่ง LINE อยู่" };
   const { sendLineTextToUsers } = await import("@/lib/line");
-  const { randomUUID } = await import("node:crypto");
-  const key = randomUUID();
-  const result = await sendLineTextToUsers([row.recipientId], row.body, key);
-  await prisma.lineOutboundMessage.create({ data: { kind: row.kind, title: row.title, body: row.body, recipientId: row.recipientId, recipientLabel: row.recipientLabel, status: result.accepted ? "ACCEPTED" : "FAILED", errorCode: result.accepted ? null : result.code, retryKey: key } });
-  return { ok: result.accepted, message: result.accepted ? "LINE รับคำขอส่งซ้ำแล้ว" : `ส่งไม่สำเร็จ (${result.code})` };
+  const result = await sendLineTextToUsers([row.recipientId], row.body, row.retryKey);
+  await prisma.lineOutboundMessage.update({ where: { id }, data: { status: result.accepted ? "ACCEPTED" : "FAILED", errorCode: result.accepted ? null : result.code, attempts: { increment: 1 }, requestId: result.requestId, acceptedRequestId: result.acceptedRequestId } });
+  return { ok: result.accepted, message: result.accepted ? result.code === "HTTP_409" ? "LINE ยืนยันว่าคำขอเดิมถูกรับแล้ว ไม่ส่งข้อความซ้ำ" : "LINE รับคำขอส่งแล้ว (ยืนยันการรับคำขอจาก API)" : `LINE ไม่รับคำขอ (${result.code})` };
 }

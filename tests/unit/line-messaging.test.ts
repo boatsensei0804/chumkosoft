@@ -26,8 +26,8 @@ describe("LINE message delivery", () => {
     vi.stubGlobal("fetch", fetchMock);
     expect(await pushText("Uparent", "เข้าโรงเรียน")).toBe(false);
     expect(await pushLineMessage("Uparent", { type: "text", text: "อนุมัติลา" })).toBe(false);
-    expect(await sendLineTextToUsers(["Uteacher"], "แจ้งครู", "key")).toEqual({ accepted: false, code: "SENDING_PAUSED" });
-    expect(await sendLineMessageToUsers(["Ua", "Ub"], { type: "text", text: "ประกาศ" }, "key")).toEqual({ accepted: false, code: "SENDING_PAUSED" });
+    expect(await sendLineTextToUsers(["Uteacher"], "แจ้งครู", "key")).toEqual({ accepted: false, code: "SENDING_PAUSED", requestId: null, acceptedRequestId: null });
+    expect(await sendLineMessageToUsers(["Ua", "Ub"], { type: "text", text: "ประกาศ" }, "key")).toEqual({ accepted: false, code: "SENDING_PAUSED", requestId: null, acceptedRequestId: null });
     expect(fetchMock).not.toHaveBeenCalled();
     expect(await replyText("reply", "ผูกบัญชีสำเร็จ")).toBe(true);
     expect(await replyLineMessage("reply", { type: "text", text: "เลือกวันลา" })).toBe(true);
@@ -53,7 +53,7 @@ describe("LINE message delivery", () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 409 });
     vi.stubGlobal("fetch", fetchMock);
     const result = await sendLineTextToUsers(["Uteacher"], "คำขอลา", "retry-key");
-    expect(result).toEqual({ accepted: true, code: "HTTP_409" });
+    expect(result).toEqual({ accepted: true, code: "HTTP_409", requestId: null, acceptedRequestId: null });
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toContain("/push");
     expect(options.headers["X-Line-Retry-Key"]).toBe("retry-key");
@@ -64,7 +64,7 @@ describe("LINE message delivery", () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 429 });
     vi.stubGlobal("fetch", fetchMock);
     const result = await sendLineTextToUsers(["Ua", "Ub"], "คำขอลา", "retry-key");
-    expect(result).toEqual({ accepted: false, code: "HTTP_429" });
+    expect(result).toEqual({ accepted: false, code: "HTTP_429", requestId: null, acceptedRequestId: null });
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toContain("/multicast");
     expect(JSON.parse(options.body).to).toEqual(["Ua", "Ub"]);
