@@ -843,3 +843,11 @@ model ScanSetting {
   updatedAt     DateTime @updatedAt
   createdAt     DateTime @default(now())
 }
+
+// Global switch for quota-consuming outbound LINE messages. Replies stay available.
+model LineDeliverySetting {
+  id              Int      @id @default(1)
+  pushEnabled     Boolean  @default(true)
+  updatedByUserId String?
+  updatedAt       DateTime @updatedAt
+}

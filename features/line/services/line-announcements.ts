@@ -1,3 +1,4 @@
+import { isLinePushEnabled } from "./line-delivery-settings";
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -70,6 +71,7 @@ export async function createAndSendLineAnnouncement(input: AnnouncementInput, ac
     return { ok: false, message: "กรุณาตรวจสอบประเภท หัวข้อ และเนื้อหาประกาศ" };
   }
   if (!isLineConfigured()) return { ok: false, message: "ยังไม่ได้ตั้งค่า LINE Channel access token บนเซิร์ฟเวอร์" };
+  if (!(await isLinePushEnabled())) return { ok: false, message: "พักการส่ง LINE อยู่ กรุณาเปิดการส่งก่อน" };
 
   let image: Awaited<ReturnType<typeof prepareAnnouncementImage>> | null = null;
   if (imageFile) {
@@ -136,11 +138,13 @@ export async function createAndSendLineAnnouncement(input: AnnouncementInput, ac
 
 export async function deliverLineAnnouncement(id: string, actorId: string): Promise<AnnouncementResult> {
   if (!isLineConfigured()) return { ok: false, message: "ยังไม่ได้ตั้งค่า LINE Channel access token บนเซิร์ฟเวอร์" };
+  if (!(await isLinePushEnabled())) return { ok: false, message: "พักการส่ง LINE อยู่ กรุณาเปิดการส่งก่อน" };
   const announcement = await prisma.lineAnnouncement.findUnique({
     where: { id },
     include: { batches: { orderBy: { batchNumber: "asc" } } },
   });
   if (!announcement || announcement.isDeleted) return { ok: false, message: "ไม่พบประกาศนี้หรือประกาศถูกลบแล้ว" };
+  let paused = false;
   const card = announcementCard(announcement.kind, announcement.title, announcement.body);
   for (const batch of announcement.batches) {
     if (batch.status === "ACCEPTED") continue;
@@ -148,6 +152,7 @@ export async function deliverLineAnnouncement(id: string, actorId: string): Prom
     if (!current || current.isDeleted) return { ok: false, message: "ประกาศถูกลบแล้ว ไม่ส่งรายการที่เหลือต่อ" };
     const recipients = Array.isArray(batch.recipients) ? batch.recipients.filter((value): value is string => typeof value === "string") : [];
     const result = await sendLineMessageToUsers(recipients, announcement.imageId ? [card, announcementImageMessage(announcement.imageId)] : card, batch.retryKey);
+    if (result.code === "SENDING_PAUSED") { paused = true; break; }
     await prisma.lineAnnouncementBatch.update({
       where: { id: batch.id },
       data: { status: result.accepted ? "ACCEPTED" : "FAILED", errorCode: result.accepted ? null : result.code },
@@ -164,7 +169,7 @@ export async function deliverLineAnnouncement(id: string, actorId: string): Prom
     id,
     accepted,
     remaining,
-    message: remaining === 0 ? `LINE รับคำขอส่งถึง ${accepted} บัญชีแล้ว` : `LINE รับคำขอส่งแล้ว ${accepted} บัญชี ยังไม่สำเร็จ ${remaining} บัญชี ตรวจรายการและลองส่งต่อได้`,
+    message: paused && remaining > 0 ? `พักการส่ง LINE แล้ว รับคำขอไปแล้ว ${accepted} บัญชี เหลือ ${remaining} บัญชีที่ยังไม่ส่ง` : remaining === 0 ? `LINE รับคำขอส่งถึง ${accepted} บัญชีแล้ว` : `LINE รับคำขอส่งแล้ว ${accepted} บัญชี ยังไม่สำเร็จ ${remaining} บัญชี ตรวจรายการและลองส่งต่อได้`,
   };
 }
 

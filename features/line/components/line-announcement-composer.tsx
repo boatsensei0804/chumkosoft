@@ -27,6 +27,7 @@ interface HistoryItem {
 }
 
 function failureLabel(code: string | null): string {
+  if (code === "SENDING_PAUSED") return "พักการส่ง LINE อยู่";
   if (code === "HTTP_401") return "LINE ปฏิเสธโทเคน (401)";
   if (code === "HTTP_403") return "โทเคนไม่มีสิทธิ์ส่ง (403)";
   if (code === "HTTP_429") return "โควตาหรืออัตราส่ง LINE เต็ม";
@@ -35,7 +36,7 @@ function failureLabel(code: string | null): string {
   return code ? `LINE ตอบ ${code}` : "รอส่งต่อ";
 }
 
-export default function LineAnnouncementComposer({ recipientCount, configured, history, audienceOptions }: { recipientCount: number; configured: boolean; history: HistoryItem[]; audienceOptions: AudienceOptions }): React.ReactNode {
+export default function LineAnnouncementComposer({ recipientCount, configured, history, audienceOptions, sendingEnabled = true }: { sendingEnabled?: boolean; recipientCount: number; configured: boolean; history: HistoryItem[]; audienceOptions: AudienceOptions }): React.ReactNode {
   const router = useRouter();
   const [audience, setAudience] = useState<AnnouncementAudience>({ mode: "all" });
   const [audiencePreview, setAudiencePreview] = useState<{ count: number; fingerprint: string; labels: string[] } | null>(null);
@@ -170,7 +171,7 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
         </section>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted">ส่งถึงบัญชี LINE ที่ผูกกับระบบเท่านั้น · นับบัญชีที่ซ้ำเพียงครั้งเดียว</p>
-          <button type="button" disabled={!configured || !audienceValid || !valid || pending || preparing} onClick={prepareReview}
+          <button type="button" disabled={!sendingEnabled || !configured || !audienceValid || !valid || pending || preparing} onClick={prepareReview}
             className="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
             <Send className="size-4" /> {preparing ? "กำลังตรวจผู้รับ…" : "ตรวจสอบผู้รับและข้อความ"}
           </button>
@@ -212,7 +213,7 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
             </div>
             <div className="flex flex-wrap items-center gap-3 text-sm">
               <span className={remaining === 0 ? "text-success" : "text-warning"}>{remaining === 0 ? <CheckCircle2 className="mr-1 inline size-4" /> : null}LINE รับแล้ว {item.accepted}/{item.recipientCount}</span>
-              {remaining > 0 && <button type="button" disabled={pending || !configured} onClick={() => retry(item.id)} className="rounded-lg border border-line px-3 py-1.5 font-semibold text-brand-ink disabled:opacity-50">{item.failed ? "ลองส่งต่อ" : "ส่งต่อ"}</button>}
+              {remaining > 0 && <button type="button" disabled={pending || !sendingEnabled || !configured} onClick={() => retry(item.id)} className="rounded-lg border border-line px-3 py-1.5 font-semibold text-brand-ink disabled:opacity-50">{item.failed ? "ลองส่งต่อ" : "ส่งต่อ"}</button>}
               <button type="button" disabled={pending} onClick={() => { setDeleteError(""); setDeleting(item); }} aria-label={`ลบประกาศ ${item.title}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-line px-3 text-sm font-semibold text-danger hover:bg-danger-soft disabled:opacity-50"><Trash2 className="size-4" />ลบ</button>
             </div>
           </div>;
@@ -243,7 +244,7 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
         </label>
         <DialogFooter>
           <button type="button" disabled={pending} onClick={() => { setReviewOpen(false); setComposerOpen(true); }} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-ink">กลับไปแก้ไข</button>
-          <button type="button" disabled={!confirmed || pending} onClick={submit}
+          <button type="button" disabled={!sendingEnabled || !confirmed || pending} onClick={submit}
             className={`rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 ${kind === "EMERGENCY" ? "bg-danger" : "bg-brand"}`}>
             {pending ? "กำลังส่ง…" : `ยืนยันส่งถึง ${selectedCount.toLocaleString("th-TH")} บัญชี`}
           </button>

@@ -3,6 +3,7 @@ import { announcementAudienceSchema, selectAudience, type AudienceCandidate } fr
 
 const db = vi.hoisted(() => ({ guardian: { findMany: vi.fn() }, studentLineAccount: { findMany: vi.fn() }, staff: { findMany: vi.fn() }, enrollment: { findMany: vi.fn() }, classroom: { findMany: vi.fn() }, lineAnnouncement: { findUnique: vi.fn(), findMany: vi.fn(), updateMany: vi.fn(), create: vi.fn() } }));
 const send = vi.hoisted(() => vi.fn());
+vi.mock("@/features/line/services/line-delivery-settings", () => ({ isLinePushEnabled: async () => true }));
 vi.mock("@/lib/prisma", () => ({ default: db }));
 vi.mock("@/lib/line", () => ({ isLineConfigured: () => true, sendLineMessageToUsers: send }));
 vi.mock("@/lib/audit", () => ({ logAudit: vi.fn() }));

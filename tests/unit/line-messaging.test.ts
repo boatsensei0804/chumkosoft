@@ -1,3 +1,5 @@
+const delivery = vi.hoisted(() => ({ enabled: vi.fn() }));
+vi.mock("@/features/line/services/line-delivery-settings", () => ({ isLinePushEnabled: delivery.enabled }));
 import { leaveCard } from "@/features/leave/leave-card";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHmac } from "node:crypto";
@@ -7,6 +9,7 @@ import { teacherMenuSyncSignature, verifyTeacherMenuSync } from "@/features/line
 
 describe("LINE message delivery", () => {
   beforeEach(() => {
+    delivery.enabled.mockReset().mockResolvedValue(true);
     process.env.LINE_CHANNEL_ACCESS_TOKEN = "test-token";
     process.env.LINE_CHANNEL_SECRET = "test-secret";
   });
@@ -17,6 +20,27 @@ describe("LINE message delivery", () => {
     delete process.env.LINE_CHANNEL_SECRET;
   });
 
+  it("pauses all quota-consuming sends before HTTP, but keeps parent quick replies available", async () => {
+    delivery.enabled.mockResolvedValue(false);
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await pushText("Uparent", "เข้าโรงเรียน")).toBe(false);
+    expect(await pushLineMessage("Uparent", { type: "text", text: "อนุมัติลา" })).toBe(false);
+    expect(await sendLineTextToUsers(["Uteacher"], "แจ้งครู", "key")).toEqual({ accepted: false, code: "SENDING_PAUSED" });
+    expect(await sendLineMessageToUsers(["Ua", "Ub"], { type: "text", text: "ประกาศ" }, "key")).toEqual({ accepted: false, code: "SENDING_PAUSED" });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(await replyText("reply", "ผูกบัญชีสำเร็จ")).toBe(true);
+    expect(await replyLineMessage("reply", { type: "text", text: "เลือกวันลา" })).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    for (const [url] of fetchMock.mock.calls) expect(url).toContain("/reply");
+  });
+  it("checks the current switch for each send and resumes only when enabled", async () => {
+    delivery.enabled.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 }); vi.stubGlobal("fetch", fetchMock);
+    expect(await pushText("Uparent", "first")).toBe(false); expect(await pushText("Uparent", "second")).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).messages[0].text).toBe("second");
+  });
   it("rejects an invalid webhook signature", () => {
     const body = JSON.stringify({ events: [] });
     const valid = createHmac("sha256", "test-secret").update(body).digest("base64");

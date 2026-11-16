@@ -1,3 +1,5 @@
+import { getLineDeliveryState } from "@/features/line/services/line-delivery-settings";
+import LineDeliveryControl from "@/features/line/components/line-delivery-control";
 import { getAnnouncementAudienceOptions } from "@/features/line/services/announcement-audience-service";
 import type { Metadata } from "next";
 import PageHeader from "@/features/dashboard/components/page-header";
@@ -11,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function LineAnnouncementsPage(): Promise<React.ReactNode> {
   await requireRoles(["ADMIN"]);
-  const [recipientCount, rows, audienceOptions] = await Promise.all([getLinkedLineRecipientCount(), listLineAnnouncements(), getAnnouncementAudienceOptions()]);
+  const [recipientCount, rows, audienceOptions, delivery] = await Promise.all([getLinkedLineRecipientCount(), listLineAnnouncements(), getAnnouncementAudienceOptions(), getLineDeliveryState()]);
   const history = rows.map((row) => {
     const accepted = row.batches.filter((batch) => batch.status === "ACCEPTED")
       .reduce((sum, batch) => sum + batch.recipientCount, 0);
@@ -30,6 +32,7 @@ export default async function LineAnnouncementsPage(): Promise<React.ReactNode> 
   });
   return <>
     <PageHeader title="ส่งประกาศผ่าน LINE" subtitle="แจ้งข่าวสารหรือเหตุฉุกเฉินถึงบัญชี LINE ที่ผูกกับนักเรียนและครูในระบบ" />
-    <LineAnnouncementComposer audienceOptions={audienceOptions} recipientCount={recipientCount} configured={isLineConfigured()} history={history} />
+    <LineDeliveryControl key={`${delivery.enabled}-${delivery.updatedAt}-${delivery.available}`} initial={delivery} canManage={true} />
+    <LineAnnouncementComposer sendingEnabled={delivery.enabled && delivery.available} audienceOptions={audienceOptions} recipientCount={recipientCount} configured={isLineConfigured()} history={history} />
   </>;
 }

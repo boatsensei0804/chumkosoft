@@ -1,4 +1,5 @@
 import "server-only";
+import { isLinePushEnabled } from "@/features/line/services/line-delivery-settings";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { LineFlexMessage } from "@/features/line/flex-types";
@@ -45,6 +46,7 @@ export async function sendLineMessageToUsers(to: string[], message: LineTextMess
   if (to.length < 1 || to.length > 500) return { accepted: false, code: "INVALID_RECIPIENT_COUNT" };
   const messages = Array.isArray(message) ? message : [message];
   if (messages.length < 1 || messages.length > 5) return { accepted: false, code: "INVALID_MESSAGE_COUNT" };
+  if (!(await isLinePushEnabled())) return { accepted: false, code: "SENDING_PAUSED" };
   try {
     const response = await fetch(to.length === 1 ? PUSH_URL : MULTICAST_URL, {
       method: "POST",
@@ -74,6 +76,7 @@ export async function pushText(to: string, text: string): Promise<boolean> {
 export async function pushLineMessage(to: string, message: LineTextMessage | LineFlexMessage): Promise<boolean> {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!token) return false;
+  if (!(await isLinePushEnabled())) return false;
   try {
     const res = await fetch(PUSH_URL, {
       method: "POST",

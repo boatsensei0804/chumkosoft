@@ -5,11 +5,14 @@ import * as repo from "@/features/line/repositories/line-repository";
 import * as guardianRepo from "@/features/guardians/repositories/guardian-repository";
 import { pushText, replyText } from "@/lib/line";
 import { logAudit } from "@/lib/audit";
+import { isLinePushEnabled } from "@/features/line/services/line-delivery-settings";
 import { linkTeacherRichMenu, teacherRichMenuId, unlinkTeacherRichMenu } from "@/features/line/services/teacher-rich-menu";
 import type { ActionResult } from "@/types/form";
 
 /** Pushes a gate check-in notification to every linked guardian of the student. */
 export async function notifyGuardiansOfCheckIn(studentId: string, studentName: string, time: string, overrideBody?: string): Promise<void> {
+  // Avoid even loading recipients while the administrator has paused outbound LINE notices.
+  if (!(await isLinePushEnabled())) return;
   const targets = await repo.findLineTargets(studentId);
   if (targets.length === 0) return;
   const body = overrideBody ?? `${studentName} เข้าโรงเรียนแล้วเมื่อเวลา ${time} น.`;

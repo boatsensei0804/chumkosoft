@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   findUnique: vi.fn(), create: vi.fn(), findFirst: vi.fn(), batches: vi.fn(), updateBatch: vi.fn(),
-  configured: vi.fn(), send: vi.fn(), audit: vi.fn(), put: vi.fn(), remove: vi.fn(), read: vi.fn(), prepare: vi.fn(), audience: vi.fn(), fingerprint: vi.fn(),
+  enabled: vi.fn(), configured: vi.fn(), send: vi.fn(), audit: vi.fn(), put: vi.fn(), remove: vi.fn(), read: vi.fn(), prepare: vi.fn(), audience: vi.fn(), fingerprint: vi.fn(),
 }));
+vi.mock("@/features/line/services/line-delivery-settings", () => ({ isLinePushEnabled: mocks.enabled }));
 vi.mock("@/lib/prisma", () => ({ default: { lineAnnouncement: { findUnique: mocks.findUnique, findFirst: mocks.findFirst, create: mocks.create }, lineAnnouncementBatch: { findMany: mocks.batches, update: mocks.updateBatch } } }));
 vi.mock("@/lib/line", () => ({ isLineConfigured: mocks.configured, sendLineMessageToUsers: mocks.send }));
 vi.mock("@/lib/minio", () => ({ putObject: mocks.put, removeObject: mocks.remove, getObjectBytes: mocks.read }));
@@ -14,12 +15,26 @@ import { GET } from "@/app/api/line/announcement-images/[id]/route";
 const imageId = "00000000-0000-4000-8000-000000000001";
 const input: AnnouncementInput = { requestKey: imageId, kind: "NEWS", title: "ประกาศทดสอบ", body: "ข้อความตัวอย่าง", expectedRecipients: 1, expectedRecipientFingerprint: "recipient-fingerprint", audience: { mode: "all" } };
 beforeEach(() => {
-  vi.resetAllMocks(); mocks.configured.mockReturnValue(true); mocks.fingerprint.mockReturnValue("recipient-fingerprint");
+  vi.resetAllMocks(); mocks.enabled.mockResolvedValue(true); mocks.configured.mockReturnValue(true); mocks.fingerprint.mockReturnValue("recipient-fingerprint");
   mocks.audience.mockResolvedValue({ recipients: ["Uexample"], fingerprint: "recipient-fingerprint" });
   mocks.prepare.mockResolvedValue({ original: Buffer.from("original"), preview: Buffer.from("preview"), digest: "digest" });
   mocks.send.mockResolvedValue({ accepted: true }); mocks.batches.mockResolvedValue([{ status: "ACCEPTED", recipientCount: 1 }]);
 });
 describe("announcement attachment delivery", () => {
+  it("does not create, upload, or retry announcements while paused", async () => {
+    mocks.enabled.mockResolvedValue(false);
+    expect((await createAndSendLineAnnouncement(input, "admin")).message).toContain("พักการส่ง");
+    expect((await deliverLineAnnouncement("announcement", "admin")).message).toContain("พักการส่ง");
+    for (const fn of [mocks.create, mocks.prepare, mocks.put, mocks.send, mocks.updateBatch]) expect(fn).not.toHaveBeenCalled();
+  });
+  it("leaves a batch unsent when paused during delivery without marking it accepted or failed", async () => {
+    mocks.findUnique.mockResolvedValueOnce({ ...input, id: "announcement", imageId, isDeleted: false, recipientCount: 1, batches: [{ id: "pending", status: "PENDING", recipients: ["Uexample"], retryKey: "stable" }] }).mockResolvedValue({ isDeleted: false });
+    mocks.send.mockResolvedValue({ accepted: false, code: "SENDING_PAUSED" });
+    mocks.batches.mockResolvedValue([{ status: "PENDING", recipientCount: 1 }]);
+    const result = await deliverLineAnnouncement("announcement", "admin");
+    expect(result).toMatchObject({ ok: false, accepted: 0, remaining: 1 }); expect(result.message).toContain("พักการส่ง");
+    expect(mocks.updateBatch).not.toHaveBeenCalled();
+  });
   it("retries only unsent batches with the same image and retry key, without uploading again", async () => {
     mocks.findUnique.mockResolvedValueOnce({ ...input, id: "announcement", imageId, isDeleted: false, recipientCount: 1, batches: [
       { id: "already", status: "ACCEPTED", recipients: ["Uprior"], retryKey: "prior" },
