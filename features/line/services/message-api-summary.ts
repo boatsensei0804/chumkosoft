@@ -11,12 +11,14 @@ export async function getLineApiSummary() {
   ]);
   if (!quotaRes.ok || !usageRes.ok) return { configured: true, quota: null, used: null, error: `LINE API ตอบกลับ ${!quotaRes.ok ? quotaRes.status : usageRes.status}` };
   const [quota, usage] = await Promise.all([quotaRes.json(), usageRes.json()]);
-  const [accepted, failed, failedRecent] = await Promise.all([
+  const [accepted, failed, failedRecent, announcements] = await Promise.all([
     prisma.lineOutboundMessage.count({ where: { status: "ACCEPTED", createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } } }),
     prisma.lineOutboundMessage.count({ where: { status: "FAILED" } }),
     prisma.lineOutboundMessage.findMany({ where: { status: "FAILED" }, orderBy: { createdAt: "desc" }, take: 100 }),
+    prisma.lineAnnouncement.findMany({ where: { isDeleted: false }, orderBy: { createdAt: "desc" }, take: 100, include: { batches: { select: { status: true, recipientCount: true, errorCode: true } } } }),
   ]);
-  return { configured: true, quota: quota.value as number, used: usage.totalUsage as number, accepted, failed, failedRecent, error: null };
+  const byDay = await prisma.lineOutboundMessage.findMany({ where: { createdAt: { gte: new Date(Date.now() - 30 * 86400000) } }, select: { createdAt: true, kind: true, status: true }, orderBy: { createdAt: "desc" }, take: 2000 });
+  return { configured: true, quota: quota.value as number, used: usage.totalUsage as number, accepted, failed, failedRecent, announcements, byDay, error: null };
 }
 
 export async function retryFailedLineDelivery(id: string) {

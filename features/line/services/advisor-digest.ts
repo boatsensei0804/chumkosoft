@@ -2,7 +2,8 @@ import "server-only";
 
 import prisma from "@/lib/prisma";
 import { getRedis } from "@/lib/redis";
-import { pushText } from "@/lib/line";
+import { sendLineTextToUsers } from "@/lib/line";
+import { randomUUID } from "node:crypto";
 import { getSchoolEntryRoster, listEntryClassrooms } from "@/features/attendance/services/school-entry-service";
 
 export async function sendAdvisorDigests(): Promise<{ sent: number; failed: number }> {
@@ -37,7 +38,10 @@ export async function sendAdvisorDigests(): Promise<{ sent: number; failed: numb
         return `ห้อง ${room.code}: มาแล้ว ${arrived.length}/${students.length} · สาย ${late.length} · ยังไม่เข้า ${awaiting.length}${awaiting.length ? `\nยังไม่เข้า: ${awaiting.map((student) => student.name).join(", ")}` : ""}`;
       });
       const message = `สรุปการเข้าโรงเรียน ${date}\n${lines.join("\n\n")}\n\nดูรายละเอียด: https://chumkosoft.com/dashboard/attendance?mode=school&date=${date}`;
-      if (!(await pushText(advisor.lineUserId, message))) throw new Error("LINE push failed");
+      const retryKey = randomUUID();
+      const delivery = await sendLineTextToUsers([advisor.lineUserId], message, retryKey);
+      await prisma.lineOutboundMessage.create({ data: { kind: "TEACHER_DIGEST", title: `สรุปเข้าเรียนครู · ${date}`, body: message, recipientId: advisor.lineUserId, status: delivery.accepted ? "ACCEPTED" : "FAILED", errorCode: delivery.accepted ? null : delivery.code, retryKey } });
+      if (!delivery.accepted) throw new Error("LINE push failed");
       await redis.set(key, "sent", "EX", 60 * 60 * 36);
       sent += 1;
     } catch {
