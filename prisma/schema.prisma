@@ -851,3 +851,25 @@ model LineDeliverySetting {
   updatedByUserId String?
   updatedAt       DateTime @updatedAt
 }
+
+enum LineOutboundStatus {
+  ACCEPTED
+  FAILED
+}
+
+model LineOutboundMessage {
+  id             String            @id @default(cuid())
+  kind           String
+  title          String
+  body           String            @db.Text
+  recipientId    String
+  recipientLabel String?
+  status         LineOutboundStatus
+  errorCode      String?
+  retryKey       String            @unique
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([createdAt])
+  @@index([status, createdAt])
+}

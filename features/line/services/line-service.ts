@@ -6,6 +6,9 @@ import * as guardianRepo from "@/features/guardians/repositories/guardian-reposi
 import { pushText, replyText } from "@/lib/line";
 import { logAudit } from "@/lib/audit";
 import { isLinePushEnabled } from "@/features/line/services/line-delivery-settings";
+import { randomUUID } from "node:crypto";
+import prisma from "@/lib/prisma";
+import { sendLineTextToUsers } from "@/lib/line";
 import { linkTeacherRichMenu, teacherRichMenuId, unlinkTeacherRichMenu } from "@/features/line/services/teacher-rich-menu";
 import type { ActionResult } from "@/types/form";
 
@@ -17,7 +20,11 @@ export async function notifyGuardiansOfCheckIn(studentId: string, studentName: s
   if (targets.length === 0) return;
   const body = overrideBody ?? `${studentName} เข้าโรงเรียนแล้วเมื่อเวลา ${time} น.`;
   const message = `แจ้งเตือนการเข้าโรงเรียน\n${body}`;
-  await Promise.all(targets.map((to) => pushText(to, message)));
+  await Promise.all(targets.map(async (to) => {
+    const retryKey = randomUUID();
+    const result = await sendLineTextToUsers([to], message, retryKey);
+    await prisma.lineOutboundMessage.create({ data: { kind: "ATTENDANCE", title: `เข้าเรียน · ${studentName}`, body: message, recipientId: to, status: result.accepted ? "ACCEPTED" : "FAILED", errorCode: result.accepted ? null : result.code, retryKey } });
+  }));
 }
 
 /** Generates a fresh 6-digit link code for a guardian and returns it. */
