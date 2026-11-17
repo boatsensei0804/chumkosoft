@@ -32,6 +32,11 @@ const statusToPrisma: Record<EnrolmentStatus, EnrollmentStatus> = {
   pending: "PENDING",
   leave: "LEAVE",
 };
+const formStatusToPrisma: Record<StudentInput["enrollmentStatus"], EnrollmentStatus> = {
+  ACTIVE: "ACTIVE",
+  PENDING: "PENDING",
+  LEAVE: "LEAVE",
+};
 
 function toIsoDate(date: Date | null): string | null {
   return date ? date.toISOString().slice(0, 10) : null;
@@ -166,8 +171,9 @@ export async function listClassroomOptions(): Promise<ClassroomOption[]> {
 }
 
 function splitCore(input: StudentInput): StudentCore {
-  const { classroomId, ...core } = input;
-  void classroomId; // placement is handled separately via Enrollment
+  const { classroomId, enrollmentStatus, ...core } = input;
+  void classroomId;
+  void enrollmentStatus; // placement and enrollment status are handled separately
   return core;
 }
 
@@ -177,11 +183,15 @@ function splitCore(input: StudentInput): StudentCore {
  */
 async function resolvePlacement(
   classroomId: string | null,
+  status: EnrollmentStatus,
 ): Promise<
-  | { ok: true; placement: { termId: string; academicYearId: string; classroomId: string } | null }
+  | { ok: true; placement: { termId: string; academicYearId: string; classroomId: string; status: EnrollmentStatus } | null }
   | { ok: false; error: ActionResult }
 > {
   if (!classroomId) {
+    if (status !== "ACTIVE") {
+      return { ok: false, error: { ok: false, fieldErrors: { classroomId: "กรุณาเลือกห้องเรียนก่อนกำหนดสถานะการศึกษา" } } };
+    }
     return { ok: true, placement: null };
   }
   const termRef = await getActiveTermRef();
@@ -192,14 +202,14 @@ async function resolvePlacement(
   if (!valid) {
     return { ok: false, error: { ok: false, fieldErrors: { classroomId: "ไม่พบชั้นเรียนที่เลือก" } } };
   }
-  return { ok: true, placement: { termId: termRef.termId, academicYearId: termRef.academicYearId, classroomId } };
+  return { ok: true, placement: { termId: termRef.termId, academicYearId: termRef.academicYearId, classroomId, status } };
 }
 
 export async function createStudentRecord(input: StudentInput): Promise<ActionResult> {
   if (await studentCodeExists(input.studentCode)) {
     return { ok: false, fieldErrors: { studentCode: "รหัสนักเรียนนี้ถูกใช้แล้ว" } };
   }
-  const resolved = await resolvePlacement(input.classroomId);
+  const resolved = await resolvePlacement(input.classroomId, formStatusToPrisma[input.enrollmentStatus]);
   if (!resolved.ok) return resolved.error;
 
   await createStudent(splitCore(input), resolved.placement);
@@ -210,7 +220,7 @@ export async function updateStudentRecord(id: string, input: StudentInput): Prom
   if (await studentCodeExists(input.studentCode, id)) {
     return { ok: false, fieldErrors: { studentCode: "รหัสนักเรียนนี้ถูกใช้แล้ว" } };
   }
-  const resolved = await resolvePlacement(input.classroomId);
+  const resolved = await resolvePlacement(input.classroomId, formStatusToPrisma[input.enrollmentStatus]);
   if (!resolved.ok) return resolved.error;
 
   await updateStudent(id, splitCore(input), resolved.placement);

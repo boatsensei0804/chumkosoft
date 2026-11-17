@@ -203,6 +203,7 @@ interface Placement {
   termId: string;
   academicYearId: string;
   classroomId: string;
+  status: EnrollmentStatus;
 }
 
 /** Creates a student and, when a placement is given, its enrollment — atomically. */
@@ -216,6 +217,7 @@ export async function createStudent(data: StudentCore, placement: Placement | nu
           classroomId: placement.classroomId,
           academicYearId: placement.academicYearId,
           termId: placement.termId,
+          status: placement.status,
         },
       });
     }
@@ -230,12 +232,13 @@ export async function updateStudent(id: string, data: StudentCore, placement: Pl
     if (placement) {
       await tx.enrollment.upsert({
         where: { studentId_termId: { studentId: id, termId: placement.termId } },
-        update: { classroomId: placement.classroomId, academicYearId: placement.academicYearId, isDeleted: false, deletedAt: null },
+        update: { classroomId: placement.classroomId, academicYearId: placement.academicYearId, status: placement.status, isDeleted: false, deletedAt: null },
         create: {
           studentId: id,
           classroomId: placement.classroomId,
           academicYearId: placement.academicYearId,
           termId: placement.termId,
+          status: placement.status,
         },
       });
     }

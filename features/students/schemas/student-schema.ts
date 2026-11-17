@@ -19,6 +19,7 @@ export const studentSchema = z.object({
   gender: z.string().trim().max(20).nullable(),
   birthDate: z.date({ message: "วันเกิดไม่ถูกต้อง" }).nullable(),
   classroomId: z.string().trim().min(1).nullable(),
+  enrollmentStatus: z.enum(["ACTIVE", "PENDING", "LEAVE"]).default("ACTIVE"),
 
   // ── Identity ──
   nationalId: z
@@ -93,4 +94,4 @@ export const studentSchema = z.object({
 export type StudentInput = z.infer<typeof studentSchema>;
 
 /** The Student table columns (placement is handled separately via Enrollment). */
-export type StudentCore = Omit<StudentInput, "classroomId">;
+export type StudentCore = Omit<StudentInput, "classroomId" | "enrollmentStatus">;

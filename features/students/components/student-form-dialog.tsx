@@ -166,6 +166,15 @@ function StudentFormBody({
             {err.classroomId ?? "เลือกเพื่อลงทะเบียนเข้าชั้นเรียนในภาคเรียนนี้"}
           </p>
         </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="enrollmentStatus">สถานะการศึกษา (ภาคเรียนปัจจุบัน)</Label>
+          <NativeSelect id="enrollmentStatus" name="enrollmentStatus" defaultValue={s?.status.toUpperCase() ?? "ACTIVE"} disabled={pending}>
+            <option value="ACTIVE">กำลังศึกษา</option>
+            <option value="PENDING">รออนุมัติ</option>
+            <option value="LEAVE">ลาพักการเรียน</option>
+          </NativeSelect>
+          <p className="text-xs text-muted-foreground">สถานะนี้บันทึกกับการลงทะเบียนห้องเรียนของภาคเรียนปัจจุบัน</p>
+        </div>
 
         <details className="group rounded-xl border border-line bg-surface px-4">
           <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 py-3 text-sm font-semibold text-ink-strong [&::-webkit-details-marker]:hidden">

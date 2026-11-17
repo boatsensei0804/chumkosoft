@@ -58,6 +58,7 @@ export async function saveStudentAction(_prev: ActionResult, formData: FormData)
       gender: nullIfEmpty(formData.get("gender")),
       birthDate: toDateOrNull(formData.get("birthDate")),
       classroomId: nullIfEmpty(formData.get("classroomId")),
+      enrollmentStatus: toText(formData.get("enrollmentStatus")) || "ACTIVE",
 
       nationalId: toNationalId(formData.get("nationalId")),
       firstNameEn: nullIfEmpty(formData.get("firstNameEn")),
@@ -126,6 +127,7 @@ export async function saveStudentAction(_prev: ActionResult, formData: FormData)
 
     if (result.ok) {
       revalidatePath(STUDENTS_PATH);
+      if (id) revalidatePath(`${STUDENTS_PATH}/${id}`);
     }
     return result;
   });
