@@ -7,6 +7,7 @@ import queue
 import sys
 import threading
 import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -17,7 +18,10 @@ from PySide6.QtGui import QDesktopServices, QFont, QFontDatabase, QImage, QPixma
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QFileDialog,
+    QFormLayout,
     QFrame,
     QGridLayout,
     QHeaderView,
@@ -32,6 +36,7 @@ from PySide6.QtWidgets import (
     QStackedWidget,
     QTableWidget,
     QTableWidgetItem,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -124,6 +129,8 @@ QPushButton:disabled { color: #9caebb; background: #f0f4f7; }
 QPushButton#primary { background: #1974c9; color: white; }
 QPushButton#primary:hover { background: #0e5fae; }
 QPushButton#primary:disabled { background: #a7c9e6; color: white; }
+QPushButton#emergency { background: #b42332; color: white; min-height: 34px; font-size: 15px; }
+QPushButton#emergency:hover { background: #941b28; }
 QComboBox { background: #fbfdff; border: 1px solid #d7e5ef; border-radius: 9px; padding: 8px 10px; min-width: 95px; }
 QComboBox:focus { border-color: #69afe4; }
 QLineEdit { background: #fbfdff; border: 1px solid #d7e5ef; border-radius: 9px; padding: 9px 10px; min-height: 18px; }
@@ -210,6 +217,8 @@ class ScannerWindow(QMainWindow):
         self.roster_page = 0
         self.nav_collapsed = False
         self.uploading_photos = False
+        self.emergency_sending = False
+        self.emergency_retry: Optional[dict[str, str]] = None
         self.camera = None
         self.current_frame = None
         self.last_detection = 0.0
@@ -382,6 +391,18 @@ class ScannerWindow(QMainWindow):
         alert_text.addWidget(self.feedback)
         alert_layout.addLayout(alert_text, stretch=1)
         scan_layout.addWidget(self.scan_alert)
+        emergency_row = QHBoxLayout()
+        self.emergency_feedback = label(
+            "แจ้งเหตุจะส่ง LINE ถึงแอดมินและครู · หากส่งไม่ได้ให้ใช้โทรศัพท์ฉุกเฉินของโรงเรียน",
+            "subtle", True,
+        )
+        emergency_row.addWidget(self.emergency_feedback, stretch=1)
+        self.emergency_button = QPushButton("🚨  แจ้งเหตุฉุกเฉิน")
+        self.emergency_button.setObjectName("emergency")
+        self.emergency_button.setMinimumWidth(230)
+        self.emergency_button.clicked.connect(self.open_emergency_dialog)
+        emergency_row.addWidget(self.emergency_button)
+        scan_layout.addLayout(emergency_row)
         controls = QHBoxLayout()
         self.scan_camera_label = label(f"ใช้กล้อง {self.camera_index} · เปลี่ยนได้ในหน้าตั้งค่า", "subtle")
         controls.addWidget(self.scan_camera_label)
@@ -678,6 +699,99 @@ class ScannerWindow(QMainWindow):
             button.setChecked(position == index)
         if index in (0, 2) and self.web_client is not None and self.camera is None:
             self.start_camera()
+
+    def _set_emergency_feedback(self, message: str, mode: str = ""):
+        self.emergency_feedback.setText(message)
+        self.emergency_feedback.setProperty("mode", mode)
+        self.emergency_feedback.style().unpolish(self.emergency_feedback)
+        self.emergency_feedback.style().polish(self.emergency_feedback)
+
+    def open_emergency_dialog(self):
+        if self.web_client is None:
+            self._set_emergency_feedback(
+                "ยังไม่เชื่อมบัญชีจุดสแกน · หากเป็นเหตุจริงให้โทรแจ้งโรงเรียนทันที", "warn"
+            )
+            return
+        if self.emergency_sending:
+            return
+        if self.emergency_retry is not None:
+            answer = QMessageBox.question(
+                self, "ลองส่งคำขอเดิมอีกครั้ง",
+                "ครั้งก่อนแอปไม่ได้รับคำตอบจากเว็บ หากเว็บบันทึกเหตุแล้ว ระบบจะใช้รหัสเดิมเพื่อป้องกันการสร้างเหตุซ้ำ\n\n"
+                "ต้องการลองส่งคำขอเดิมอีกครั้งหรือไม่?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
+            )
+            if answer == QMessageBox.StandardButton.Yes:
+                self._send_emergency_request(self.emergency_retry)
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("แจ้งเหตุฉุกเฉิน")
+        dialog.setMinimumWidth(460)
+        layout = QVBoxLayout(dialog)
+        notice = label(
+            "ระบบจะแจ้ง LINE ไปยังแอดมินและครูที่ผูกบัญชีไว้ · หากเน็ตหรือ LINE ใช้ไม่ได้ให้โทรแจ้งโรงเรียนทันที",
+            "feedback", True,
+        )
+        notice.setProperty("mode", "warn")
+        layout.addWidget(notice)
+        form = QFormLayout()
+        category = QComboBox()
+        for title, value in (
+            ("เจ็บป่วย / บาดเจ็บ", "MEDICAL"),
+            ("ไฟไหม้ / ควัน", "FIRE"),
+            ("ความปลอดภัย", "SECURITY"),
+            ("เหตุฉุกเฉินอื่น ๆ", "OTHER"),
+        ):
+            category.addItem(title, value)
+        form.addRow("ประเภทเหตุ", category)
+        detail = QTextEdit()
+        detail.setPlaceholderText("ระบุจุดเกิดเหตุหรือข้อมูลที่จำเป็น (ไม่เกิน 300 ตัวอักษร)")
+        detail.setMaximumHeight(110)
+        form.addRow("รายละเอียด", detail)
+        layout.addLayout(form)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok
+        )
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("ยืนยันแจ้งเหตุ")
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("ยกเลิก")
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        description = detail.toPlainText().strip()
+        if len(description) > 300:
+            QMessageBox.warning(self, "รายละเอียดเกินกำหนด", "กรุณาย่อรายละเอียดให้ไม่เกิน 300 ตัวอักษร")
+            return
+        self.emergency_retry = {
+            "request_id": str(uuid.uuid4()),
+            "category": category.currentData(),
+            "detail": description,
+        }
+        self._send_emergency_request(self.emergency_retry)
+
+    def _send_emergency_request(self, payload: dict[str, str]):
+        client = self.web_client
+        if client is None:
+            self._set_emergency_feedback("เว็บไม่ได้เชื่อมอยู่ · ให้โทรแจ้งโรงเรียนทันที", "warn")
+            return
+        self.emergency_sending = True
+        self.emergency_button.setEnabled(False)
+        self.emergency_button.setText("กำลังส่งแจ้งเหตุ…")
+        self._set_emergency_feedback("กำลังบันทึกเหตุและแจ้ง LINE ถึงแอดมิน/ครู…")
+
+        def work():
+            try:
+                result = client.report_emergency(
+                    payload["request_id"], payload["category"], payload["detail"]
+                )
+                self.background_results.put(("emergency", payload["request_id"], result, ""))
+            except Exception as error:
+                self.background_results.put(("emergency", payload["request_id"], None, str(error)))
+
+        threading.Thread(target=work, name="scanner-emergency-report", daemon=True).start()
 
     def toggle_navigation(self):
         self.nav_collapsed = not self.nav_collapsed
@@ -1083,6 +1197,31 @@ class ScannerWindow(QMainWindow):
                     self.pair_info.setText("เชื่อมบัญชีจุดสแกนแล้ว")
                     self.pair_client = None
                     self._connected_to_website(client)
+            elif kind == "emergency":
+                request_id, result, error = values
+                if not self.emergency_retry or self.emergency_retry["request_id"] != request_id:
+                    continue
+                self.emergency_sending = False
+                self.emergency_button.setEnabled(self.web_client is not None)
+                if error:
+                    self.emergency_button.setText("ลองส่งคำขอเดิมอีกครั้ง")
+                    self._set_emergency_feedback(
+                        f"เว็บไม่ตอบรับการแจ้งเหตุ: {error} · ลองส่งคำขอเดิมอีกครั้ง หรือโทรแจ้งโรงเรียนทันที",
+                        "warn",
+                    )
+                    continue
+                self.emergency_retry = None
+                self.emergency_button.setText("🚨  แจ้งเหตุฉุกเฉิน")
+                message = result.get("message", "ระบบบันทึกเหตุแล้ว")
+                target_count = result.get("targetCount", 0)
+                failed_count = result.get("failedCount", 0)
+                mode = "success" if target_count > 0 and failed_count == 0 else "warn"
+                suffix = f" · รหัสเหตุ {result['incidentId']}"
+                if target_count == 0 or failed_count > 0:
+                    suffix += " · ตรวจหน้า ‘แจ้งเหตุฉุกเฉิน’ บนเว็บและใช้ช่องทางโทรศัพท์สำรอง"
+                else:
+                    suffix += " · LINE รับคำขอส่ง ไม่ได้ยืนยันว่าผู้รับเปิดอ่านข้อความแล้ว"
+                self._set_emergency_feedback(message + suffix, mode)
             elif kind == "roster":
                 client, students, error, manual = values
                 if client is not self.web_client:
@@ -1194,6 +1333,7 @@ class ScannerWindow(QMainWindow):
         self.pair_code.setVisible(False)
         self.open_pair_button.setVisible(False)
         self.web_client = None
+        self.emergency_button.setEnabled(False)
         self.connection_badge.setText("รอเชื่อมเว็บ")
         self.connection_badge.setProperty("mode", "")
         self.connection_badge.style().unpolish(self.connection_badge)
@@ -1219,6 +1359,7 @@ class ScannerWindow(QMainWindow):
     def _connected_to_website(self, client: KioskWebClient):
         self.pair_retry_timer.stop()
         self.web_client = client
+        self.emergency_button.setEnabled(True)
         self.connection_badge.setText("เชื่อมเว็บแล้ว")
         self.connection_badge.setProperty("mode", "connected")
         self.connection_badge.style().unpolish(self.connection_badge)

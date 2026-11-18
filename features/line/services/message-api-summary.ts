@@ -30,5 +30,12 @@ export async function retryFailedLineDelivery(id: string) {
   const { sendLineTextToUsers } = await import("@/lib/line");
   const result = await sendLineTextToUsers([row.recipientId], row.body, row.retryKey);
   await prisma.lineOutboundMessage.update({ where: { id }, data: { status: result.accepted ? "ACCEPTED" : "FAILED", errorCode: result.accepted ? null : result.code, attempts: { increment: 1 }, requestId: result.requestId, acceptedRequestId: result.acceptedRequestId } });
+  if (row.emergencyIncidentId) {
+    const [acceptedCount, failedCount] = await Promise.all([
+      prisma.lineOutboundMessage.count({ where: { emergencyIncidentId: row.emergencyIncidentId, status: "ACCEPTED" } }),
+      prisma.lineOutboundMessage.count({ where: { emergencyIncidentId: row.emergencyIncidentId, status: "FAILED" } }),
+    ]);
+    await prisma.emergencyIncident.update({ where: { id: row.emergencyIncidentId }, data: { lineAcceptedCount: acceptedCount, lineFailedCount: failedCount } });
+  }
   return { ok: result.accepted, message: result.accepted ? result.code === "HTTP_409" ? "LINE ยืนยันว่าคำขอเดิมถูกรับแล้ว ไม่ส่งข้อความซ้ำ" : "LINE รับคำขอส่งแล้ว (ยืนยันการรับคำขอจาก API)" : `LINE ไม่รับคำขอ (${result.code})` };
 }

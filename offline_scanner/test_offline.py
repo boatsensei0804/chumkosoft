@@ -183,6 +183,48 @@ class OfflineScannerTests(unittest.TestCase):
             sync_live(self.db, OfflineClient())
         self.assertEqual(len(pending(self.db)), 1)
 
+    def test_emergency_report_uses_paired_kiosk_client_and_idempotency_id(self):
+        client = KioskWebClient("http://127.0.0.1:3000", "12345678-1234-5678-1234-567812345678")
+        request_id = "87654321-4321-8765-4321-876543218765"
+        response_body = {
+            "ok": True,
+            "incidentId": "cmemergency123",
+            "duplicate": False,
+            "targetCount": 2,
+            "acceptedCount": 2,
+            "failedCount": 0,
+            "message": "บันทึกเหตุแล้ว · LINE รับคำขอส่งถึงแอดมิน/ครู 2 บัญชี",
+        }
+
+        class Response(io.BytesIO):
+            def __init__(self, payload, url):
+                super().__init__(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
+                self.url = url
+
+            def geturl(self):
+                return self.url
+
+        class FakeOpener:
+            def open(self, request, timeout):
+                self.request = request
+                self.timeout = timeout
+                return Response(response_body, request.full_url)
+
+        client.opener = FakeOpener()
+        result = client.report_emergency(request_id, "MEDICAL", "ห้องพยาบาล")
+        request = client.opener.request
+        self.assertEqual(request.full_url, "http://127.0.0.1:3000/api/scanner/emergencies")
+        self.assertEqual(client.opener.timeout, 30)
+        self.assertEqual(json.loads(request.data), {
+            "deviceId": "12345678-1234-5678-1234-567812345678",
+            "requestId": request_id,
+            "category": "MEDICAL",
+            "detail": "ห้องพยาบาล",
+        })
+        self.assertEqual(result["acceptedCount"], 2)
+        with self.assertRaises(ValueError):
+            client.report_emergency(request_id, "UNKNOWN", "")
+
     def test_models_download_once_and_work_offline(self):
         cache = Path(self.temp.name) / "models"
         assets = {name: bytes([index + 1]) * 100_001 for index, name in enumerate(MODEL_NAMES)}

@@ -138,6 +138,34 @@ class KioskWebClient:
             raise ScannerWebError("การตั้งค่าจากเว็บไซต์ไม่ถูกต้อง")
         return settings
 
+    def report_emergency(self, request_id: str, category: str, detail: str) -> dict:
+        if not self.device_id:
+            raise ScannerWebError("เครื่องสแกนยังไม่มีรหัสประจำเครื่อง")
+        try:
+            request_id = str(uuid.UUID(request_id))
+        except ValueError as error:
+            raise ValueError("รหัสคำขอแจ้งเหตุไม่ถูกต้อง") from error
+        if category not in ("MEDICAL", "FIRE", "SECURITY", "OTHER"):
+            raise ValueError("ประเภทเหตุไม่ถูกต้อง")
+        if not isinstance(detail, str) or len(detail) > 300:
+            raise ValueError("รายละเอียดเหตุยาวเกินกำหนด")
+        payload = {"deviceId": self.device_id, "requestId": request_id,
+                   "category": category, "detail": detail.strip()}
+        request = urllib.request.Request(
+            self.site + "/api/scanner/emergencies",
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            method="POST",
+        )
+        data = _json_response(self.opener, request, self.host, timeout=30)
+        if (not isinstance(data.get("incidentId"), str) or
+                type(data.get("duplicate")) is not bool or
+                any(type(data.get(key)) is not int or data[key] < 0
+                    for key in ("targetCount", "acceptedCount", "failedCount")) or
+                not isinstance(data.get("message"), str) or len(data["message"]) > 500):
+            raise ScannerWebError("คำตอบการแจ้งเหตุจากเว็บไซต์ไม่ถูกต้อง")
+        return data
+
     def sync_events(self, rows: list[sqlite3.Row]) -> tuple[list[str], list[tuple[str, str]]]:
         if not self.device_id:
             raise ScannerWebError("เครื่องสแกนยังไม่มีรหัสประจำเครื่อง")

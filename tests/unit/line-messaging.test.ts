@@ -50,7 +50,7 @@ describe("LINE message delivery", () => {
   });
 
   it("uses push for one advisor and treats an accepted retry as sent", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 409 });
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 409, headers: new Headers() });
     vi.stubGlobal("fetch", fetchMock);
     const result = await sendLineTextToUsers(["Uteacher"], "คำขอลา", "retry-key");
     expect(result).toEqual({ accepted: true, code: "HTTP_409", requestId: null, acceptedRequestId: null });
@@ -61,7 +61,7 @@ describe("LINE message delivery", () => {
   });
 
   it("uses multicast for multiple advisors and reports an API failure", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 429 });
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 429, headers: new Headers() });
     vi.stubGlobal("fetch", fetchMock);
     const result = await sendLineTextToUsers(["Ua", "Ub"], "คำขอลา", "retry-key");
     expect(result).toEqual({ accepted: false, code: "HTTP_429", requestId: null, acceptedRequestId: null });
@@ -77,7 +77,7 @@ describe("LINE message delivery", () => {
   });
 
   it("sends a tappable leave choice as a LINE quick reply", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, headers: new Headers() });
     vi.stubGlobal("fetch", fetchMock);
     const sent = await replyLineMessage("reply-token", { type: "text", text: "เลือกประเภท", quickReply: { items: [
       { type: "action", action: { type: "postback", label: "ลาป่วย", data: "leave|kind|student|SICK" } },
@@ -93,7 +93,7 @@ describe("LINE message delivery", () => {
     const card = announcementCard("EMERGENCY", "แจ้งเปลี่ยนเวลาเลิกเรียน", body);
     expect(card.altText.length).toBeLessThanOrEqual(400);
     expect(card.contents.body.contents.filter((item) => item.type === "text").slice(1).map((item) => "text" in item ? item.text : "").join("")).toBe(body);
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, headers: new Headers() });
     vi.stubGlobal("fetch", fetchMock);
     expect((await sendLineMessageToUsers(["Uparent"], card, "retry-card")).accepted).toBe(true);
     const [, options] = fetchMock.mock.calls[0];
@@ -104,7 +104,7 @@ describe("LINE message delivery", () => {
   });
 
   it("sends the card and image in one retryable request", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, headers: new Headers() });
     vi.stubGlobal("fetch", fetchMock);
     const messages = [announcementCard("NEWS", "หัวข้อ", "ข้อความ"), { type: "image" as const, originalContentUrl: "https://chumkosoft.com/image.jpg", previewImageUrl: "https://chumkosoft.com/preview.jpg" }];
     expect((await sendLineMessageToUsers(["Uexample"], messages, "stable-key")).accepted).toBe(true);
