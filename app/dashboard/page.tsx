@@ -44,7 +44,7 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
   const greeting = user.firstName ? `${thaiGreeting(now)} คุณ${user.firstName}` : thaiGreeting(now);
   return (
     <>
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3">
         <WelcomeBand
           greeting={greeting}
           subtitle="จัดการงานโรงเรียนในที่เดียว ดูการเช็คชื่อ ทะเบียนนักเรียน และการสื่อสารกับผู้ปกครองได้ทันที"
@@ -52,9 +52,11 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
           date={formatThaiWeekdayLong(now)}
         />
         <DailySchoolOverview rooms={rooms ?? []} date={date} scoped={user.role !== "ADMIN"} />
-        <div className="mt-2"><h2 className="mb-3 text-lg font-bold text-ink-strong">ข้อมูลทะเบียนของโรงเรียน</h2><SummaryFigures figures={figures} /></div>
+        <details className="group rounded-[20px] border border-blue-100 bg-white px-4 py-3 shadow-sm">
+          <summary className="cursor-pointer font-semibold text-brand-ink">ข้อมูลเพิ่มเติม: ทะเบียน ตารางเรียน และประกาศ</summary>
+          <div className="mt-4"><h2 className="mb-3 text-lg font-bold text-ink-strong">ข้อมูลทะเบียนของโรงเรียน</h2><SummaryFigures figures={figures} /></div>
 
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.65fr_1fr]">
+        <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1.65fr_1fr]">
           <div className="flex flex-col gap-5">
             <EnrolmentTrend data={enrolmentTrend} />
             <SectionCard
@@ -83,6 +85,7 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
             <Announcements items={announcements} />
           </div>
         </div>
+        </details>
       </div>
     </>
   );

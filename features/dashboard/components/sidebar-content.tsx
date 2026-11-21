@@ -35,7 +35,7 @@ export default function SidebarContent({ user, onNavigate }: SidebarContentProps
         {groups.map((group, i) => {
           const active = group.items.some((item) => pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`)));
           if (!group.label) return <SidebarNav key={`group-${i}`} items={group.items} onNavigate={onNavigate} />;
-          return <details key={`${group.label}-${active ? "active" : "inactive"}`} open={active} className="group/nav rounded-xl open:bg-surface-2/60">
+          return <details key={`${group.label}-${active ? "active" : "inactive"}`} open={active || group.label === "ทะเบียนข้อมูล"} className="group/nav rounded-xl open:bg-surface-2/60">
             <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between rounded-lg px-3 text-[12px] font-bold text-muted hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
               {group.label}<ChevronDown className="size-4 transition-transform group-open/nav:rotate-180" />
             </summary>
