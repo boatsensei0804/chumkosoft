@@ -47,7 +47,8 @@ export const navGroups: NavGroup[] = [
   {
     label: "ตารางและเช็คชื่อ",
     items: [
-      { key: "timetable", label: "จัดตารางสอน", href: "/dashboard/timetable", icon: CalendarDays, available: true },
+      { key: "timetable", label: "จัดตารางสอน", href: "/dashboard/timetable", icon: CalendarDays, available: true, roles: ["ADMIN"] },
+      { key: "timetable-teacher", label: "ตารางสอน", href: "/dashboard/timetable", icon: CalendarDays, available: true, roles: ["TEACHER"] },
       { key: "attendance", label: "เช็คชื่อ", href: "/dashboard/attendance", icon: ClipboardCheck, available: true },
       { key: "leave-requests", label: "คำขอลา / ขอมาสาย", href: "/dashboard/leave-requests", icon: CalendarX2, available: true },
       { key: "behavior", label: "คะแนนความประพฤติ", href: "/dashboard/behavior", icon: Award, available: true },
@@ -56,10 +57,10 @@ export const navGroups: NavGroup[] = [
   {
     label: "สแกนและสื่อสาร",
     items: [
-      { key: "faces", label: "ชุดข้อมูลใบหน้า", href: "/dashboard/faces", icon: ScanFace, available: true },
+      { key: "faces", label: "ชุดข้อมูลใบหน้า", href: "/dashboard/faces", icon: ScanFace, available: true, roles: ["ADMIN"] },
       { key: "emergencies", label: "แจ้งเหตุฉุกเฉิน", href: "/dashboard/emergencies", icon: Siren, available: true, roles: ["ADMIN", "TEACHER"] },
       { key: "guardians", label: "ผู้ปกครอง", href: "/dashboard/guardians", icon: UserCheck, available: true },
-      { key: "line", label: "LINE / แจ้งเตือน", href: "/dashboard/line", icon: MessageSquare, available: true },
+      { key: "line", label: "LINE / แจ้งเตือน", href: "/dashboard/line", icon: MessageSquare, available: true, roles: ["ADMIN"] },
       { key: "my-line", label: "LINE ของฉัน", href: "/dashboard/my-line", icon: Link2, available: true, roles: ["TEACHER"] },
       { key: "line-announcements", label: "ส่งประกาศ LINE", href: "/dashboard/line-announcements", icon: Megaphone, available: true, roles: ["ADMIN"] },
     ],

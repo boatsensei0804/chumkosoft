@@ -814,6 +814,11 @@ model ScannerDevice {
   lastSyncAt               DateTime?
   pendingCount             Int      @default(0)
   cameraActive             Boolean  @default(false)
+  screenActive             Boolean?
+  displayScheduleEnabled  Boolean  @default(false)
+  displayOnTime            String   @default("06:00")
+  displayOffTime           String   @default("18:00")
+  displayOverride          String   @default("AUTO")
   modelVersion             String?
   syncEvents               ScannerSyncEvent[]
   emergencyIncidents       EmergencyIncident[]

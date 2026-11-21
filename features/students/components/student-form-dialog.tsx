@@ -27,15 +27,16 @@ interface StudentFormDialogProps {
   open: boolean;
   student: StudentSummary | null;
   classrooms: ClassroomOption[];
+  canChangeClassroom?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export default function StudentFormDialog({ open, student, classrooms, onClose, onSaved }: StudentFormDialogProps): React.ReactNode {
+export default function StudentFormDialog({ open, student, classrooms, canChangeClassroom = true, onClose, onSaved }: StudentFormDialogProps): React.ReactNode {
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="flex max-h-[min(90dvh,900px)] flex-col overflow-hidden p-0 sm:max-w-3xl">
-        {open && <StudentFormBody key={student?.id ?? "new"} student={student} classrooms={classrooms} onClose={onClose} onSaved={onSaved} />}
+        {open && <StudentFormBody key={student?.id ?? "new"} student={student} classrooms={classrooms} canChangeClassroom={canChangeClassroom} onClose={onClose} onSaved={onSaved} />}
       </DialogContent>
     </Dialog>
   );
@@ -48,11 +49,13 @@ function SectionHeading({ children }: { children: React.ReactNode }): React.Reac
 function StudentFormBody({
   student,
   classrooms,
+  canChangeClassroom,
   onClose,
   onSaved,
 }: {
   student: StudentSummary | null;
   classrooms: ClassroomOption[];
+  canChangeClassroom: boolean;
   onClose: () => void;
   onSaved: () => void;
 }): React.ReactNode {
@@ -154,7 +157,8 @@ function StudentFormBody({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="classroomId">ชั้นเรียน (ภาคเรียนปัจจุบัน)</Label>
-          <NativeSelect id="classroomId" name="classroomId" defaultValue={s?.currentClassroomId ?? ""} disabled={pending} invalid={Boolean(err.classroomId)}>
+          {!canChangeClassroom && <input type="hidden" name="classroomId" value={s?.currentClassroomId ?? ""} />}
+          <NativeSelect id="classroomId" name={canChangeClassroom ? "classroomId" : undefined} defaultValue={s?.currentClassroomId ?? ""} disabled={pending || !canChangeClassroom} invalid={Boolean(err.classroomId)}>
             <option value="">ยังไม่กำหนด</option>
             {classrooms.map((c) => (
               <option key={c.id} value={c.id}>
@@ -163,7 +167,7 @@ function StudentFormBody({
             ))}
           </NativeSelect>
           <p className={cn("text-xs", err.classroomId ? "text-destructive" : "text-muted-foreground")}>
-            {err.classroomId ?? "เลือกเพื่อลงทะเบียนเข้าชั้นเรียนในภาคเรียนนี้"}
+            {err.classroomId ?? (canChangeClassroom ? "เลือกเพื่อลงทะเบียนเข้าชั้นเรียนในภาคเรียนนี้" : "การย้ายห้องเรียนให้ผู้ดูแลระบบดำเนินการ")}
           </p>
         </div>
         <div className="flex flex-col gap-1.5">

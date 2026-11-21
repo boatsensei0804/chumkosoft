@@ -79,7 +79,7 @@ export async function findStudentsWithGuardians(params: { skip: number; take: nu
         where: { isDeleted: false, ...(termId ? { termId } : {}) },
         orderBy: { enrolledAt: "desc" },
         take: 1,
-        select: { classroom: { select: { code: true } } },
+        select: { classroomId: true, classroom: { select: { code: true } } },
       },
       guardians: {
         where: { isDeleted: false },

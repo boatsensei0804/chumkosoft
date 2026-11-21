@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRoles } from "@/lib/dal";
-import { STAFF_ROLES } from "@/features/auth/roles";
 import { roomSchema } from "@/features/rooms/schemas/room-schema";
 import { createRoomRecord, updateRoomRecord, deleteRoomRecord } from "@/features/rooms/services/room-service";
 import { fieldErrorsFromZod } from "@/utils/zod";
@@ -17,7 +16,7 @@ function toText(value: FormDataEntryValue | null): string {
 
 export async function saveRoomAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(STAFF_ROLES);
+    await requireRoles(["ADMIN"]);
 
     const id = toText(formData.get("id"));
     const name = toText(formData.get("name"));
@@ -42,7 +41,7 @@ export async function saveRoomAction(_prev: ActionResult, formData: FormData): P
 
 export async function deleteRoomAction(id: string): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(STAFF_ROLES);
+    await requireRoles(["ADMIN"]);
     const result = await deleteRoomRecord(id);
     if (result.ok) revalidatePath(ROOMS_PATH);
     return result;

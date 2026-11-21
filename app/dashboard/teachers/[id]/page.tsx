@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import SectionCard from "@/features/dashboard/components/section-card";
 import { getStaffDetail } from "@/services/staff-service";
+import { requireRoles } from "@/lib/dal";
 import type { StaffKind } from "@/features/teachers/types";
 
 export const metadata: Metadata = {
@@ -54,9 +55,14 @@ interface TeacherDetailPageProps {
 }
 
 export default async function TeacherDetailPage({ params }: TeacherDetailPageProps): Promise<React.ReactNode> {
+  const user = await requireRoles(["ADMIN", "TEACHER"]);
   const { id } = await params;
-  const s = await getStaffDetail(id);
-  if (!s) notFound();
+  const detail = await getStaffDetail(id);
+  if (!detail) notFound();
+  const s = user.role === "ADMIN" || user.staffId === id ? detail : {
+    ...detail, birthDate: null, nationalId: null, positionNumber: null, salary: null,
+    licenseNumber: null, licenseExpiry: null, loginEmail: null,
+  };
 
   const fullName = [s.prefix, `${s.firstName} ${s.lastName}`].filter(Boolean).join(" ");
   const age = ageFrom(s.birthDate);

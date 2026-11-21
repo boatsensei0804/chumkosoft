@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireRoles } from "@/lib/dal";
 import { STAFF_ROLES } from "@/features/auth/roles";
+import { advisedStudentClassroomId, canEditAdvisedGuardian } from "@/lib/teacher-data-access";
 import { guardianSchema } from "@/features/guardians/schemas/guardian-schema";
 import {
   createGuardianRecord,
@@ -21,10 +22,13 @@ function toText(value: FormDataEntryValue | null): string {
 
 export async function saveGuardianAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(STAFF_ROLES);
+    const user = await requireRoles(STAFF_ROLES);
 
     const id = toText(formData.get("id"));
     const studentId = toText(formData.get("studentId"));
+    if (user.role === "TEACHER" && !(id ? await canEditAdvisedGuardian(user, id) : await advisedStudentClassroomId(user, studentId))) {
+      return { ok: false, message: "จัดการได้เฉพาะผู้ปกครองของนักเรียนในห้องที่คุณเป็นครูที่ปรึกษา" };
+    }
     const nullIf = (v: FormDataEntryValue | null): string | null => (toText(v) === "" ? null : toText(v));
     const incomeRaw = toText(formData.get("monthlyIncome")).replace(/,/g, "");
     const nid = toText(formData.get("nationalId")).replace(/\D/g, "");
@@ -56,7 +60,10 @@ export async function saveGuardianAction(_prev: ActionResult, formData: FormData
 
 export async function deleteGuardianAction(id: string): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(STAFF_ROLES);
+    const user = await requireRoles(STAFF_ROLES);
+    if (user.role === "TEACHER" && !await canEditAdvisedGuardian(user, id)) {
+      return { ok: false, message: "จัดการได้เฉพาะผู้ปกครองของนักเรียนในห้องที่คุณเป็นครูที่ปรึกษา" };
+    }
     const result = await deleteGuardianRecord(id);
     if (result.ok) revalidatePath(GUARDIANS_PATH);
     return result;

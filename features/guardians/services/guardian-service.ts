@@ -80,6 +80,7 @@ export async function listStudentGuardians(params: { page: number; search: strin
     code: s.studentCode,
     name: personName(s),
     classroom: s.enrollments[0]?.classroom.code ?? "—",
+    classroomId: s.enrollments[0]?.classroomId ?? null,
     lineAccounts: s.lineAccounts.map((account) => ({ id: account.id, linked: account.lineUserId !== null, linkCode: account.lineLinkCode, lineDisplayName: displayName(account.lineUserId) })),
     guardians: s.guardians.map(
       (g): GuardianRow => ({

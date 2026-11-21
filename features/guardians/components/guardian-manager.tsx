@@ -27,6 +27,7 @@ interface GuardianManagerProps {
   query: string;
   classrooms: GuardianClassroomOption[];
   classroomId: string;
+  editableClassroomIds: string[] | null;
 }
 
 type Editing = { studentId: string; studentName: string; guardian: GuardianRow | null };
@@ -41,7 +42,7 @@ function detailLine(g: GuardianRow): string {
     .join(" · ");
 }
 
-export default function GuardianManager({ page, query, classrooms, classroomId }: GuardianManagerProps): React.ReactNode {
+export default function GuardianManager({ page, query, classrooms, classroomId, editableClassroomIds }: GuardianManagerProps): React.ReactNode {
   const router = useRouter();
   const { navigate, isPending } = useListParams("/dashboard/guardians", { q: query, page: page.page, classroom: classroomId });
   const [search, setSearch] = useState(query);
@@ -49,6 +50,8 @@ export default function GuardianManager({ page, query, classrooms, classroomId }
   const [viewing, setViewing] = useState<{ studentId: string; studentName: string; guardian: GuardianRow } | null>(null);
   const [deleting, setDeleting] = useState<GuardianRow | null>(null);
   const [isRemovePending, startRemove] = useTransition();
+  const canEditStudent = (student: StudentGuardians): boolean => editableClassroomIds === null || Boolean(student.classroomId && editableClassroomIds.includes(student.classroomId));
+  const canEditId = (studentId: string): boolean => page.rows.some((student) => student.studentId === studentId && canEditStudent(student));
 
   useEffect(() => {
     if (search === query) return;
@@ -103,7 +106,7 @@ export default function GuardianManager({ page, query, classrooms, classroomId }
           <div className={cn("grid gap-3 rounded-xl border border-line bg-card p-3 transition-opacity md:hidden", isPending && "opacity-60")}>
             {page.rows.map((student) => <MobileRecordCard key={student.studentId} title={student.name} subtitle={`รหัส ${student.code} · ${student.classroom}`}
               fields={[{ label: "ผู้ปกครอง", value: student.guardians.length ? `${student.guardians.length} คน` : "ยังไม่มี" }, { label: "ผูก LINE", value: `${student.guardians.filter((g) => g.lineStatus === "linked").length} คน` }]}
-              actions={<div className="w-full space-y-2"><Button variant="outline" size="sm" className="min-h-10" onClick={() => setEditing({ studentId: student.studentId, studentName: student.name, guardian: null })}><Plus className="size-4" /> เพิ่มผู้ปกครอง</Button>{student.guardians.map((g) => <div key={g.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-2 p-2.5"><div className="min-w-0"><p className="text-sm font-semibold text-ink">{[g.prefix, g.fullName].filter(Boolean).join(" ")}</p><p className="text-xs text-muted">{g.relation} · {g.lineStatus === "linked" ? "ผูก LINE แล้ว" : g.lineStatus === "pending" ? "รอผูก LINE" : "ยังไม่ผูก LINE"}</p></div><div className="flex gap-1"><Button variant="ghost" size="sm" className="min-h-10" onClick={() => setViewing({ studentId: student.studentId, studentName: student.name, guardian: g })}><Eye className="size-4" /> ดู</Button><Button variant="ghost" size="sm" className="min-h-10" onClick={() => setEditing({ studentId: student.studentId, studentName: student.name, guardian: g })}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(g)}><Trash2 className="size-4" /> ลบ</Button></div></div>)}</div>}
+              actions={<div className="w-full space-y-2">{canEditStudent(student) && <Button variant="outline" size="sm" className="min-h-10" onClick={() => setEditing({ studentId: student.studentId, studentName: student.name, guardian: null })}><Plus className="size-4" /> เพิ่มผู้ปกครอง</Button>}{student.guardians.map((g) => <div key={g.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-2 p-2.5"><div className="min-w-0"><p className="text-sm font-semibold text-ink">{[g.prefix, g.fullName].filter(Boolean).join(" ")}</p><p className="text-xs text-muted">{g.relation} · {g.lineStatus === "linked" ? "ผูก LINE แล้ว" : g.lineStatus === "pending" ? "รอผูก LINE" : "ยังไม่ผูก LINE"}</p></div><div className="flex gap-1"><Button variant="ghost" size="sm" className="min-h-10" onClick={() => setViewing({ studentId: student.studentId, studentName: student.name, guardian: g })}><Eye className="size-4" /> ดู</Button>{canEditStudent(student) && <><Button variant="ghost" size="sm" className="min-h-10" onClick={() => setEditing({ studentId: student.studentId, studentName: student.name, guardian: g })}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(g)}><Trash2 className="size-4" /> ลบ</Button></>}</div></div>)}</div>}
             />)}
           </div>
           <div className={cn("hidden overflow-x-auto rounded-xl border border-line bg-card transition-opacity md:block", isPending && "opacity-60")}>
@@ -160,10 +163,10 @@ export default function GuardianManager({ page, query, classrooms, classroomId }
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex flex-col items-end gap-1">
-                        <Button variant="ghost" size="sm" className="text-brand-ink" onClick={() => setEditing({ studentId: student.studentId, studentName: student.name, guardian: null })}>
+                        {canEditStudent(student) && <Button variant="ghost" size="sm" className="text-brand-ink" onClick={() => setEditing({ studentId: student.studentId, studentName: student.name, guardian: null })}>
                           <Plus className="size-4" /> เพิ่ม
-                        </Button>
-                        {student.guardians.map((g) => <div key={g.id} className="py-1"><RecordActions name={g.fullName} onView={() => setViewing({ studentId: student.studentId, studentName: student.name, guardian: g })} onEdit={() => setEditing({ studentId: student.studentId, studentName: student.name, guardian: g })} onDelete={() => setDeleting(g)} /></div>)}
+                        </Button>}
+                        {student.guardians.map((g) => <div key={g.id} className="py-1"><RecordActions name={g.fullName} onView={() => setViewing({ studentId: student.studentId, studentName: student.name, guardian: g })} onEdit={canEditStudent(student) ? () => setEditing({ studentId: student.studentId, studentName: student.name, guardian: g }) : undefined} onDelete={canEditStudent(student) ? () => setDeleting(g) : undefined} /></div>)}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -189,7 +192,7 @@ export default function GuardianManager({ page, query, classrooms, classroomId }
           />
         )}
 
-        {viewing && <RecordPreviewDialog open title={[viewing.guardian.prefix, viewing.guardian.fullName].filter(Boolean).join(" ")} subtitle={`ผู้ปกครองของ ${viewing.studentName}`} fields={[{ label: "ความสัมพันธ์", value: viewing.guardian.relation }, { label: "เบอร์โทรศัพท์", value: viewing.guardian.phone ?? "—" }, { label: "อาชีพ", value: viewing.guardian.occupation ?? "—" }, { label: "กรุ๊ปเลือด", value: viewing.guardian.bloodType ?? "—" }, { label: "สถานะ LINE", value: viewing.guardian.lineStatus === "linked" ? "ผูกแล้ว" : viewing.guardian.lineStatus === "pending" ? "รอผูก" : "ยังไม่ผูก" }]} onClose={() => setViewing(null)} onEdit={() => { const item = viewing; setViewing(null); setEditing(item); }} />}
+        {viewing && <RecordPreviewDialog open title={[viewing.guardian.prefix, viewing.guardian.fullName].filter(Boolean).join(" ")} subtitle={`ผู้ปกครองของ ${viewing.studentName}`} fields={[{ label: "ความสัมพันธ์", value: viewing.guardian.relation }, { label: "เบอร์โทรศัพท์", value: viewing.guardian.phone ?? "—" }, { label: "อาชีพ", value: viewing.guardian.occupation ?? "—" }, { label: "กรุ๊ปเลือด", value: viewing.guardian.bloodType ?? "—" }, { label: "สถานะ LINE", value: viewing.guardian.lineStatus === "linked" ? "ผูกแล้ว" : viewing.guardian.lineStatus === "pending" ? "รอผูก" : "ยังไม่ผูก" }]} onClose={() => setViewing(null)} onEdit={canEditId(viewing.studentId) ? () => { const item = viewing; setViewing(null); setEditing(item); } : undefined} />}
 
         <ConfirmDialog
           open={deleting !== null}

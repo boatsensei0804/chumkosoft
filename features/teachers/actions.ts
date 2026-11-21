@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRoles } from "@/lib/dal";
-import { STAFF_ROLES } from "@/features/auth/roles";
+import prisma from "@/lib/prisma";
+import { z } from "zod";
 import { staffSchema } from "@/features/teachers/schemas/staff-schema";
 import {
   createStaffRecord,
@@ -42,14 +43,11 @@ function toNationalId(value: FormDataEntryValue | null): string | null {
 
 export async function saveStaffAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    const currentUser = await requireRoles(STAFF_ROLES);
+    await requireRoles(["ADMIN"]);
 
     const id = toText(formData.get("id"));
     const rawLoginPassword = formData.get("loginPassword");
     const loginPassword = typeof rawLoginPassword === "string" && rawLoginPassword.length > 0 ? rawLoginPassword : undefined;
-    if (loginPassword && currentUser.role !== "ADMIN") {
-      return { ok: false, message: "เฉพาะผู้ดูแลระบบเท่านั้นที่สร้างหรือเปลี่ยนรหัสผ่านบัญชีบุคลากรได้" };
-    }
     if (loginPassword && (loginPassword.length < 8 || loginPassword.length > 100)) {
       return { ok: false, message: "กรุณาตรวจสอบข้อมูล", fieldErrors: { loginPassword: "รหัสผ่านต้องมี 8–100 ตัวอักษร" } };
     }
@@ -81,7 +79,7 @@ export async function saveStaffAction(_prev: ActionResult, formData: FormData): 
     }
 
     const result = id
-      ? await updateStaffRecord(id, parsed.data, loginPassword, currentUser.role === "ADMIN")
+      ? await updateStaffRecord(id, parsed.data, loginPassword, true)
       : await createStaffRecord(parsed.data, loginPassword);
 
     if (result.ok) {
@@ -93,11 +91,46 @@ export async function saveStaffAction(_prev: ActionResult, formData: FormData): 
 
 export async function deleteStaffAction(id: string): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(STAFF_ROLES);
+    await requireRoles(["ADMIN"]);
     const result = await deleteStaffRecord(id);
     if (result.ok) {
       revalidatePath(TEACHERS_PATH);
     }
     return result;
+  });
+}
+
+const ownProfileSchema = z.object({
+  firstName: z.string().trim().min(1).max(100),
+  lastName: z.string().trim().min(1).max(100),
+  phone: z.string().trim().max(30),
+  email: z.union([z.email(), z.literal("")]),
+});
+
+/** Teachers can update their own contact details, never personnel type or payroll fields. */
+export async function saveOwnStaffAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const user = await requireRoles(["TEACHER"]);
+    if (!user.staffId) return { ok: false, message: "บัญชีนี้ยังไม่เชื่อมกับข้อมูลครู" };
+    const parsed = ownProfileSchema.safeParse({
+      firstName: formData.get("firstName"),
+      lastName: formData.get("lastName"),
+      phone: toText(formData.get("phone")),
+      email: toText(formData.get("email")).toLowerCase(),
+    });
+    if (!parsed.success) return { ok: false, message: "กรุณาตรวจสอบชื่อ อีเมล และเบอร์โทรศัพท์" };
+    const result = await prisma.staff.updateMany({
+      where: { id: user.staffId, isDeleted: false },
+      data: {
+        firstName: parsed.data.firstName,
+        lastName: parsed.data.lastName,
+        phone: parsed.data.phone || null,
+        email: parsed.data.email || null,
+      },
+    });
+    if (result.count === 0) return { ok: false, message: "ไม่พบข้อมูลครูที่เชื่อมกับบัญชีนี้" };
+    revalidatePath(TEACHERS_PATH);
+    revalidatePath(`${TEACHERS_PATH}/${user.staffId}`);
+    return { ok: true, message: "บันทึกข้อมูลส่วนตัวเรียบร้อย" };
   });
 }

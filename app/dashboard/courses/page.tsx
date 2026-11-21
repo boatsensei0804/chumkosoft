@@ -6,6 +6,7 @@ import CoursesBrowser from "@/features/courses/components/courses-browser";
 import { listCoursesPaginated, getCourseStats } from "@/services/course-service";
 import { parsePage } from "@/types/pagination";
 import { getActiveTermLabel } from "@/services/dashboard-service";
+import { requireRoles } from "@/lib/dal";
 
 export const metadata: Metadata = {
   title: "รายวิชา · chumkosoft",
@@ -18,6 +19,7 @@ interface CoursesPageProps {
 }
 
 export default async function CoursesPage({ searchParams }: CoursesPageProps): Promise<React.ReactNode> {
+  const user = await requireRoles(["ADMIN", "TEACHER"]);
   const params = await searchParams;
   const query = params.q ?? "";
   const [result, stats, termLabel] = await Promise.all([
@@ -39,7 +41,7 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps): P
           { label: "ยังไม่เปิดสอน", value: stats.total - stats.open, hint: "วิชา", icon: CircleDashed, tone: "default" },
         ]}
       />}
-      <CoursesBrowser page={result} query={query} />
+      <CoursesBrowser page={result} query={query} canManage={user.role === "ADMIN"} />
     </>
   );
 }

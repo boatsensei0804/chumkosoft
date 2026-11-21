@@ -3,7 +3,7 @@ import { Users, GraduationCap, Briefcase } from "lucide-react";
 import PageHeader from "@/features/dashboard/components/page-header";
 import StatStrip from "@/components/ui/stat-strip";
 import TeachersBrowser from "@/features/teachers/components/teachers-browser";
-import { listStaffPaginated, getStaffStats } from "@/services/staff-service";
+import { listStaffPaginated, getStaffStats, getStaffDetail } from "@/services/staff-service";
 import type { StaffFilter } from "@/repositories/staff-repository";
 import { parsePage } from "@/types/pagination";
 import { requireRoles } from "@/lib/dal";
@@ -27,11 +27,20 @@ export default async function TeachersPage({ searchParams }: TeachersPageProps):
   const params = await searchParams;
   const query = params.q ?? "";
   const filter: StaffFilter = FILTERS.includes(params.filter as StaffFilter) ? (params.filter as StaffFilter) : "all";
-  const [result, stats, termLabel] = await Promise.all([
+  const [result, stats, termLabel, ownDetail] = await Promise.all([
     listStaffPaginated({ page: parsePage(params.page), search: query, filter }),
     getStaffStats(),
     getActiveTermLabel(),
+    currentUser.role === "TEACHER" && currentUser.staffId ? getStaffDetail(currentUser.staffId) : Promise.resolve(null),
   ]);
+  const ownStaff = ownDetail;
+  const visibleResult = currentUser.role === "ADMIN" ? result : {
+    ...result,
+    rows: result.rows.map((staff) => staff.id === currentUser.staffId ? staff : {
+      ...staff, birthDate: null, nationalId: null, positionNumber: null, salary: null,
+      licenseNumber: null, licenseExpiry: null, loginEmail: null,
+    }),
+  };
 
   return (
     <>
@@ -46,7 +55,7 @@ export default async function TeachersPage({ searchParams }: TeachersPageProps):
           { label: "บุคลากร", value: stats.personnel, hint: "คน", icon: Briefcase, tone: "default" },
         ]}
       />}
-      <TeachersBrowser page={result} query={query} filter={filter} canManageAccounts={currentUser.role === "ADMIN"} />
+      <TeachersBrowser page={visibleResult} query={query} filter={filter} canManageAccounts={currentUser.role === "ADMIN"} ownStaffId={currentUser.staffId} ownStaff={ownStaff} />
     </>
   );
 }

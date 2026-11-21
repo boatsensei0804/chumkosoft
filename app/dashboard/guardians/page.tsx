@@ -5,6 +5,7 @@ import StatStrip from "@/components/ui/stat-strip";
 import GuardianManager from "@/features/guardians/components/guardian-manager";
 import { requireRoles } from "@/lib/dal";
 import { STAFF_ROLES } from "@/features/auth/roles";
+import { advisoryClassroomIds } from "@/lib/teacher-data-access";
 import { listStudentGuardians, listGuardianClassrooms, getGuardianStats } from "@/features/guardians/services/guardian-service";
 import { parsePage } from "@/types/pagination";
 
@@ -19,7 +20,8 @@ interface GuardiansPageProps {
 }
 
 export default async function GuardiansPage({ searchParams }: GuardiansPageProps): Promise<React.ReactNode> {
-  await requireRoles(STAFF_ROLES);
+  const user = await requireRoles(STAFF_ROLES);
+  const editableClassroomIds = user.role === "ADMIN" ? null : await advisoryClassroomIds(user);
   const params = await searchParams;
   const query = params.q ?? "";
   const classroomId = params.classroom ?? "";
@@ -33,7 +35,7 @@ export default async function GuardiansPage({ searchParams }: GuardiansPageProps
     <>
       <PageHeader
         title="ผู้ปกครอง"
-        subtitle="จัดการข้อมูลบิดา มารดา และผู้ปกครองของนักเรียน — สำหรับการผูก LINE และแจ้งเตือน ดูที่เมนู LINE / แจ้งเตือน"
+        subtitle={user.role === "ADMIN" ? "จัดการข้อมูลบิดา มารดา และผู้ปกครองของนักเรียน — สำหรับการผูก LINE และแจ้งเตือน ดูที่เมนู LINE / แจ้งเตือน" : "ดูข้อมูลผู้ปกครอง และแก้ไขได้เฉพาะนักเรียนในห้องที่คุณเป็นครูที่ปรึกษา"}
       />
       <StatStrip
         items={[
@@ -42,7 +44,7 @@ export default async function GuardiansPage({ searchParams }: GuardiansPageProps
           { label: "ยังไม่มีผู้ปกครอง", value: Math.max(0, stats.students - stats.withGuardian), hint: "คน", icon: UserX, tone: "warning" },
         ]}
       />
-      <GuardianManager page={result} query={query} classrooms={classrooms} classroomId={classroomId} />
+      <GuardianManager page={result} query={query} classrooms={classrooms} classroomId={classroomId} editableClassroomIds={editableClassroomIds} />
     </>
   );
 }

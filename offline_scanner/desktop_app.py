@@ -4,6 +4,7 @@ import argparse
 import base64
 import os
 import queue
+import subprocess
 import sys
 import threading
 import time
@@ -42,6 +43,7 @@ from PySide6.QtWidgets import (
 )
 
 from model_update import ModelUpdateError, bootstrap_bundled_models, ensure_models
+from display_schedule import DisplaySchedule, load_display_schedule, save_display_schedule
 from scanner import best_match, extract_face, load_cv, scan_face_jpeg
 from scan_snapshots import purge_scan_snapshots, save_scan_snapshot, snapshot_path
 from settings import DETECTION_INTERVALS, REPEAT_COOLDOWNS, ScannerSettings, get_or_create_device_id, load_settings, save_settings
@@ -97,6 +99,7 @@ QFrame#paircard { background: white; border: 1px solid #dce9f4; border-radius: 2
 QLabel#brandmark { background: #0e6cbb; color: white; border-radius: 12px; font-size: 23px; font-weight: 800; }
 QLabel#brandtitle { font-size: 19px; font-weight: 800; }
 QLabel#brandsub { color: #8ca1b6; font-size: 10px; letter-spacing: 1px; }
+QLabel#brandtagline { color: #527493; font-size: 11px; }
 QLabel#eyebrow { color: #2f88ce; font-size: 10px; font-weight: 800; }
 QLabel#heading { font-size: 28px; font-weight: 800; }
 QLabel#subtle { color: #7389a0; }
@@ -120,6 +123,15 @@ QLabel#alerttitle { font-size: 18px; font-weight: 700; color: #183454; }
 QLabel#alertbody { font-size: 15px; color: #365b79; }
 QFrame#scanalert[mode="success"] QLabel#alerticon, QFrame#scanalert[mode="success"] QLabel#alerttitle { color: #167c55; }
 QFrame#scanalert[mode="warn"] QLabel#alerticon, QFrame#scanalert[mode="warn"] QLabel#alerttitle { color: #a26f20; }
+QLabel#lastscan { background: #e9f8ef; color: #167c55; border: 1px solid #bde7d0; border-radius: 12px; padding: 11px 13px; font-size: 13px; font-weight: 700; }
+QLabel#lastscan[mode="warn"] { background: #fff7e7; color: #a26f20; border-color: #f1dfb8; }
+QFrame#scanrow { background: #f8fbff; border: 1px solid #dce9f4; border-radius: 13px; }
+QLabel#scanrowname { font-size: 15px; font-weight: 700; color: #183454; }
+QLabel#scanrowmeta { color: #7389a0; font-size: 11px; }
+QLabel#scanrowtime { color: #365b79; font-size: 12px; font-weight: 700; }
+QLabel#scanrowcheck { color: #167c55; background: #e5f7eb; border-radius: 11px; padding: 5px 8px; font-size: 11px; font-weight: 700; }
+QLabel#scanonline { color: #167c55; background: #e5f7eb; border: 1px solid #bde7d0; border-radius: 13px; padding: 9px 14px; font-size: 13px; font-weight: 800; }
+QLabel#scanonline[mode="offline"] { color: #8a5b12; background: #fff5df; border-color: #f1dfb8; }
 QPushButton#nav { background: transparent; color: #607d98; text-align: left; padding: 13px 14px; font-size: 14px; }
 QPushButton#nav:checked { background: #e1f0fc; color: #1267ad; }
 QPushButton#collapse { background: #f0f7fd; color: #1267ad; text-align: left; padding: 10px 14px; }
@@ -131,6 +143,9 @@ QPushButton#primary:hover { background: #0e5fae; }
 QPushButton#primary:disabled { background: #a7c9e6; color: white; }
 QPushButton#emergency { background: #b42332; color: white; min-height: 34px; font-size: 15px; }
 QPushButton#emergency:hover { background: #941b28; }
+QPushButton#emergency:disabled { background: #d9a2a7; color: white; }
+QLabel#emergencyhint { background: #fff1f2; color: #8f2632; border: 1px solid #f2c9ce; border-radius: 12px; padding: 11px 14px; font-size: 12px; }
+QLabel#emergencyhint[mode="success"] { background: #e9f8ef; color: #167c55; border-color: #bde7d0; }
 QComboBox { background: #fbfdff; border: 1px solid #d7e5ef; border-radius: 9px; padding: 8px 10px; min-width: 95px; }
 QComboBox:focus { border-color: #69afe4; }
 QLineEdit { background: #fbfdff; border: 1px solid #d7e5ef; border-radius: 9px; padding: 9px 10px; min-height: 18px; }
@@ -175,14 +190,17 @@ class ScannerWindow(QMainWindow):
                  check_updates: bool = True, site_url: str = SITE, auto_connect: bool = True):
         super().__init__()
         self.setWindowTitle("Chumkosoft · เครื่องสแกนหน้า")
-        self.resize(1240, 860)
-        self.setMinimumSize(970, 690)
+        self.resize(1360, 900)
+        self.setMinimumSize(1040, 720)
         self.setStyleSheet(STYLE)
         self.models_dir = data_dir / "models"
         self.db_path = data_dir / "scanner.sqlite3"
         self.scan_photo_dir = data_dir / "scan_photos"
         purge_scan_snapshots(self.scan_photo_dir)
         self.settings_path = data_dir / "settings.json"
+        self.display_schedule_path = data_dir / "display-schedule.json"
+        self.display_schedule = load_display_schedule(self.display_schedule_path)
+        self.screen_active = True
         self.device_id = get_or_create_device_id(data_dir / "device-id")
         saved = load_settings(self.settings_path)
         self.settings = ScannerSettings(
@@ -233,6 +251,9 @@ class ScannerWindow(QMainWindow):
         self.clock_timer.timeout.connect(self._update_clock)
         self.clock_timer.start(1000)
         self._update_clock()
+        self.display_timer = QTimer(self)
+        self.display_timer.timeout.connect(self._update_display_state)
+        self.display_timer.start(15000)
         self.frame_timer = QTimer(self)
         self.frame_timer.timeout.connect(self._camera_tick)
         self.background_timer = QTimer(self)
@@ -271,6 +292,9 @@ class ScannerWindow(QMainWindow):
         shell_layout.setContentsMargins(0, 0, 0, 0)
         shell_layout.setSpacing(0)
         self.setCentralWidget(shell)
+        self.sleep_overlay = QWidget(self)
+        self.sleep_overlay.setStyleSheet("background: #040b15;")
+        self.sleep_overlay.hide()
 
         self.navigation_widget = QFrame()
         self.navigation_widget.setObjectName("sidebar")
@@ -302,28 +326,35 @@ class ScannerWindow(QMainWindow):
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
         shell_layout.addWidget(scroll, stretch=1)
+        self.main_scroll = scroll
         root = QWidget()
         root.setObjectName("root")
-        root.setMinimumHeight(710)
+        root.setMinimumHeight(0)
+        root.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+        self.main_root = root
         scroll.setWidget(root)
         outer = QVBoxLayout(root)
-        outer.setContentsMargins(27, 18, 27, 18)
-        outer.setSpacing(12)
+        outer.setContentsMargins(20, 14, 20, 14)
+        outer.setSpacing(10)
 
         header = QHBoxLayout()
-        mark = label("ช", "brandmark")
+        mark = label("", "brandmark")
         mark.setAlignment(Qt.AlignCenter)
-        mark.setFixedSize(39, 39)
+        mark.setFixedSize(48, 48)
+        mascot = mascot_path()
+        if mascot.is_file():
+            mark.setPixmap(QPixmap(str(mascot)).scaled(44, 44, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        else:
+            mark.setText("ช")
         header.addWidget(mark)
         brand = QVBoxLayout()
         brand.setSpacing(0)
-        brand.addWidget(label("Chumkosoft", "brandtitle"))
-        brand.addWidget(label("FACE SCAN STATION", "brandsub"))
+        brand.addWidget(label("Chumkosoft School", "brandtitle"))
+        brand.addWidget(label("จุดสแกนใบหน้า · สแกนและเช็กชื่อในเครื่อง", "brandtagline"))
         header.addLayout(brand)
         header.addStretch()
         self.connection_badge = label("รอเชื่อมเว็บ", "testbadge")
         header.addWidget(self.connection_badge)
-        header.addWidget(label("พร้อมใช้งานออฟไลน์", "statebadge"))
         outer.addLayout(header)
 
         self.pages = CurrentPageStack()
@@ -336,6 +367,10 @@ class ScannerWindow(QMainWindow):
         for page in (scan_page, overview_page, enroll_page, transfer_page, settings_page):
             self.pages.addWidget(page)
         self.show_page(3)
+        scan_page_layout.setContentsMargins(0, 0, 0, 0)
+        scan_page_layout.setSpacing(0)
+        scan_page_layout.itemAt(0).widget().hide()
+        scan_page_layout.itemAt(1).widget().hide()
 
         metrics = QGridLayout()
         metrics.setSpacing(11)
@@ -346,14 +381,21 @@ class ScannerWindow(QMainWindow):
         overview_layout.addLayout(metrics)
 
         scan_card, scan_layout = card()
-        scan_card.setMinimumHeight(570)
-        scan_layout.addWidget(label("01 / สถานีสแกน", "eyebrow"))
-        scan_layout.addWidget(label("กล้องสแกนใบหน้า", "section"))
+        scan_card.setMinimumHeight(0)
+        scan_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        camera_header = QHBoxLayout()
+        camera_title = QVBoxLayout()
+        camera_title.setSpacing(2)
+        camera_title.addWidget(label("กล้องตรวจจับใบหน้า", "section"))
         self.model_status = label(f"โมเดล {self.manifest['model_version']} พร้อมใช้ในเครื่อง · กำลังตรวจอัปเดต", "subtle", True)
-        scan_layout.addWidget(self.model_status)
+        camera_title.addWidget(self.model_status)
+        camera_header.addLayout(camera_title, stretch=1)
+        self.scan_camera_label = label(f"กล้อง {self.camera_index} · LIVE", "eyebrow")
+        camera_header.addWidget(self.scan_camera_label, alignment=Qt.AlignRight | Qt.AlignVCenter)
+        scan_layout.addLayout(camera_header)
         self.stage = QStackedWidget()
-        self.stage.setMinimumHeight(340)
-        self.stage.setMaximumHeight(540)
+        self.stage.setMinimumHeight(280)
+        self.stage.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         placeholder = QWidget()
         placeholder.setObjectName("placeholder")
         place_layout = QVBoxLayout(placeholder)
@@ -372,7 +414,7 @@ class ScannerWindow(QMainWindow):
         place_layout.addWidget(hint)
         self.preview = label("", "camera")
         self.preview.setAlignment(Qt.AlignCenter)
-        self.preview.setMinimumHeight(340)
+        self.preview.setMinimumHeight(280)
         self.stage.addWidget(placeholder)
         self.stage.addWidget(self.preview)
         scan_layout.addWidget(self.stage, stretch=1)
@@ -391,70 +433,74 @@ class ScannerWindow(QMainWindow):
         alert_text.addWidget(self.feedback)
         alert_layout.addLayout(alert_text, stretch=1)
         scan_layout.addWidget(self.scan_alert)
-        emergency_row = QHBoxLayout()
-        self.emergency_feedback = label(
-            "แจ้งเหตุจะส่ง LINE ถึงแอดมินและครู · หากส่งไม่ได้ให้ใช้โทรศัพท์ฉุกเฉินของโรงเรียน",
-            "subtle", True,
-        )
-        emergency_row.addWidget(self.emergency_feedback, stretch=1)
-        self.emergency_button = QPushButton("🚨  แจ้งเหตุฉุกเฉิน")
-        self.emergency_button.setObjectName("emergency")
-        self.emergency_button.setMinimumWidth(230)
-        self.emergency_button.clicked.connect(self.open_emergency_dialog)
-        emergency_row.addWidget(self.emergency_button)
-        scan_layout.addLayout(emergency_row)
-        controls = QHBoxLayout()
-        self.scan_camera_label = label(f"ใช้กล้อง {self.camera_index} · เปลี่ยนได้ในหน้าตั้งค่า", "subtle")
-        controls.addWidget(self.scan_camera_label)
-        controls.addStretch()
-        scan_layout.insertLayout(3, controls)
-        scan_workspace = QHBoxLayout()
-        scan_workspace.setSpacing(14)
-        scan_workspace.addWidget(scan_card, stretch=5)
-        side_column = QVBoxLayout()
-        side_column.setSpacing(14)
-        result_card = QFrame()
-        result_card.setObjectName("scanresult")
-        result_layout = QVBoxLayout(result_card)
-        result_layout.setContentsMargins(20, 18, 20, 18)
-        result_layout.setSpacing(3)
-        result_layout.addWidget(label("ผลสแกนล่าสุด", "eyebrow"))
-        self.result_name = label("พร้อมสแกนใบหน้า", "resultname", True)
-        result_layout.addWidget(self.result_name)
-        self.result_meta = label("เมื่อสแกนสำเร็จ ชื่อและเวลาจะแสดงตรงนี้", "resultmeta", True)
-        result_layout.addWidget(self.result_meta)
-        side_column.addWidget(result_card)
-        self.result_card = result_card
-        activity_card, activity_layout = card()
-        activity_card.setMinimumWidth(350)
-        activity_card.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
-        activity_layout.addWidget(label("รายการสแกนวันนี้", "eyebrow"))
-        activity_layout.addWidget(label("เวลาปัจจุบัน · เวลาไทย", "subtle"))
+        camera_footer = QFrame()
+        camera_footer.setObjectName("card")
+        footer_layout = QHBoxLayout(camera_footer)
+        footer_layout.setContentsMargins(15, 9, 15, 9)
+        footer_layout.setSpacing(14)
         self.scan_clock = label("--:--:--", "clock")
-        activity_layout.addWidget(self.scan_clock)
+        self.scan_clock.setStyleSheet("font-size: 29px; font-weight: 700; color: #183454;")
+        footer_layout.addWidget(self.scan_clock)
         self.scan_date = label("--", "subtle")
-        activity_layout.addWidget(self.scan_date)
+        footer_layout.addWidget(self.scan_date)
+        footer_layout.addStretch()
+        self.scan_online_badge = label("● ออฟไลน์ · เก็บข้อมูลในเครื่อง", "scanonline")
+        self.scan_online_badge.setProperty("mode", "offline")
+        footer_layout.addWidget(self.scan_online_badge)
+        scan_layout.addWidget(camera_footer)
+        scan_workspace = QHBoxLayout()
+        scan_workspace.setSpacing(12)
+        scan_workspace.addWidget(scan_card, stretch=6)
+        side_column = QVBoxLayout()
+        side_column.setSpacing(10)
+        activity_card, activity_layout = card()
+        activity_card.setMinimumWidth(385)
+        activity_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        activity_heading = QHBoxLayout()
+        activity_heading.addWidget(label("รายการสแกนล่าสุด", "section"), stretch=1)
         self.scan_count = label("สแกนแล้ว 0 คน", "section")
-        activity_layout.addWidget(self.scan_count)
-        self.scan_queue_note = label("บันทึกบนเครื่องนี้ · เรียงจากล่าสุด", "subtle")
+        activity_heading.addWidget(self.scan_count)
+        activity_layout.addLayout(activity_heading)
+        self.scan_queue_note = label("วันนี้ · เรียงเวลาล่าสุดก่อน", "subtle")
         activity_layout.addWidget(self.scan_queue_note)
-        self.scan_history = QTableWidget(0, 3)
-        self.scan_history.setHorizontalHeaderLabels(["ภาพ", "รายชื่อ / รหัส", "เวลาสแกน"])
-        self.scan_history.verticalHeader().setVisible(False)
-        self.scan_history.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.scan_history.setSelectionBehavior(QTableWidget.SelectRows)
-        self.scan_history.setColumnWidth(0, 68)
-        self.scan_history.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.scan_history.setColumnWidth(2, 125)
-        self.scan_history.setMinimumHeight(360)
-        activity_layout.addWidget(self.scan_history, stretch=1)
+        self.latest_scan_summary = label("ยังไม่มีผลสแกนล่าสุด", "lastscan", True)
+        activity_layout.addWidget(self.latest_scan_summary)
+        self.scan_rows_scroll = QScrollArea()
+        self.scan_rows_scroll.setObjectName("scanrows")
+        self.scan_rows_scroll.setWidgetResizable(True)
+        self.scan_rows_scroll.setFrameShape(QFrame.NoFrame)
+        self.scan_rows_scroll.setMinimumHeight(0)
+        self.scan_rows_scroll.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.scan_rows_scroll.viewport().setStyleSheet("background-color: white;")
+        self.scan_rows_container = QWidget()
+        self.scan_rows_container.setObjectName("scanrowscontainer")
+        self.scan_rows_container.setStyleSheet("background-color: white;")
+        self.scan_rows_layout = QVBoxLayout(self.scan_rows_container)
+        self.scan_rows_layout.setContentsMargins(0, 2, 0, 2)
+        self.scan_rows_layout.setSpacing(9)
+        self.scan_rows_scroll.setWidget(self.scan_rows_container)
+        activity_layout.addWidget(self.scan_rows_scroll, stretch=1)
         self.scan_empty = label("ยังไม่มีใครสแกนในวันนี้", "subtle", True)
         self.scan_empty.setAlignment(Qt.AlignCenter)
-        activity_layout.addWidget(self.scan_empty)
-        side_column.addWidget(activity_card)
-        scan_workspace.addLayout(side_column, stretch=3)
-        scan_page_layout.addLayout(scan_workspace)
-        scan_page_layout.addStretch()
+        self.scan_rows_layout.addWidget(self.scan_empty)
+        self.scan_rows_layout.addStretch()
+        side_column.addWidget(activity_card, stretch=1)
+        self.emergency_button = QPushButton("🚨  แจ้งเหตุฉุกเฉิน")
+        self.emergency_button.setObjectName("emergency")
+        self.emergency_button.setMinimumHeight(58)
+        self.emergency_button.setMaximumHeight(66)
+        self.emergency_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.emergency_button.setAccessibleName("แจ้งเหตุฉุกเฉิน")
+        self.emergency_button.setToolTip("ส่งเหตุไปยังแอดมินและครูที่ผูกบัญชี LINE")
+        self.emergency_button.clicked.connect(self.open_emergency_dialog)
+        side_column.addWidget(self.emergency_button)
+        self.emergency_feedback = label(
+            "หากเป็นเหตุเร่งด่วน หรืออินเทอร์เน็ต/LINE ใช้ไม่ได้ ให้โทรแจ้งโรงเรียนทันที",
+            "emergencyhint", True,
+        )
+        side_column.addWidget(self.emergency_feedback)
+        scan_workspace.addLayout(side_column, stretch=4)
+        scan_page_layout.addLayout(scan_workspace, stretch=1)
 
         enrollment_workspace = QHBoxLayout()
         enrollment_workspace.setSpacing(14)
@@ -695,10 +741,61 @@ class ScannerWindow(QMainWindow):
             self.stop_camera()
         self.pages.setCurrentIndex(index)
         self.pages.updateGeometry()
+        self._fit_scan_workspace()
+        self.connection_badge.setVisible(index != 0)
         for position, button in enumerate(self.nav_buttons):
             button.setChecked(position == index)
         if index in (0, 2) and self.web_client is not None and self.camera is None:
             self.start_camera()
+
+    def _fit_scan_workspace(self):
+        if not hasattr(self, "main_root") or not hasattr(self, "pages"):
+            return
+        if self.pages.currentIndex() == 0:
+            height = self.main_scroll.viewport().height()
+            if height > 0:
+                self.main_root.setFixedHeight(height)
+        else:
+            self.main_root.setMinimumHeight(0)
+            self.main_root.setMaximumHeight(16777215)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, "sleep_overlay"):
+            self.sleep_overlay.setGeometry(self.rect())
+        QTimer.singleShot(0, self._fit_scan_workspace)
+
+    def _update_display_state(self):
+        # Keep the QR pairing screen visible until the device is connected.
+        active = self.web_client is None or self.display_schedule.is_active(
+            datetime.now(THAI_TIME).strftime("%H:%M")
+        )
+        if active == self.screen_active:
+            return
+        self.screen_active = active
+        if active:
+            if sys.platform.startswith("linux") and os.environ.get("DISPLAY"):
+                try:
+                    subprocess.run(["xset", "dpms", "force", "on"], timeout=2, check=False,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                except (OSError, subprocess.TimeoutExpired):
+                    pass
+            self.sleep_overlay.hide()
+        else:
+            self.sleep_overlay.setGeometry(self.rect())
+            self.sleep_overlay.raise_()
+            self.sleep_overlay.show()
+            QTimer.singleShot(200, self._request_monitor_sleep)
+
+    def _request_monitor_sleep(self):
+        # On X11, turn off monitor power too; Wayland/macOS retain the black cover.
+        if self.screen_active or not sys.platform.startswith("linux") or not os.environ.get("DISPLAY"):
+            return
+        try:
+            subprocess.run(["xset", "dpms", "force", "off"], timeout=2, check=False,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
 
     def _set_emergency_feedback(self, message: str, mode: str = ""):
         self.emergency_feedback.setText(message)
@@ -837,7 +934,7 @@ class ScannerWindow(QMainWindow):
             return
         self.settings = selected
         self.camera_index = selected.camera_index
-        self.scan_camera_label.setText(f"ใช้กล้อง {selected.camera_index} · เปลี่ยนได้ในหน้าตั้งค่า")
+        self.scan_camera_label.setText(f"กล้อง {selected.camera_index} · รอเปิด")
         self.enroll_camera_label.setText(f"ใช้กล้อง {selected.camera_index} · เปลี่ยนได้ในหน้าตั้งค่า")
         self.settings_feedback.setText("บันทึกแล้ว · ใช้ค่ากล้องและเวลาใหม่ได้ทันที")
 
@@ -960,23 +1057,59 @@ class ScannerWindow(QMainWindow):
         ).fetchall()
         total_today = self.db.execute("SELECT COUNT(*) FROM events WHERE local_date=?", (today,)).fetchone()[0]
         self.scan_count.setText(f"สแกนแล้ว {total_today} คน")
-        self.scan_empty.setVisible(total_today == 0)
-        self.scan_history.setVisible(total_today > 0)
-        self.scan_history.setRowCount(len(today_rows))
+        self.scan_empty.setVisible(not today_rows)
+        self.latest_scan_summary.setProperty("mode", "" if today_rows else "warn")
+        self.latest_scan_summary.setText(
+            f"✓ ล่าสุด  {today_rows[0]['display_name']} · {datetime.fromisoformat(today_rows[0]['captured_at']).astimezone(THAI_TIME).strftime('%H:%M น.')}"
+            if today_rows else "ยังไม่มีผลสแกนล่าสุด"
+        )
+        self.latest_scan_summary.style().unpolish(self.latest_scan_summary)
+        self.latest_scan_summary.style().polish(self.latest_scan_summary)
+        while self.scan_rows_layout.count():
+            item = self.scan_rows_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+        self.scan_empty = label("ยังไม่มีใครสแกนในวันนี้", "subtle", True)
+        self.scan_empty.setAlignment(Qt.AlignCenter)
+        self.scan_empty.setMinimumHeight(120)
+        self.scan_rows_layout.addWidget(self.scan_empty)
+        if today_rows:
+            self.scan_empty.hide()
         for index, row in enumerate(today_rows):
             at = datetime.fromisoformat(row["captured_at"]).astimezone(THAI_TIME).strftime("%H:%M:%S")
-            portrait = label("—", "subtle")
+            row_card = QFrame()
+            row_card.setObjectName("scanrow")
+            row_layout = QHBoxLayout(row_card)
+            row_layout.setContentsMargins(9, 8, 10, 8)
+            row_layout.setSpacing(10)
+            portrait = label("ภาพ", "subtle")
             portrait.setAlignment(Qt.AlignCenter)
+            portrait.setFixedSize(60, 60)
+            portrait.setStyleSheet("background: #eaf4fc; border-radius: 9px;")
             path = snapshot_path(self.scan_photo_dir, row["event_id"])
             if path:
                 pixmap = QPixmap(str(path))
                 if not pixmap.isNull():
                     portrait.setText("")
-                    portrait.setPixmap(pixmap.scaled(52, 52, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-            self.scan_history.setCellWidget(index, 0, portrait)
-            self.scan_history.setItem(index, 1, QTableWidgetItem(f"{row['display_name']}\n{row['student_id']}"))
-            self.scan_history.setItem(index, 2, QTableWidgetItem(at))
-            self.scan_history.setRowHeight(index, 72)
+                    portrait.setPixmap(pixmap.scaled(60, 60, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            row_layout.addWidget(portrait)
+            identity = QVBoxLayout()
+            identity.setSpacing(4)
+            identity.addWidget(label(row["display_name"], "scanrowname", True))
+            identity.addWidget(label(f"รหัส {row['student_id']}", "scanrowmeta"))
+            row_layout.addLayout(identity, stretch=1)
+            outcome = QVBoxLayout()
+            outcome.setSpacing(5)
+            checkmark = label("✓  มาแล้ว", "scanrowcheck")
+            checkmark.setAlignment(Qt.AlignCenter)
+            outcome.addWidget(checkmark, alignment=Qt.AlignRight)
+            time_label = label(at, "scanrowtime")
+            time_label.setAlignment(Qt.AlignRight)
+            outcome.addWidget(time_label)
+            row_layout.addLayout(outcome)
+            self.scan_rows_layout.insertWidget(index, row_card)
+        self.scan_rows_layout.addStretch()
 
     def start_camera(self):
         if self.web_client is None or self.pages.currentIndex() not in (0, 2) or self.camera is not None:
@@ -986,10 +1119,12 @@ class ScannerWindow(QMainWindow):
         camera = self.cv.VideoCapture(index)
         if not camera.isOpened():
             camera.release()
+            self.scan_camera_label.setText(f"กล้อง {index} · ไม่พบภาพ")
             self._feedback(f"เปิดกล้อง {index} ไม่ได้ · ตรวจสิทธิ์กล้องหรือเปลี่ยนที่หน้าตั้งค่า · จะลองใหม่อัตโนมัติ", "warn", force=True)
             self.camera_retry_timer.start(10000)
             return
         self.camera = camera
+        self.scan_camera_label.setText(f"กล้อง {index} · LIVE")
         self.stage.setCurrentIndex(1)
         self._update_enroll_actions()
         self._feedback("กล้องพร้อมถ่ายภาพลงทะเบียน" if self.pages.currentIndex() == 2 else "กำลังสแกน · จัดใบหน้าให้อยู่กลางภาพ")
@@ -1002,6 +1137,7 @@ class ScannerWindow(QMainWindow):
             self.camera.release()
         self.camera = None
         self.current_frame = None
+        self.scan_camera_label.setText(f"กล้อง {self.camera_index} · รอเปิด")
         self.stage.setCurrentIndex(0)
         self.enroll_preview.clear()
         self.enroll_preview.setText("กำลังเตรียมกล้อง หรือเลือกรูปจากไฟล์")
@@ -1074,13 +1210,12 @@ class ScannerWindow(QMainWindow):
             "success" if added else "warn",
             hold_seconds=6 if added else 3,
         )
-        self.result_card.setProperty("mode", "" if added else "warn")
-        self.result_card.style().unpolish(self.result_card)
-        self.result_card.style().polish(self.result_card)
-        self.result_name.setText(match["display_name"])
-        self.result_meta.setText(
-            f"{datetime.now(THAI_TIME).strftime('%H:%M:%S')} น. · {'บันทึกแล้ว รอส่งขึ้นเว็บ' if added else 'สแกนแล้ววันนี้'}"
+        self.latest_scan_summary.setProperty("mode", "" if added else "warn")
+        self.latest_scan_summary.setText(
+            f"✓ ล่าสุด  {match['display_name']} · {datetime.now(THAI_TIME).strftime('%H:%M:%S')} น."
         )
+        self.latest_scan_summary.style().unpolish(self.latest_scan_summary)
+        self.latest_scan_summary.style().polish(self.latest_scan_summary)
         self.refresh()
         if added:
             self.try_sync()
@@ -1295,6 +1430,12 @@ class ScannerWindow(QMainWindow):
                     self._apply_remote_settings(settings)
 
     def _apply_remote_settings(self, remote: dict):
+        if "displayScheduleEnabled" in remote:
+            schedule = DisplaySchedule.from_remote(remote)
+            if schedule != self.display_schedule:
+                save_display_schedule(self.display_schedule_path, schedule)
+                self.display_schedule = schedule
+            self._update_display_state()
         selected = ScannerSettings(
             camera_index=remote["cameraIndex"],
             detection_interval_seconds=remote["detectionIntervalSeconds"],
@@ -1311,7 +1452,7 @@ class ScannerWindow(QMainWindow):
         self.settings_camera.setCurrentIndex(self.settings_camera.findData(selected.camera_index))
         self.settings_interval.setCurrentIndex(self.settings_interval.findData(selected.detection_interval_seconds))
         self.settings_cooldown.setCurrentIndex(self.settings_cooldown.findData(selected.repeat_cooldown_seconds))
-        self.scan_camera_label.setText(f"ใช้กล้อง {selected.camera_index} · เปลี่ยนได้ในหน้าตั้งค่า")
+        self.scan_camera_label.setText(f"กล้อง {selected.camera_index} · รอเปิด")
         self.enroll_camera_label.setText(f"ใช้กล้อง {selected.camera_index} · เปลี่ยนได้ในหน้าตั้งค่า")
         self.settings_feedback.setText("ได้รับค่ากล้องและเวลาล่าสุดจากเว็บไซต์แล้ว")
         if old_camera != selected.camera_index and self.camera is not None:
@@ -1333,6 +1474,11 @@ class ScannerWindow(QMainWindow):
         self.pair_code.setVisible(False)
         self.open_pair_button.setVisible(False)
         self.web_client = None
+        self._update_display_state()
+        self.scan_online_badge.setText("● OFFLINE · เก็บข้อมูลในเครื่อง")
+        self.scan_online_badge.setProperty("mode", "offline")
+        self.scan_online_badge.style().unpolish(self.scan_online_badge)
+        self.scan_online_badge.style().polish(self.scan_online_badge)
         self.emergency_button.setEnabled(False)
         self.connection_badge.setText("รอเชื่อมเว็บ")
         self.connection_badge.setProperty("mode", "")
@@ -1359,6 +1505,11 @@ class ScannerWindow(QMainWindow):
     def _connected_to_website(self, client: KioskWebClient):
         self.pair_retry_timer.stop()
         self.web_client = client
+        self._update_display_state()
+        self.scan_online_badge.setText("● ONLINE · เชื่อมเว็บแล้ว")
+        self.scan_online_badge.setProperty("mode", "")
+        self.scan_online_badge.style().unpolish(self.scan_online_badge)
+        self.scan_online_badge.style().polish(self.scan_online_badge)
         self.emergency_button.setEnabled(True)
         self.connection_badge.setText("เชื่อมเว็บแล้ว")
         self.connection_badge.setProperty("mode", "connected")
@@ -1504,11 +1655,12 @@ class ScannerWindow(QMainWindow):
         self.heartbeating = True
         count = self.db.execute("SELECT COUNT(*) FROM events WHERE state='pending'").fetchone()[0]
         camera_active = self.camera is not None
+        screen_active = self.screen_active
         model_version = self.manifest["model_version"]
 
         def work():
             try:
-                settings = client.heartbeat(count, camera_active, model_version)
+                settings = client.heartbeat(count, camera_active, model_version, screen_active)
                 self.background_results.put(("heartbeat", client, settings, ""))
             except Exception as error:
                 self.background_results.put(("heartbeat", client, None, str(error)))
@@ -1517,6 +1669,7 @@ class ScannerWindow(QMainWindow):
 
     def closeEvent(self, event):
         self.background_timer.stop()
+        self.display_timer.stop()
         self.sync_timer.stop()
         self.heartbeat_timer.stop()
         self.photo_timer.stop()
@@ -1548,7 +1701,7 @@ def main():
     except (ModelUpdateError, OSError, RuntimeError, ValueError) as error:
         QMessageBox.critical(None, "เปิดโปรแกรมไม่ได้", str(error))
         return 1
-    window.show()
+    window.showFullScreen()
     if args.smoke:
         if window.pages.currentIndex() != 3 or window.navigation_widget.isVisible():
             raise RuntimeError("หน้า QR ต้องเปิดก่อนเชื่อมบัญชี")

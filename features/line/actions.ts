@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRoles } from "@/lib/dal";
-import { STAFF_ROLES } from "@/features/auth/roles";
 import { generateLinkCode, generateStudentLinkCode, prepareClassroomLinkCodes, unlinkGuardianLine, removeStudentLineAccount } from "@/features/line/services/line-service";
 import { listGuardianClassrooms } from "@/features/guardians/services/guardian-service";
 import { runAction } from "@/lib/action-error";
@@ -16,7 +15,7 @@ function revalidateLinePages(): void {
 
 export async function prepareClassroomLinkCodesAction(classroomId: string): Promise<ActionResult & { created?: number }> {
   try {
-    await requireRoles(STAFF_ROLES);
+    await requireRoles(["ADMIN"]);
     const result = await prepareClassroomLinkCodes(classroomId);
     if (result.ok) {
       revalidatePath("/dashboard/line");
@@ -33,7 +32,7 @@ export async function prepareClassroomLinkCodesAction(classroomId: string): Prom
 
 export async function prepareAllClassroomLinkCodesAction(): Promise<ActionResult & { created?: number }> {
   try {
-    await requireRoles(STAFF_ROLES);
+    await requireRoles(["ADMIN"]);
     const classrooms = await listGuardianClassrooms();
     if (classrooms.length === 0) return { ok: false, message: "ยังไม่มีห้องเรียนในปีการศึกษาปัจจุบัน" };
     let created = 0;
@@ -54,7 +53,7 @@ export async function prepareAllClassroomLinkCodesAction(): Promise<ActionResult
 
 export async function generateLinkCodeAction(guardianId: string): Promise<ActionResult & { code?: string }> {
   try {
-    await requireRoles(STAFF_ROLES);
+    await requireRoles(["ADMIN"]);
     const result = await generateLinkCode(guardianId);
     if (result.ok) revalidateLinePages();
     return result;
@@ -68,7 +67,7 @@ export async function generateLinkCodeAction(guardianId: string): Promise<Action
 
 export async function generateStudentLinkCodeAction(studentId: string): Promise<ActionResult & { code?: string }> {
   try {
-    await requireRoles(STAFF_ROLES);
+    await requireRoles(["ADMIN"]);
     const result = await generateStudentLinkCode(studentId);
     if (result.ok) revalidateLinePages();
     return result;
@@ -82,7 +81,7 @@ export async function generateStudentLinkCodeAction(studentId: string): Promise<
 
 export async function unlinkGuardianAction(guardianId: string): Promise<ActionResult> {
   return runAction(async () => {
-    const user = await requireRoles(STAFF_ROLES);
+    const user = await requireRoles(["ADMIN"]);
     const result = await unlinkGuardianLine(guardianId);
     if (result.ok) {
       await logAudit({ actorId: user.id, action: "line.guardian.unlink", targetType: "guardian", targetId: guardianId });
@@ -94,7 +93,7 @@ export async function unlinkGuardianAction(guardianId: string): Promise<ActionRe
 
 export async function removeStudentLineAccountAction(id: string): Promise<ActionResult> {
   return runAction(async () => {
-    const user = await requireRoles(STAFF_ROLES);
+    const user = await requireRoles(["ADMIN"]);
     const result = await removeStudentLineAccount(id);
     if (result.ok) {
       await logAudit({ actorId: user.id, action: "line.student_account.remove", targetType: "studentLineAccount", targetId: id });

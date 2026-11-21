@@ -4,6 +4,7 @@ import PageHeader from "@/features/dashboard/components/page-header";
 import StatStrip from "@/components/ui/stat-strip";
 import ClassroomsBrowser from "@/features/classrooms/components/classrooms-browser";
 import { listClassrooms, listTeacherOptions } from "@/features/classrooms/services/classroom-service";
+import { requireRoles } from "@/lib/dal";
 
 export const metadata: Metadata = {
   title: "ห้องเรียน · chumkosoft",
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function ClassroomsPage(): Promise<React.ReactNode> {
+  const user = await requireRoles(["ADMIN", "TEACHER"]);
   const [classrooms, teachers] = await Promise.all([listClassrooms(), listTeacherOptions()]);
   const withAdvisor = classrooms.filter((c) => c.advisors.length > 0).length;
 
@@ -28,7 +30,7 @@ export default async function ClassroomsPage(): Promise<React.ReactNode> {
           { label: "ยังไม่กำหนดครู", value: classrooms.length - withAdvisor, hint: "ห้อง", icon: TriangleAlert, tone: "warning" },
         ]}
       />
-      <ClassroomsBrowser classrooms={classrooms} teachers={teachers} />
+      <ClassroomsBrowser classrooms={classrooms} teachers={teachers} canManage={user.role === "ADMIN"} />
     </>
   );
 }

@@ -19,9 +19,10 @@ import type { ClassroomRow, TeacherOption } from "../types";
 interface ClassroomsBrowserProps {
   classrooms: ClassroomRow[];
   teachers: TeacherOption[];
+  canManage: boolean;
 }
 
-export default function ClassroomsBrowser({ classrooms, teachers }: ClassroomsBrowserProps): React.ReactNode {
+export default function ClassroomsBrowser({ classrooms, teachers, canManage }: ClassroomsBrowserProps): React.ReactNode {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -83,9 +84,9 @@ export default function ClassroomsBrowser({ classrooms, teachers }: ClassroomsBr
                 className="min-w-0 w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
               />
             </div>
-            <Button onClick={openCreate}>
+            {canManage && <Button onClick={openCreate}>
               <Plus className="size-4" /> เพิ่มห้องเรียน
-            </Button>
+            </Button>}
           </div>
         </div>
 
@@ -95,7 +96,7 @@ export default function ClassroomsBrowser({ classrooms, teachers }: ClassroomsBr
             {results.map((c) => <MobileRecordCard key={c.id}
               title={c.code} subtitle={c.gradeLevel}
               fields={[{ label: "ครูที่ปรึกษา", value: c.advisors.map((a) => a.name).join(", ") || "ยังไม่กำหนด" }, { label: "นักเรียน / วิชา", value: `${c.studentCount} คน · ${c.offeringCount} วิชา` }]}
-              actions={<><Button asChild variant="outline" size="sm" className="min-h-10"><Link href={`/dashboard/classrooms/${c.id}`}><ArrowRight className="size-4" /> ดูข้อมูล</Link></Button><Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(c)}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(c)}><Trash2 className="size-4" /> ลบ</Button></>}
+              actions={<><Button asChild variant="outline" size="sm" className="min-h-10"><Link href={`/dashboard/classrooms/${c.id}`}><ArrowRight className="size-4" /> ดูข้อมูล</Link></Button>{canManage && <><Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(c)}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(c)}><Trash2 className="size-4" /> ลบ</Button></>}</>}
             />)}
           </div>
           <div className="hidden overflow-x-auto border-t border-line md:block">
@@ -138,7 +139,7 @@ export default function ClassroomsBrowser({ classrooms, teachers }: ClassroomsBr
                       <span className="tabular text-[13.5px] text-ink">{c.offeringCount}</span>
                       <span className="text-[12.5px] text-muted"> วิชา</span>
                     </TableCell>
-                    <TableCell className="text-right"><RecordActions name={c.code} href={`/dashboard/classrooms/${c.id}`} onEdit={() => openEdit(c)} onDelete={() => setDeleting(c)} /></TableCell>
+                    <TableCell className="text-right"><RecordActions name={c.code} href={`/dashboard/classrooms/${c.id}`} onEdit={canManage ? () => openEdit(c) : undefined} onDelete={canManage ? () => setDeleting(c) : undefined} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

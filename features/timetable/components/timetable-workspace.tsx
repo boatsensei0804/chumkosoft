@@ -18,6 +18,7 @@ type OverviewView = "all" | "classroom" | "teacher";
 
 interface TimetableWorkspaceProps {
   initialView?: MainView;
+  canManage: boolean;
   context: { termId: string; termName: string; classroomId: string; classroomCode: string } | null;
   terms: ContextOption[];
   classrooms: ContextOption[];
@@ -36,9 +37,9 @@ export default function TimetableWorkspace(props: TimetableWorkspaceProps): Reac
     <div className="flex flex-col gap-4">
       <div role="tablist" aria-label="มุมมองตารางสอน" className="flex w-fit flex-wrap gap-1 rounded-lg border border-line bg-surface-2 p-1">
         <MainTab active={mainView === "overview"} onClick={() => setMainView("overview")} icon={CalendarDays}>ภาพรวมตารางสอน</MainTab>
-        <MainTab active={mainView === "edit"} onClick={() => setMainView("edit")} icon={Clock3}>จัดและแก้ตาราง</MainTab>
+        {props.canManage && <MainTab active={mainView === "edit"} onClick={() => setMainView("edit")} icon={Clock3}>จัดและแก้ตาราง</MainTab>}
       </div>
-      {mainView === "overview" ? <TimetableOverview {...props} /> : <TimetableBuilder {...props} key={`${props.context?.termId ?? "none"}:${props.context?.classroomId ?? "none"}`} />}
+      {mainView === "overview" || !props.canManage ? <TimetableOverview {...props} /> : <TimetableBuilder {...props} key={`${props.context?.termId ?? "none"}:${props.context?.classroomId ?? "none"}`} />}
     </div>
   );
 }

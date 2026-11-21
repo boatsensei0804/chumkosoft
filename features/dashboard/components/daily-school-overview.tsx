@@ -39,10 +39,13 @@ export default function DailySchoolOverview({ rooms, date, scoped }: { rooms: Da
         <p className="mt-3 text-5xl font-bold tracking-tight text-brand-ink">{pct}<span className="text-2xl">%</span></p>
         <div role="progressbar" aria-label="เช็คชื่อแล้ว" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} className="mt-4 h-2.5 overflow-hidden rounded-full bg-blue-100"><div style={{ width: `${pct}%` }} className="h-full rounded-full bg-brand" /></div>
         <p className="mt-3 text-sm text-muted">บันทึกแล้ว {number(checked)} จาก {number(total)} คน</p>
-        <p className="mt-1 text-xs leading-5 text-muted">นับทุกสถานะที่ครูบันทึก รวมขาดและลา ไม่ใช่เฉพาะผู้ที่มาโรงเรียน</p>
+        <p className="mt-1 text-xs leading-5 text-muted">รวมผลสแกนเข้าโรงเรียนและสถานะที่ครูบันทึก · หากครูบันทึกแล้วจะใช้สถานะของครู</p>
       </aside>
       <div className="grid grid-cols-2 gap-px bg-blue-100/60 sm:grid-cols-3">
-        {metrics.map((metric) => <div key={metric.key} className="bg-white p-4 sm:p-6"><p className="flex items-center gap-2 text-sm text-muted"><span className="size-2 rounded-full" style={{ backgroundColor: metric.color }} />{metric.label}</p><p className="mt-3 text-3xl font-bold tabular text-ink-strong">{number(rooms.reduce((sum, room) => sum + room[metric.key], 0))}<span className="ml-2 text-xs font-normal text-muted">คน</span></p></div>)}
+        {metrics.map((metric) => {
+          const count = rooms.reduce((sum, room) => sum + room[metric.key], 0);
+          return <div key={metric.key} className="bg-white p-4 sm:p-6"><p className="flex items-center gap-2 text-sm text-muted"><span className="size-2 rounded-full" style={{ backgroundColor: metric.color }} />{metric.label}</p><p className="mt-3 text-3xl font-bold tabular text-ink-strong">{number(count)}<span className="ml-2 text-xs font-normal text-muted">คน</span></p><p className="mt-1 text-xs text-muted">{total ? (count / total * 100).toFixed(1) : "0.0"}% ของนักเรียนทั้งหมด</p></div>;
+        })}
       </div>
     </div>
     <div className="flex flex-wrap items-center justify-between gap-3 border-y border-blue-100 bg-slate-50/60 p-4 sm:px-6"><div className="flex flex-wrap items-center gap-3"><h3 className="text-sm font-bold">ติดตามรายห้อง</h3><button type="button" aria-pressed={attentionOnly} onClick={() => setAttentionOnly(!attentionOnly)} className={`min-h-10 rounded-full border px-3 text-xs font-semibold ${attentionOnly ? "border-brand bg-brand-soft text-brand-ink" : "border-line bg-white text-muted"}`}>ยังเช็คไม่ครบ ({rooms.filter((room) => room.unchecked > 0).length} ห้อง)</button></div><label className="flex min-h-10 items-center gap-2 rounded-xl border border-line bg-white px-3"><Search className="size-4 text-muted" /><input aria-label="ค้นหาห้องในภาพรวมวันนี้" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหาห้องเรียน" className="min-w-0 w-40 bg-transparent text-sm outline-none" /></label></div>

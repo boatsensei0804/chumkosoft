@@ -114,11 +114,13 @@ class KioskWebClient:
             raise ScannerWebError("เว็บไซต์ตอบรหัสเครื่องสแกนไม่ตรงกัน")
         return state
 
-    def heartbeat(self, pending_count: int, camera_active: bool, model_version: str) -> dict:
+    def heartbeat(self, pending_count: int, camera_active: bool, model_version: str,
+                  screen_active: bool = True) -> dict:
         if not self.device_id:
             raise ScannerWebError("เครื่องสแกนยังไม่มีรหัสประจำเครื่อง")
         body = {"deviceId": self.device_id, "pendingCount": pending_count,
-                "cameraActive": camera_active, "modelVersion": model_version}
+                "cameraActive": camera_active, "screenActive": screen_active,
+                "modelVersion": model_version}
         request = urllib.request.Request(
             self.site + "/api/scanner/device/heartbeat",
             data=json.dumps(body).encode("utf-8"),
@@ -136,6 +138,13 @@ class KioskWebClient:
                 not isinstance(settings.get("lateAfterTime"), str) or
                 not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", settings["lateAfterTime"])):
             raise ScannerWebError("การตั้งค่าจากเว็บไซต์ไม่ถูกต้อง")
+        display_keys = ("displayScheduleEnabled", "displayOnTime", "displayOffTime", "displayOverride")
+        if any(key in settings for key in display_keys):
+            from display_schedule import DisplaySchedule
+            try:
+                DisplaySchedule.from_remote(settings)
+            except ValueError as error:
+                raise ScannerWebError("ตารางพักหน้าจอจากเว็บไซต์ไม่ถูกต้อง") from error
         return settings
 
     def report_emergency(self, request_id: str, category: str, detail: str) -> dict:

@@ -24,9 +24,10 @@ import type { Paginated } from "@/types/pagination";
 interface CoursesBrowserProps {
   page: Paginated<CourseSummary>;
   query: string;
+  canManage: boolean;
 }
 
-export default function CoursesBrowser({ page, query }: CoursesBrowserProps): React.ReactNode {
+export default function CoursesBrowser({ page, query, canManage }: CoursesBrowserProps): React.ReactNode {
   const router = useRouter();
   const { navigate, isPending } = useListParams("/dashboard/courses", { q: query, page: page.page });
   const [search, setSearch] = useState(query);
@@ -88,9 +89,9 @@ export default function CoursesBrowser({ page, query }: CoursesBrowserProps): Re
                 className="min-w-0 w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
               />
             </div>
-            <Button onClick={openCreate}>
+            {canManage && <Button onClick={openCreate}>
               <Plus className="size-4" /> เพิ่มรายวิชา
-            </Button>
+            </Button>}
           </div>
         </div>
 
@@ -99,7 +100,7 @@ export default function CoursesBrowser({ page, query }: CoursesBrowserProps): Re
           <div className={cn("grid gap-3 border-t border-line p-3 md:hidden", isPending && "opacity-60")}>
             {courses.map((c) => <MobileRecordCard key={c.id} title={c.name} subtitle={`รหัส ${c.code}`}
               fields={[{ label: "หน่วยกิต", value: c.credits ?? "—" }, { label: "เปิดสอน", value: `${c.offeringsCount} ห้อง` }]}
-              actions={<><Button variant="outline" size="sm" className="min-h-10" onClick={() => setViewing(c)}><Eye className="size-4" /> ดูข้อมูล</Button><Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(c)}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(c)}><Trash2 className="size-4" /> ลบ</Button></>}
+              actions={<><Button variant="outline" size="sm" className="min-h-10" onClick={() => setViewing(c)}><Eye className="size-4" /> ดูข้อมูล</Button>{canManage && <><Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(c)}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(c)}><Trash2 className="size-4" /> ลบ</Button></>}</>}
             />)}
           </div>
           <div className={cn("hidden overflow-x-auto border-t border-line transition-opacity md:block", isPending && "opacity-60")}>
@@ -130,7 +131,7 @@ export default function CoursesBrowser({ page, query }: CoursesBrowserProps): Re
                         <span className="text-[13px] text-faint">ยังไม่เปิด</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right"><RecordActions name={c.name} onView={() => setViewing(c)} onEdit={() => openEdit(c)} onDelete={() => setDeleting(c)} /></TableCell>
+                    <TableCell className="text-right"><RecordActions name={c.name} onView={() => setViewing(c)} onEdit={canManage ? () => openEdit(c) : undefined} onDelete={canManage ? () => setDeleting(c) : undefined} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -158,7 +159,7 @@ export default function CoursesBrowser({ page, query }: CoursesBrowserProps): Re
         />
 
         <CourseFormDialog open={dialogOpen} course={editing} onClose={() => setDialogOpen(false)} onSaved={handleSaved} />
-        {viewing && <RecordPreviewDialog open title={viewing.name} subtitle={`รหัสวิชา ${viewing.code}`} fields={[{ label: "หน่วยกิต", value: viewing.credits ?? "—" }, { label: "ห้องที่เปิดสอน", value: `${viewing.offeringsCount} ห้อง` }, { label: "คำอธิบาย", value: viewing.description ?? "—" }]} onClose={() => setViewing(null)} onEdit={() => { const course = viewing; setViewing(null); openEdit(course); }} />}
+        {viewing && <RecordPreviewDialog open title={viewing.name} subtitle={`รหัสวิชา ${viewing.code}`} fields={[{ label: "หน่วยกิต", value: viewing.credits ?? "—" }, { label: "ห้องที่เปิดสอน", value: `${viewing.offeringsCount} ห้อง` }, { label: "คำอธิบาย", value: viewing.description ?? "—" }]} onClose={() => setViewing(null)} onEdit={canManage ? () => { const course = viewing; setViewing(null); openEdit(course); } : undefined} />}
 
         <ConfirmDialog
           open={deleting !== null}

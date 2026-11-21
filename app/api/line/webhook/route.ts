@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyLineSignature } from "@/lib/line";
 import { handleLinkMessage } from "@/features/line/services/line-service";
+import { handleQrLoginLineMessage } from "@/features/auth/services/qr-login-line";
 import { handleLeaveLineMessage } from "@/features/leave/services/line-leave-service";
 import { handleLeavePostback, startLineLeaveChoices, showLineLeaveHistory } from "@/features/leave/services/line-leave-quick-reply";
 
@@ -15,7 +16,7 @@ interface LineTextMessageEvent {
   type: string;
   webhookEventId?: string;
   replyToken?: string;
-  source?: { userId?: string };
+  source?: { type?: string; userId?: string };
   message?: { id?: string; type?: string; text?: string };
   postback?: { data?: string; params?: { date?: string; time?: string } };
 }
@@ -30,7 +31,7 @@ function isLeavePostback(event: unknown): event is LineTextMessageEvent & {
 }
 
 function isTextMessage(event: unknown): event is Required<Pick<LineTextMessageEvent, "replyToken">> & {
-  source: { userId: string };
+  source: { userId: string; type?: string };
   message: { id: string; text: string };
 } {
   if (typeof event !== "object" || event === null) return false;
@@ -69,7 +70,9 @@ export async function POST(request: Request): Promise<Response> {
     events.map(async (event) => {
       if (isTextMessage(event)) {
         try {
-          if (["แจ้งลา", "ลา", "แจ้งมาสาย", "ขอมาสาย"].includes(event.message.text.trim())) {
+          if (event.source.type === "user" && await handleQrLoginLineMessage(event.source.userId, event.message.text, event.replyToken)) {
+            // QR login is separate from guardian link codes and leave requests.
+          } else if (["แจ้งลา", "ลา", "แจ้งมาสาย", "ขอมาสาย"].includes(event.message.text.trim())) {
             await startLineLeaveChoices(event.source.userId, event.replyToken);
           } else if (["สถานะการลา", "คำขอล่าสุด"].includes(event.message.text.trim())) {
             await showLineLeaveHistory(event.source.userId, event.replyToken);

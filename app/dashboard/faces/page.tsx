@@ -11,6 +11,7 @@ import {
   listClassroomFaceProgress,
   getFaceEnrollmentStats,
 } from "@/features/faces/services/face-service";
+import { requireRoles } from "@/lib/dal";
 
 export const metadata: Metadata = {
   title: "ชุดข้อมูลใบหน้า · chumkosoft",
@@ -23,6 +24,7 @@ interface FacesPageProps {
 }
 
 export default async function FacesPage({ searchParams }: FacesPageProps): Promise<React.ReactNode> {
+  await requireRoles(["ADMIN"]);
   const params = await searchParams;
   // A selected student implies the student view, so a link straight to ?student= works.
   const view = params.view === "rooms" && !params.student ? "rooms" : "students";

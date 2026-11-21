@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRoles } from "@/lib/dal";
-import { STAFF_ROLES } from "@/features/auth/roles";
 import { offeringSchema } from "@/features/classrooms/schemas/offering-schema";
 import { addOfferingRecord, updateOfferingRecord, deleteOfferingRecord, getOfferingClassroomId } from "@/features/classrooms/services/classroom-service";
 import { fieldErrorsFromZod } from "@/utils/zod";
@@ -15,7 +14,7 @@ function toText(value: FormDataEntryValue | null): string {
 
 export async function addOfferingAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(STAFF_ROLES);
+    await requireRoles(["ADMIN"]);
 
     const classroomId = toText(formData.get("classroomId"));
     if (!classroomId) return { ok: false, message: "ไม่พบห้องเรียน" };
@@ -45,7 +44,7 @@ export async function addOfferingAction(_prev: ActionResult, formData: FormData)
 
 export async function deleteOfferingAction(id: string): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(STAFF_ROLES);
+    await requireRoles(["ADMIN"]);
     const classroomId = await getOfferingClassroomId(id);
     const result = await deleteOfferingRecord(id);
     if (result.ok && classroomId) {
@@ -58,7 +57,7 @@ export async function deleteOfferingAction(id: string): Promise<ActionResult> {
 
 export async function updateOfferingAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(STAFF_ROLES);
+    await requireRoles(["ADMIN"]);
     const id = toText(formData.get("offeringId"));
     const classroomId = await getOfferingClassroomId(id);
     if (!classroomId) return { ok: false, message: "ไม่พบรายวิชาของห้อง" };

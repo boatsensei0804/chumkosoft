@@ -17,7 +17,7 @@ import RecordPreviewDialog from "@/features/dashboard/components/record-preview-
 import { deleteRoomAction } from "@/features/rooms/actions";
 import type { RoomRow } from "../types";
 
-export default function RoomsBrowser({ rooms }: { rooms: RoomRow[] }): React.ReactNode {
+export default function RoomsBrowser({ rooms, canManage }: { rooms: RoomRow[]; canManage: boolean }): React.ReactNode {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -72,9 +72,9 @@ export default function RoomsBrowser({ rooms }: { rooms: RoomRow[] }): React.Rea
                 className="min-w-0 w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
               />
             </div>
-            <Button onClick={openCreate}>
+            {canManage && <Button onClick={openCreate}>
               <Plus className="size-4" /> เพิ่มห้อง
-            </Button>
+            </Button>}
           </div>
         </div>
 
@@ -83,7 +83,7 @@ export default function RoomsBrowser({ rooms }: { rooms: RoomRow[] }): React.Rea
           <div className="grid gap-3 border-t border-line p-3 md:hidden">
             {results.map((r) => <MobileRecordCard key={r.id} title={r.name ?? r.code} subtitle={`รหัส ${r.code}`}
               fields={[{ label: "อาคาร", value: r.building ?? "—" }, { label: "ความจุ", value: r.capacity ?? "—" }, { label: "ใช้สอน", value: `${r.offeringCount} วิชา` }]}
-              actions={<><Button variant="outline" size="sm" className="min-h-10" onClick={() => setViewing(r)}><Eye className="size-4" /> ดูข้อมูล</Button><Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(r)}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(r)}><Trash2 className="size-4" /> ลบ</Button></>}
+              actions={<><Button variant="outline" size="sm" className="min-h-10" onClick={() => setViewing(r)}><Eye className="size-4" /> ดูข้อมูล</Button>{canManage && <><Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(r)}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(r)}><Trash2 className="size-4" /> ลบ</Button></>}</>}
             />)}
           </div>
           <div className="hidden overflow-x-auto border-t border-line md:block">
@@ -116,7 +116,7 @@ export default function RoomsBrowser({ rooms }: { rooms: RoomRow[] }): React.Rea
                         <span className="text-[13px] text-faint">ว่าง</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right"><RecordActions name={r.code} onView={() => setViewing(r)} onEdit={() => openEdit(r)} onDelete={() => setDeleting(r)} /></TableCell>
+                    <TableCell className="text-right"><RecordActions name={r.code} onView={() => setViewing(r)} onEdit={canManage ? () => openEdit(r) : undefined} onDelete={canManage ? () => setDeleting(r) : undefined} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -139,7 +139,7 @@ export default function RoomsBrowser({ rooms }: { rooms: RoomRow[] }): React.Rea
         </div>
 
         <RoomFormDialog open={dialogOpen} room={editing} onClose={() => setDialogOpen(false)} onSaved={handleSaved} />
-        {viewing && <RecordPreviewDialog open title={viewing.name ?? viewing.code} subtitle={`รหัสห้อง ${viewing.code}`} fields={[{ label: "อาคาร", value: viewing.building ?? "—" }, { label: "ความจุ", value: viewing.capacity === null ? "—" : `${viewing.capacity} คน` }, { label: "รายวิชาที่ใช้ห้องนี้", value: `${viewing.offeringCount} วิชา` }]} onClose={() => setViewing(null)} onEdit={() => { const room = viewing; setViewing(null); openEdit(room); }} />}
+        {viewing && <RecordPreviewDialog open title={viewing.name ?? viewing.code} subtitle={`รหัสห้อง ${viewing.code}`} fields={[{ label: "อาคาร", value: viewing.building ?? "—" }, { label: "ความจุ", value: viewing.capacity === null ? "—" : `${viewing.capacity} คน` }, { label: "รายวิชาที่ใช้ห้องนี้", value: `${viewing.offeringCount} วิชา` }]} onClose={() => setViewing(null)} onEdit={canManage ? () => { const room = viewing; setViewing(null); openEdit(room); } : undefined} />}
 
         <ConfirmDialog
           open={deleting !== null}

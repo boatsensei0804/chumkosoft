@@ -3,6 +3,7 @@ import PageHeader from "@/features/dashboard/components/page-header";
 import TimetableWorkspace from "@/features/timetable/components/timetable-workspace";
 import { getTimetableBoard, getTimetableOverview } from "@/services/timetable-service";
 import { listOfferingOptions } from "@/features/classrooms/services/classroom-service";
+import { requireRoles } from "@/lib/dal";
 
 export const metadata: Metadata = {
   title: "จัดตารางสอน · chumkosoft",
@@ -15,6 +16,7 @@ interface TimetablePageProps {
 }
 
 export default async function TimetablePage({ searchParams }: TimetablePageProps): Promise<React.ReactNode> {
+  const user = await requireRoles(["ADMIN", "TEACHER"]);
   const { term, classroom, view } = await searchParams;
   const [board, offeringOptions] = await Promise.all([
     getTimetableBoard({ termId: term, classroomId: classroom }),
@@ -30,7 +32,8 @@ export default async function TimetablePage({ searchParams }: TimetablePageProps
         subtitle="ดูภาพรวมคาบเรียนแยกตามห้องและวัน เปิดตารางรายห้องหรือรายครู แล้วสลับไปจัดหรือแก้คาบสอนได้จากหน้าเดียว"
       />
       <TimetableWorkspace
-        initialView={view === "edit" ? "edit" : "overview"}
+        initialView={user.role === "ADMIN" && view === "edit" ? "edit" : "overview"}
+        canManage={user.role === "ADMIN"}
         key={`${board.context?.termId ?? "none"}:${board.context?.classroomId ?? "none"}`}
         context={board.context}
         terms={board.terms}

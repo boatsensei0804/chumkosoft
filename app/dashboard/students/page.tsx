@@ -7,10 +7,12 @@ import { parsePage } from "@/types/pagination";
 import type { EnrolmentStatus } from "@/features/dashboard/types";
 import type { StudentGender } from "@/features/students/overview";
 import { requireRoles } from "@/lib/dal";
+import { advisoryClassroomIds } from "@/lib/teacher-data-access";
 export const metadata: Metadata = { title: "นักเรียน · chumkosoft" };
 export const dynamic = "force-dynamic";
 export default async function StudentsPage({ searchParams }: { searchParams: Promise<{ page?: string; q?: string; filter?: string; classroom?: string; gender?: string; grade?: string }> }): Promise<React.ReactNode> {
-  await requireRoles(["ADMIN", "TEACHER"]);
+  const user = await requireRoles(["ADMIN", "TEACHER"]);
+  const editableClassroomIds = user.role === "ADMIN" ? null : await advisoryClassroomIds(user);
   const params = await searchParams;
   const query = typeof params.q === "string" ? params.q.slice(0, 100) : "";
   const filter = ["active", "pending", "leave"].includes(params.filter ?? "") ? params.filter as EnrolmentStatus : "all";
@@ -21,6 +23,6 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   return <>
     <PageHeader title="นักเรียน" subtitle={`ทะเบียน ${result.overview.overall.total.toLocaleString("th-TH")} คน · ${result.overview.term ?? "ยังไม่มีภาคเรียนปัจจุบัน"}`} />
     <StudentOverviewPanel overview={result.overview} classroom={classroom} />
-    <div className="mt-6"><StudentsBrowser key={JSON.stringify([query, filter, classroom, gender, grade])} page={result.page} query={query} filter={filter} classrooms={result.classrooms} classroom={classroom} gender={gender} grade={grade} grades={result.overview.grades} /></div>
+    <div className="mt-6"><StudentsBrowser key={JSON.stringify([query, filter, classroom, gender, grade])} page={result.page} query={query} filter={filter} classrooms={result.classrooms} classroom={classroom} gender={gender} grade={grade} grades={result.overview.grades} editableClassroomIds={editableClassroomIds} /></div>
   </>;
 }

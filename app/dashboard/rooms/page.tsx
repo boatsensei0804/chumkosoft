@@ -4,6 +4,7 @@ import PageHeader from "@/features/dashboard/components/page-header";
 import StatStrip from "@/components/ui/stat-strip";
 import RoomsBrowser from "@/features/rooms/components/rooms-browser";
 import { listRooms } from "@/features/rooms/services/room-service";
+import { requireRoles } from "@/lib/dal";
 
 export const metadata: Metadata = {
   title: "ห้องและสถานที่ · chumkosoft",
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function RoomsPage(): Promise<React.ReactNode> {
+  const user = await requireRoles(["ADMIN", "TEACHER"]);
   const rooms = await listRooms();
   const inUse = rooms.filter((r) => r.offeringCount > 0).length;
 
@@ -25,7 +27,7 @@ export default async function RoomsPage(): Promise<React.ReactNode> {
           { label: "ว่าง", value: rooms.length - inUse, hint: "แห่ง", icon: DoorOpen, tone: "default" },
         ]}
       />}
-      <RoomsBrowser rooms={rooms} />
+      <RoomsBrowser rooms={rooms} canManage={user.role === "ADMIN"} />
     </>
   );
 }

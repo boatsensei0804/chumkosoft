@@ -67,6 +67,21 @@ export async function findRecordsInRange(termId: string, start: Date, endExclusi
   });
 }
 
+/** Face scanner and manual gate arrivals used when no homeroom status was saved. */
+export async function findGateEntries(termId: string, date: Date) {
+  return prisma.schoolEntry.findMany({
+    where: { termId, date, checkInAt: { not: null }, isDeleted: false },
+    select: { studentId: true, date: true, isLate: true },
+  });
+}
+
+export async function findGateEntriesInRange(termId: string, start: Date, endExclusive: Date) {
+  return prisma.schoolEntry.findMany({
+    where: { termId, date: { gte: start, lt: endExclusive }, checkInAt: { not: null }, isDeleted: false },
+    select: { studentId: true, date: true, isLate: true },
+  });
+}
+
 export async function upsertRecords(args: {
   termId: string;
   classroomId: string;

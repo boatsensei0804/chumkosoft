@@ -1,0 +1,6 @@
+ALTER TABLE "ScannerDevice"
+  ADD COLUMN "screenActive" BOOLEAN,
+  ADD COLUMN "displayScheduleEnabled" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN "displayOnTime" TEXT NOT NULL DEFAULT '06:00',
+  ADD COLUMN "displayOffTime" TEXT NOT NULL DEFAULT '18:00',
+  ADD COLUMN "displayOverride" TEXT NOT NULL DEFAULT 'AUTO';

@@ -34,6 +34,8 @@ interface StudentsBrowserProps {
   gender?: "all" | StudentGender;
   grade?: string;
   grades?: string[];
+  /** null = administrator; teachers may edit students in these rooms only. */
+  editableClassroomIds: string[] | null;
 }
 
 const filters: { key: Filter; label: string }[] = [
@@ -43,7 +45,7 @@ const filters: { key: Filter; label: string }[] = [
   { key: "leave", label: "ลาพัก" },
 ];
 
-export default function StudentsBrowser({ page, query, filter, classrooms, classroom = "", gender = "all", grade = "", grades = [] }: StudentsBrowserProps): React.ReactNode {
+export default function StudentsBrowser({ page, query, filter, classrooms, classroom = "", gender = "all", grade = "", grades = [], editableClassroomIds }: StudentsBrowserProps): React.ReactNode {
   const router = useRouter();
   const { navigate, isPending } = useListParams("/dashboard/students", { q: query, page: page.page, filter, classroom, gender, grade });
   const [search, setSearch] = useState(query);
@@ -62,6 +64,8 @@ export default function StudentsBrowser({ page, query, filter, classrooms, class
   }, [search, query, navigate]);
 
   const students = page.rows;
+  const isAdmin = editableClassroomIds === null;
+  const canEdit = (student: StudentSummary): boolean => isAdmin || Boolean(student.currentClassroomId && editableClassroomIds.includes(student.currentClassroomId));
 
   // Selection lives by id; ids no longer on the current page are simply ignored,
   // so paging/filtering never needs a selection-reset effect.
@@ -134,7 +138,7 @@ export default function StudentsBrowser({ page, query, filter, classrooms, class
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm" id="student-roster">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-4"><div><h2 className="font-bold text-ink-strong">รายชื่อนักเรียน</h2><p className="mt-1 text-xs text-muted">พบ {page.total.toLocaleString("th-TH")} คนตามเงื่อนไข · ดูข้อมูล แก้ไข หรือจัดห้องได้จากรายการ</p></div>{(query || filter !== "all" || classroom || gender !== "all" || grade) && <Button variant="outline" size="sm" onClick={() => navigate({ q: "", filter: "all", classroom: "", gender: "all", grade: "", page: 1 })}>ล้างตัวกรองทั้งหมด</Button>}</div>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-4"><div><h2 className="font-bold text-ink-strong">รายชื่อนักเรียน</h2><p className="mt-1 text-xs text-muted">พบ {page.total.toLocaleString("th-TH")} คนตามเงื่อนไข · {isAdmin ? "ดูข้อมูล แก้ไข หรือจัดห้องได้จากรายการ" : "แก้ไขได้เฉพาะนักเรียนในห้องที่คุณเป็นครูที่ปรึกษา"}</p></div>{(query || filter !== "all" || classroom || gender !== "all" || grade) && <Button variant="outline" size="sm" onClick={() => navigate({ q: "", filter: "all", classroom: "", gender: "all", grade: "", page: 1 })}>ล้างตัวกรองทั้งหมด</Button>}</div>
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div role="tablist" aria-label="กรองตามสถานะ" className="flex flex-wrap items-center gap-1">
             {filters.map((f) => {
@@ -167,9 +171,9 @@ export default function StudentsBrowser({ page, query, filter, classrooms, class
                 className="min-w-0 w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
               />
             </div>
-            <Button onClick={openCreate}>
+            {isAdmin && <Button onClick={openCreate}>
               <Plus className="size-4" /> เพิ่มนักเรียน
-            </Button>
+            </Button>}
           </div>
         </div>
 
@@ -178,7 +182,7 @@ export default function StudentsBrowser({ page, query, filter, classrooms, class
           <label className="text-xs font-semibold text-muted">ระดับชั้น<select aria-label="กรองระดับชั้นนักเรียน" value={grade} onChange={event => navigate({ grade: event.target.value, classroom: "", page: 1 })} className="mt-1 block min-h-11 w-full rounded-xl border border-line bg-card px-3 text-sm font-normal text-ink"><option value="">ทุกระดับ</option>{grades.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
           <label className="text-xs font-semibold text-muted">เพศ<select aria-label="กรองเพศนักเรียน" value={gender} onChange={event => navigate({ gender: event.target.value, page: 1 })} className="mt-1 block min-h-11 w-full rounded-xl border border-line bg-card px-3 text-sm font-normal text-ink"><option value="all">ทุกเพศ</option><option value="male">ชาย</option><option value="female">หญิง</option><option value="other">อื่น ๆ / ยังไม่ระบุ</option></select></label>
         </div>
-        {selectedOnPage.length > 0 && (
+        {isAdmin && selectedOnPage.length > 0 && (
           <div className="flex items-center justify-between gap-3 border-t border-line bg-brand-soft px-4 py-2.5">
             <span className="text-[13.5px] font-semibold text-brand-ink">เลือกแล้ว {selectedOnPage.length} คน</span>
             <div className="flex items-center gap-1.5">
@@ -196,24 +200,24 @@ export default function StudentsBrowser({ page, query, filter, classrooms, class
           <>
           <div className={cn("grid gap-3 border-t border-line p-3 md:hidden", isPending && "opacity-60")}>
             {students.map((s) => <MobileRecordCard key={s.id}
-              title={<span className="flex items-start gap-2"><Checkbox checked={selected.has(s.id)} onCheckedChange={() => toggleOne(s.id)} aria-label={`เลือก ${s.firstName} ${s.lastName}`} /><span>{[s.prefix, `${s.firstName} ${s.lastName}`].filter(Boolean).join(" ")}</span></span>}
+              title={<span className="flex items-start gap-2">{isAdmin && <Checkbox checked={selected.has(s.id)} onCheckedChange={() => toggleOne(s.id)} aria-label={`เลือก ${s.firstName} ${s.lastName}`} />}<span>{[s.prefix, `${s.firstName} ${s.lastName}`].filter(Boolean).join(" ")}</span></span>}
               subtitle={`รหัส ${s.code} · ${s.classroom}`}
               badge={<StudentStatus student={s} />}
               fields={[{ label: "เพศ", value: genderLabel(s.gender) }, { label: "ระดับ", value: s.grade }, { label: "วันที่ลงทะเบียน", value: s.enrolledAt }]}
-              actions={<><Button asChild variant="outline" size="sm" className="min-h-10"><Link href={`/dashboard/students/${s.id}`}><Eye className="size-4" /> ดูข้อมูล</Link></Button><Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(s)}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(s)}><Trash2 className="size-4" /> ลบ</Button></>}
+              actions={<><Button asChild variant="outline" size="sm" className="min-h-10"><Link href={`/dashboard/students/${s.id}`}><Eye className="size-4" /> ดูข้อมูล</Link></Button>{canEdit(s) && <Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(s)}><Pencil className="size-4" /> แก้ไข</Button>}{isAdmin && <Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(s)}><Trash2 className="size-4" /> ลบ</Button>}</>}
             />)}
           </div>
           <div className={cn("hidden overflow-x-auto border-t border-line transition-opacity md:block", isPending && "opacity-60")}>
             <Table className="min-w-[720px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-11">
+                  {isAdmin && <TableHead className="w-11">
                     <Checkbox
                       checked={someSelected ? "indeterminate" : allSelected}
                       onCheckedChange={toggleAll}
                       aria-label="เลือกนักเรียนทั้งหมดในหน้านี้"
                     />
-                  </TableHead>
+                  </TableHead>}
                   <TableHead>นักเรียน</TableHead>
                   <TableHead>ชั้นเรียน</TableHead>
                   <TableHead>เพศ</TableHead>
@@ -228,9 +232,9 @@ export default function StudentsBrowser({ page, query, filter, classrooms, class
                   const fullName = [s.prefix, `${s.firstName} ${s.lastName}`].filter(Boolean).join(" ");
                   return (
                     <TableRow key={s.id} data-state={isSelected ? "selected" : undefined} className="data-[state=selected]:bg-brand-soft">
-                      <TableCell>
+                      {isAdmin && <TableCell>
                         <Checkbox checked={isSelected} onCheckedChange={() => toggleOne(s.id)} aria-label={`เลือก ${s.firstName} ${s.lastName}`} />
-                      </TableCell>
+                      </TableCell>}
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand-soft text-sm font-semibold text-brand-ink" aria-hidden="true">
@@ -248,7 +252,7 @@ export default function StudentsBrowser({ page, query, filter, classrooms, class
                       <TableCell>
                         <StudentStatus student={s} />
                       </TableCell>
-                      <TableCell className="text-right"><RecordActions name={`${s.firstName} ${s.lastName}`} href={`/dashboard/students/${s.id}`} onEdit={() => openEdit(s)} onDelete={() => setDeleting(s)} /></TableCell>
+                      <TableCell className="text-right"><RecordActions name={`${s.firstName} ${s.lastName}`} href={`/dashboard/students/${s.id}`} onEdit={canEdit(s) ? () => openEdit(s) : undefined} onDelete={isAdmin ? () => setDeleting(s) : undefined} /></TableCell>
                     </TableRow>
                   );
                 })}
@@ -279,7 +283,7 @@ export default function StudentsBrowser({ page, query, filter, classrooms, class
           onPageChange={(p) => navigate({ page: p })}
         />
 
-        <StudentFormDialog open={dialogOpen} student={editing} classrooms={classrooms} onClose={() => setDialogOpen(false)} onSaved={handleSaved} />
+        <StudentFormDialog open={dialogOpen} student={editing} classrooms={classrooms} canChangeClassroom={isAdmin} onClose={() => setDialogOpen(false)} onSaved={handleSaved} />
 
         <ConfirmDialog
           open={deleting !== null}

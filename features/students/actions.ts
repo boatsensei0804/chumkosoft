@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireRoles } from "@/lib/dal";
 import { STAFF_ROLES } from "@/features/auth/roles";
+import { advisedStudentClassroomId } from "@/lib/teacher-data-access";
 import { studentSchema } from "@/features/students/schemas/student-schema";
 import {
   createStudentRecord,
@@ -47,9 +48,16 @@ function toStringArray(values: FormDataEntryValue[]): string[] {
 
 export async function saveStudentAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(STAFF_ROLES);
+    const user = await requireRoles(STAFF_ROLES);
 
     const id = toText(formData.get("id"));
+    if (user.role === "TEACHER" && !id) {
+      return { ok: false, message: "เฉพาะผู้ดูแลระบบเท่านั้นที่เพิ่มนักเรียนได้" };
+    }
+    const advisedClassroomId = user.role === "TEACHER" ? await advisedStudentClassroomId(user, id) : null;
+    if (user.role === "TEACHER" && !advisedClassroomId) {
+      return { ok: false, message: "แก้ไขได้เฉพาะนักเรียนในห้องที่คุณเป็นครูที่ปรึกษา" };
+    }
     const parsed = studentSchema.safeParse({
       studentCode: formData.get("studentCode"),
       prefix: nullIfEmpty(formData.get("prefix")),
@@ -122,6 +130,9 @@ export async function saveStudentAction(_prev: ActionResult, formData: FormData)
     if (!parsed.success) {
       return { ok: false, message: "กรุณาตรวจสอบข้อมูล", fieldErrors: fieldErrorsFromZod(parsed.error) };
     }
+    if (advisedClassroomId && parsed.data.classroomId !== advisedClassroomId) {
+      return { ok: false, message: "การย้ายห้องเรียนต้องให้ผู้ดูแลระบบดำเนินการ" };
+    }
 
     const result = id ? await updateStudentRecord(id, parsed.data) : await createStudentRecord(parsed.data);
 
@@ -135,7 +146,7 @@ export async function saveStudentAction(_prev: ActionResult, formData: FormData)
 
 export async function deleteStudentAction(id: string): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(STAFF_ROLES);
+    await requireRoles(["ADMIN"]);
     const result = await deleteStudentRecord(id);
     if (result.ok) {
       revalidatePath(STUDENTS_PATH);
@@ -146,7 +157,7 @@ export async function deleteStudentAction(id: string): Promise<ActionResult> {
 
 export async function deleteStudentsAction(ids: string[]): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(STAFF_ROLES);
+    await requireRoles(["ADMIN"]);
     if (ids.length === 0) {
       return { ok: false, message: "ยังไม่ได้เลือกนักเรียน" };
     }

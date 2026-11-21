@@ -7,6 +7,8 @@ const heartbeatSchema = z.object({
   deviceId: z.string().uuid(),
   pendingCount: z.number().int().min(0).max(100_000),
   cameraActive: z.boolean(),
+  // Older scanner builds still report heartbeats while devices are upgraded.
+  screenActive: z.boolean().optional(),
   modelVersion: z.string().min(1).max(64),
 }).strict();
 
@@ -28,14 +30,19 @@ export async function POST(request: Request): Promise<Response> {
     where: { id: parsed.data.deviceId, kioskUserId: kioskId },
     data: {
       lastSeenAt: new Date(), pendingCount: parsed.data.pendingCount,
-      cameraActive: parsed.data.cameraActive, modelVersion: parsed.data.modelVersion,
+      cameraActive: parsed.data.cameraActive,
+      ...(parsed.data.screenActive === undefined ? {} : { screenActive: parsed.data.screenActive }),
+      modelVersion: parsed.data.modelVersion,
     },
   });
   if (!updated.count) return Response.json({ ok: false, message: "เครื่องนี้ยังไม่ได้ผูกบัญชี" }, { status: 404 });
   const [device, scanWindow] = await Promise.all([
     prisma.scannerDevice.findUniqueOrThrow({
       where: { id: parsed.data.deviceId },
-      select: { cameraIndex: true, detectionIntervalSeconds: true, repeatCooldownSeconds: true },
+      select: {
+        cameraIndex: true, detectionIntervalSeconds: true, repeatCooldownSeconds: true,
+        displayScheduleEnabled: true, displayOnTime: true, displayOffTime: true, displayOverride: true,
+      },
     }),
     getScanSetting(),
   ]);

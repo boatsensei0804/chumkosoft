@@ -29,18 +29,30 @@ export async function getDailyRollCallCalendar(month: string, advisorStaffId?: s
   const classrooms = (await repo.findClassrooms(term.id, term.academicYearId, advisorStaffId)).filter((room) => !classroomId || room.id === classroomId);
   const classroomIds = classrooms.map((classroom) => classroom.id);
   if (classroomIds.length === 0) return [];
-  const [enrollments, records] = await Promise.all([
+  const [enrollments, records, gateEntries] = await Promise.all([
     repo.findEnrolledRoster(term.id, classroomIds),
     repo.findRecordsInRange(term.id, start, end, classroomIds),
+    repo.findGateEntriesInRange(term.id, start, end),
   ]);
   const total = enrollments.length;
   const enrolledIds = new Set(enrollments.map((enrollment) => `${enrollment.classroomId}:${enrollment.studentId}`));
-  const byDate = new Map<string, typeof records>();
+  const classroomByStudent = new Map(enrollments.map((enrollment) => [enrollment.studentId, enrollment.classroomId]));
+  const recorded = new Set<string>();
+  const byDate = new Map<string, { status: DailyRollCallStatus }[]>();
   for (const record of records) {
     if (!enrolledIds.has(`${record.classroomId}:${record.studentId}`)) continue;
     const iso = record.date.toISOString().slice(0, 10);
+    recorded.add(`${iso}:${record.studentId}`);
     const group = byDate.get(iso) ?? [];
     group.push(record);
+    byDate.set(iso, group);
+  }
+  for (const entry of gateEntries) {
+    const iso = entry.date.toISOString().slice(0, 10);
+    const classroom = classroomByStudent.get(entry.studentId);
+    if (!classroom || !enrolledIds.has(`${classroom}:${entry.studentId}`) || recorded.has(`${iso}:${entry.studentId}`)) continue;
+    const group = byDate.get(iso) ?? [];
+    group.push({ status: entry.isLate ? "LATE" : "PRESENT" });
     byDate.set(iso, group);
   }
   const daysInMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
@@ -69,13 +81,22 @@ export async function getDailyRollCallOverview(dateISO: string, advisorStaffId?:
   if (!term) return [];
 
   const classrooms = await repo.findClassrooms(term.id, term.academicYearId, advisorStaffId);
-  const [records, classroomStudents] = await Promise.all([
+  const [records, classroomStudents, gateEntries] = await Promise.all([
     repo.findRecords(term.id, date, classrooms.map((classroom) => classroom.id)),
     Promise.all(classrooms.map(async (classroom) => [classroom.id, await repo.findEnrolledStudents(term.id, classroom.id)] as const)),
+    repo.findGateEntries(term.id, date),
   ]);
   const totals = new Map(classroomStudents.map(([id, students]) => [id, students.length]));
+  const classroomByStudent = new Map(classroomStudents.flatMap(([id, students]) => students.map((student) => [student.id, id] as const)));
+  const validRecords = records.filter((record) => classroomByStudent.get(record.studentId) === record.classroomId);
+  const recorded = new Set(validRecords.map((record) => record.studentId));
   const counts = new Map<string, Record<DailyRollCallStatusKey, number>>();
-  for (const record of records) {
+  for (const record of [...validRecords, ...gateEntries.flatMap((entry) => {
+    const classroomId = classroomByStudent.get(entry.studentId);
+    return classroomId && !recorded.has(entry.studentId)
+      ? [{ classroomId, status: entry.isLate ? "LATE" as const : "PRESENT" as const }]
+      : [];
+  })]) {
     const classroomCounts = counts.get(record.classroomId) ?? {
       PRESENT: 0,
       LATE: 0,
@@ -119,11 +140,18 @@ export async function getDailyClassRoster(
   const classroom = classrooms.find((row) => row.id === classroomId);
   if (!classroom) return null;
 
-  const [students, records] = await Promise.all([
+  const [students, records, gateEntries] = await Promise.all([
     repo.findEnrolledStudents(term.id, classroomId),
     repo.findRecords(term.id, date, [classroomId]),
+    repo.findGateEntries(term.id, date),
   ]);
   const statusByStudent = new Map(records.map((record) => [record.studentId, record.status as DailyRollCallStatusKey]));
+  const enrolledIds = new Set(students.map((student) => student.id));
+  for (const entry of gateEntries) {
+    if (enrolledIds.has(entry.studentId) && !statusByStudent.has(entry.studentId)) {
+      statusByStudent.set(entry.studentId, entry.isLate ? "LATE" : "PRESENT");
+    }
+  }
   return {
     date: dateISO,
     classroomId,

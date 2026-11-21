@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRoles } from "@/lib/dal";
-import { STAFF_ROLES } from "@/features/auth/roles";
 import { descriptorSchema, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES } from "@/features/faces/schemas/face-schema";
 import { enrollFace, removeFaceTemplate, setFaceConsent } from "@/features/faces/services/face-service";
 import { runAction } from "@/lib/action-error";
@@ -17,7 +16,7 @@ const FACES_PATH = "/dashboard/faces";
  */
 export async function uploadFaceAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    const user = await requireRoles(STAFF_ROLES);
+    const user = await requireRoles(["ADMIN"]);
 
     const studentId = formData.get("studentId");
     if (typeof studentId !== "string" || studentId === "") {
@@ -61,7 +60,7 @@ export async function uploadFaceAction(formData: FormData): Promise<ActionResult
 
 export async function deleteFaceTemplateAction(id: string): Promise<ActionResult> {
   return runAction(async () => {
-    const user = await requireRoles(STAFF_ROLES);
+    const user = await requireRoles(["ADMIN"]);
     const result = await removeFaceTemplate(id, user.id);
     if (result.ok) {
       revalidatePath(FACES_PATH);
@@ -72,7 +71,7 @@ export async function deleteFaceTemplateAction(id: string): Promise<ActionResult
 
 export async function setFaceConsentAction(studentId: string, consent: boolean): Promise<ActionResult> {
   return runAction(async () => {
-    const user = await requireRoles(STAFF_ROLES);
+    const user = await requireRoles(["ADMIN"]);
     const result = await setFaceConsent(studentId, consent, user.id);
     if (result.ok) {
       revalidatePath(FACES_PATH);

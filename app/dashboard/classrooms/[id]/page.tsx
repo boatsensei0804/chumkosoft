@@ -9,6 +9,7 @@ import StatusChip from "@/features/dashboard/components/status-chip";
 import SectionCard from "@/features/dashboard/components/section-card";
 import ClassroomOfferings from "@/features/classrooms/components/classroom-offerings";
 import { getClassroomDetail, listOfferingOptions } from "@/features/classrooms/services/classroom-service";
+import { requireRoles } from "@/lib/dal";
 
 export const metadata: Metadata = {
   title: "รายละเอียดห้องเรียน · chumkosoft",
@@ -21,6 +22,7 @@ interface ClassroomDetailPageProps {
 }
 
 export default async function ClassroomDetailPage({ params }: ClassroomDetailPageProps): Promise<React.ReactNode> {
+  const user = await requireRoles(["ADMIN", "TEACHER"]);
   const { id } = await params;
   const [detail, offeringOptions] = await Promise.all([getClassroomDetail(id), listOfferingOptions()]);
   if (!detail) notFound();
@@ -111,7 +113,7 @@ export default async function ClassroomDetailPage({ params }: ClassroomDetailPag
         </SectionCard>
 
         </> }, { title: "รายวิชาของห้อง", description: "วิชาที่เปิดสอนและครูผู้รับผิดชอบ", content: <>
-        <ClassroomOfferings classroomId={detail.id} offerings={detail.offerings} options={offeringOptions} />
+        <ClassroomOfferings classroomId={detail.id} offerings={detail.offerings} options={offeringOptions} canManage={user.role === "ADMIN"} />
       </> }]} />
     </div>
   );

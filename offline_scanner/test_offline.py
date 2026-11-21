@@ -105,6 +105,31 @@ class OfflineScannerTests(unittest.TestCase):
         self.assertEqual(len(roster), 201)
         self.assertEqual(roster[-1]["code"], "TEST-200")
 
+    def test_heartbeat_reports_display_state_and_accepts_schedule(self):
+        client = KioskWebClient("http://127.0.0.1:3000", "12345678-1234-5678-1234-567812345678")
+
+        class Response(io.BytesIO):
+            def geturl(self):
+                return "http://127.0.0.1:3000/api/scanner/device/heartbeat"
+
+        class FakeOpener:
+            def open(self, request, timeout):
+                body = json.loads(request.data)
+                self_screen = body["screenActive"]
+                if self_screen is not False:
+                    raise AssertionError("display state was not sent")
+                settings = {
+                    "cameraIndex": 0, "detectionIntervalSeconds": 0.85,
+                    "repeatCooldownSeconds": 10, "scanStartTime": "06:30",
+                    "lateAfterTime": "08:00", "displayScheduleEnabled": True,
+                    "displayOnTime": "06:00", "displayOffTime": "18:00",
+                    "displayOverride": "OFF",
+                }
+                return Response(json.dumps({"ok": True, "settings": settings}).encode())
+
+        client.opener = FakeOpener()
+        self.assertEqual(client.heartbeat(2, True, "v1", False)["displayOverride"], "OFF")
+
     def test_qr_pairing_rejects_wrong_verification_origin(self):
         client = KioskWebClient("http://127.0.0.1:3000")
 

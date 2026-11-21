@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import BrandMark from "@/features/dashboard/components/brand-mark";
-import LoginForm from "@/features/auth/components/login-form";
+import LoginChoices from "@/features/auth/components/login-choices";
 import LanguageSwitcher from "@/features/i18n/components/language-switcher";
 import { decryptSession, getSessionToken } from "@/lib/session";
 import { getLocale, getDictionary } from "@/lib/i18n/server";
@@ -59,7 +59,7 @@ export default async function LoginPage(): Promise<React.ReactNode> {
               </h1>
               <p className="mb-6 mt-1 text-[14px] text-muted">{t.subtitle}</p>
 
-              <LoginForm t={t} />
+              <LoginChoices t={t} />
               <details className="mt-6 rounded-xl border border-blue-100 bg-blue-50/60 p-3 text-xs text-muted"><summary className="min-h-8 cursor-pointer font-semibold text-brand-ink">ต้องใช้บัญชีแบบไหน?</summary><div className="mt-2 space-y-2 leading-6"><p>ครูและเจ้าหน้าที่ใช้บัญชีที่โรงเรียนออกให้ หากเข้าสู่ระบบไม่ได้ กรุณาติดต่อผู้ดูแลระบบ</p><p>บัญชีจุดสแกนใช้สำหรับเชื่อมแอปสแกนผ่าน QR และตั้งค่าอุปกรณ์</p></div></details>
             </div>
           </div>

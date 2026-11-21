@@ -9,7 +9,6 @@ import StatStrip from "@/components/ui/stat-strip";
 import LineManager from "@/features/line/components/line-manager";
 import LineClassroomOverview from "@/features/line/components/line-classroom-overview";
 import { requireRoles } from "@/lib/dal";
-import { STAFF_ROLES } from "@/features/auth/roles";
 import { listStudentGuardians, listGuardianClassrooms, getStudentLineStats, listClassroomLineStats } from "@/features/guardians/services/guardian-service";
 import type { StudentLineFilter } from "@/features/guardians/repositories/guardian-repository";
 import { isLineConfigured } from "@/lib/line";
@@ -26,7 +25,7 @@ interface LinePageProps {
 }
 
 export default async function LinePage({ searchParams }: LinePageProps): Promise<React.ReactNode> {
-  const user = await requireRoles(STAFF_ROLES);
+  const user = await requireRoles(["ADMIN"]);
   const params = await searchParams;
   const query = params.q ?? "";
   const classroomId = params.classroom ?? "";

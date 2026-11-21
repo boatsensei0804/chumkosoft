@@ -3,7 +3,7 @@ import "server-only";
 import { randomInt } from "node:crypto";
 import * as repo from "@/features/line/repositories/line-repository";
 import * as guardianRepo from "@/features/guardians/repositories/guardian-repository";
-import { pushText, replyText } from "@/lib/line";
+import { replyText } from "@/lib/line";
 import { logAudit } from "@/lib/audit";
 import { isLinePushEnabled } from "@/features/line/services/line-delivery-settings";
 import { randomUUID } from "node:crypto";
@@ -50,7 +50,7 @@ export async function generateStudentLinkCode(studentId: string): Promise<Action
 export async function generateAdvisorLinkCode(staffId: string): Promise<ActionResult & { code?: string }> {
   const advisor = await repo.getAdvisorLine(staffId);
   if (!advisor) return { ok: false, message: "ไม่พบบัญชีครู" };
-  if (!advisor.user || advisor.user.role !== "TEACHER" || !advisor.user.isActive || advisor.user.isDeleted) return { ok: false, message: "ครูคนนี้ยังไม่มีบัญชีผู้ใช้ที่ใช้งานได้" };
+  if (!advisor.user || !["ADMIN", "TEACHER"].includes(advisor.user.role) || !advisor.user.isActive || advisor.user.isDeleted) return { ok: false, message: "บุคลากรคนนี้ยังไม่มีบัญชีผู้ใช้ที่ใช้งานได้" };
   if (advisor.lineUserId) return { ok: false, message: "บัญชี LINE นี้เชื่อมแล้ว" };
   let code = String(randomInt(100000, 1000000));
   while (await repo.lineCodeExists(code)) code = String(randomInt(100000, 1000000));
@@ -127,9 +127,13 @@ export async function handleLinkMessage(lineUserId: string, text: string, replyT
   if (!studentAccount || studentAccount.student.isDeleted) {
     const advisor = await repo.findAdvisorByLinkCode(code);
     if (advisor) {
+      if (await repo.otherStaffLinkedToLine(advisor.id, lineUserId)) {
+        await replyText(replyToken, "LINE นี้ผูกกับบัญชีบุคลากรคนอื่นอยู่แล้ว กรุณาให้ผู้ดูแลระบบยกเลิกการผูกเดิมก่อน");
+        return;
+      }
       await repo.linkAdvisor(advisor.id, lineUserId);
       await logAudit({ action: "line.link", targetType: "staff", targetId: advisor.id, detail: "advisor LINE account" });
-      await replyText(replyToken, `เชื่อม LINE ครูที่ปรึกษาสำเร็จ ✅\nคุณจะได้รับสรุปการเข้าโรงเรียนของห้องที่รับผิดชอบ`);
+      await replyText(replyToken, "เชื่อม LINE บุคลากรสำเร็จ ✅\nใช้บัญชีนี้เข้าสู่เว็บด้วย QR ได้ และหากเป็นครูที่ปรึกษาจะได้รับสรุปการเข้าโรงเรียนของห้องที่รับผิดชอบ");
       try {
         if (!(await linkTeacherRichMenu(lineUserId))) console.warn("[line] teacher rich menu pending sync");
       } catch (error) {

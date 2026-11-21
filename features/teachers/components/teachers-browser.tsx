@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PaginationBar from "@/components/ui/pagination-bar";
 import StaffFormDialog from "./staff-form-dialog";
+import OwnStaffDialog from "./own-staff-dialog";
 import MobileRecordCard from "@/features/dashboard/components/mobile-record-card";
 import { deleteStaffAction } from "@/features/teachers/actions";
 import { useListParams } from "@/features/dashboard/hooks/use-list-params";
@@ -39,9 +40,11 @@ interface TeachersBrowserProps {
   query: string;
   filter: StaffFilter;
   canManageAccounts: boolean;
+  ownStaffId: string | null;
+  ownStaff: StaffSummary | null;
 }
 
-export default function TeachersBrowser({ page, query, filter, canManageAccounts }: TeachersBrowserProps): React.ReactNode {
+export default function TeachersBrowser({ page, query, filter, canManageAccounts, ownStaffId, ownStaff }: TeachersBrowserProps): React.ReactNode {
   const router = useRouter();
   const { navigate, isPending } = useListParams("/dashboard/teachers", { q: query, page: page.page, filter });
   const [search, setSearch] = useState(query);
@@ -119,9 +122,12 @@ export default function TeachersBrowser({ page, query, filter, canManageAccounts
                 className="min-w-0 w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
               />
             </div>
-            <Button onClick={openCreate}>
+            {canManageAccounts && <Button onClick={openCreate}>
               <Plus className="size-4" /> เพิ่มบุคลากร
-            </Button>
+            </Button>}
+            {ownStaff && <Button variant="outline" onClick={() => openEdit(ownStaff)}>
+              <Pencil className="size-4" /> แก้ไขข้อมูลของฉัน
+            </Button>}
           </div>
         </div>
 
@@ -133,7 +139,7 @@ export default function TeachersBrowser({ page, query, filter, canManageAccounts
               subtitle={`รหัส ${s.code} · ${s.position ?? "ยังไม่ระบุตำแหน่ง"}`}
               badge={<Badge variant="secondary" className={kindStyle[s.type].className}>{kindStyle[s.type].label}</Badge>}
               fields={[{ label: "วิชาที่สอน", value: `${s.subjectsCount} วิชา` }, { label: "อีเมล", value: s.email ?? "—" }]}
-              actions={<><Button asChild variant="outline" size="sm" className="min-h-10"><Link href={`/dashboard/teachers/${s.id}`}><Eye className="size-4" /> ดูข้อมูล</Link></Button><Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(s)}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(s)}><Trash2 className="size-4" /> ลบ</Button></>}
+              actions={<><Button asChild variant="outline" size="sm" className="min-h-10"><Link href={`/dashboard/teachers/${s.id}`}><Eye className="size-4" /> ดูข้อมูล</Link></Button>{(canManageAccounts || s.id === ownStaffId) && <Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(s)}><Pencil className="size-4" /> แก้ไข</Button>}{canManageAccounts && <Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(s)}><Trash2 className="size-4" /> ลบ</Button>}</>}
             />)}
           </div>
           <div className={cn("hidden overflow-x-auto border-t border-line transition-opacity md:block", isPending && "opacity-60")}>
@@ -176,7 +182,7 @@ export default function TeachersBrowser({ page, query, filter, canManageAccounts
                         <span className="text-[12.5px] text-muted"> วิชา</span>
                       </TableCell>
                       <TableCell className="text-[13px] text-muted">{s.email ?? "—"}</TableCell>
-                      <TableCell className="text-right"><RecordActions name={`${s.firstName} ${s.lastName}`} href={`/dashboard/teachers/${s.id}`} onEdit={() => openEdit(s)} onDelete={() => setDeleting(s)} /></TableCell>
+                      <TableCell className="text-right"><RecordActions name={`${s.firstName} ${s.lastName}`} href={`/dashboard/teachers/${s.id}`} onEdit={canManageAccounts || s.id === ownStaffId ? () => openEdit(s) : undefined} onDelete={canManageAccounts ? () => setDeleting(s) : undefined} /></TableCell>
                     </TableRow>
                   );
                 })}
@@ -203,7 +209,7 @@ export default function TeachersBrowser({ page, query, filter, canManageAccounts
           onPageChange={(p) => navigate({ page: p })}
         />
 
-        <StaffFormDialog open={dialogOpen} staff={editing} canManageAccounts={canManageAccounts} onClose={() => setDialogOpen(false)} onSaved={handleSaved} />
+        {canManageAccounts ? <StaffFormDialog open={dialogOpen} staff={editing} canManageAccounts onClose={() => setDialogOpen(false)} onSaved={handleSaved} /> : <OwnStaffDialog open={dialogOpen} staff={editing} onClose={() => setDialogOpen(false)} onSaved={handleSaved} />}
 
         <ConfirmDialog
           open={deleting !== null}

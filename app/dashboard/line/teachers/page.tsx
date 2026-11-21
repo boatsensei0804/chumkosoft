@@ -34,7 +34,7 @@ export default async function TeacherLineStatusPage(): Promise<React.ReactNode> 
     type: person.type,
     classrooms: person.advisories.map((entry) => entry.classroom.code),
     status: person.lineUserId ? "CONNECTED" as const :
-      !person.user || person.user.isDeleted || !person.user.isActive || person.user.role !== "TEACHER" ? "NO_ACCOUNT" as const :
+      !person.user || person.user.isDeleted || !person.user.isActive || !["ADMIN", "TEACHER"].includes(person.user.role) ? "NO_ACCOUNT" as const :
       person.lineLinkCode ? "PENDING" as const : "UNLINKED" as const,
   }));
   return <>
