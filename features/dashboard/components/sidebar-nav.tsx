@@ -21,7 +21,7 @@ export default function SidebarNav({ items, onNavigate }: SidebarNavProps): Reac
 
   return (
     <TooltipProvider delayDuration={200}>
-      <ul className="flex flex-col gap-1.5">
+      <ul className="flex flex-col gap-0.5">
         {items.map((item) => {
           const active = item.available && isActive(pathname, item.href);
           const Icon = item.icon;
@@ -53,8 +53,8 @@ export default function SidebarNav({ items, onNavigate }: SidebarNavProps): Reac
                 onClick={onNavigate}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "group relative flex items-center gap-3 min-h-10 rounded-xl px-3 py-2 text-[13.5px] font-semibold transition-all",
-                  active ? "bg-gradient-to-r from-[#0762c4] to-[#0887ed] text-white shadow-[0_4px_12px_#2563eb30]" : "text-[#14355f] hover:bg-[#ebf6ff]",
+                  "group relative flex min-h-11 items-center gap-2.5 rounded-xl px-2.5 py-2 text-[14px] font-semibold transition-all",
+                  active ? "bg-gradient-to-r from-[#075fc4] to-[#138be9] text-white shadow-[0_5px_12px_#1b67b936]" : "text-[#153b69] hover:bg-white hover:shadow-[0_2px_8px_#1b67b912]",
                 )}
               >
                 {active && <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-white/70" aria-hidden="true" />}

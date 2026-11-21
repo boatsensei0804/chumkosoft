@@ -46,7 +46,7 @@ export default function AppShell({ children, user, today }: AppShellProps): Reac
 
       {/* Mobile drawer */}
       <Sheet open={navOpen} onOpenChange={setNavOpen}>
-        <SheetContent side="left" className="w-[280px] border-none bg-surface-2 p-0">
+        <SheetContent side="left" className="w-[288px] border-none bg-surface-2 p-0">
           <SheetHeader className="sr-only">
             <SheetTitle>เมนูหลัก</SheetTitle>
           </SheetHeader>
