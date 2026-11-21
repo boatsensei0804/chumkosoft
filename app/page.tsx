@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CalendarCheck2, Check, ChevronDown, GraduationCap, HeartHandshake, MessageCircle, ShieldCheck } from "lucide-react";
-import Mascot from "@/components/ui/mascot";
+import Image from "next/image";
 import HomeGuide from "@/features/guide/components/home-guide";
 
 export const metadata: Metadata = {
@@ -58,8 +58,7 @@ export default function Home(): React.ReactNode {
               <p className="mt-5 text-xs leading-6 text-muted">ครูและเจ้าหน้าที่ใช้บัญชีที่โรงเรียนออกให้</p>
             </div>
             <div className="relative mx-auto flex w-full max-w-[420px] flex-col items-center justify-center py-4 lg:py-8">
-              <div aria-hidden="true" className="absolute top-4 aspect-square w-[85%] rounded-full bg-white/80" />
-              <Mascot pose="welcome" size={360} priority className="relative h-auto w-[min(80%,340px)] drop-shadow-lg" />
+              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[24px] border border-white/80 shadow-[0_16px_40px_#215b9820]"><Image src="/mascot/overview-scene.webp" alt="ภาพประกอบกระต่าย Chumkosoft กับอาคารโรงเรียน" fill priority sizes="(min-width: 1024px) 420px, 100vw" className="object-cover object-right" /></div>
               <div className="relative -mt-2 w-full rounded-2xl border border-white bg-white/95 p-4 shadow-[0_12px_36px_#215b9820] sm:p-5">
                 <p className="mb-3 text-xs font-semibold text-brand-ink">ดูแลนักเรียนไปด้วยกัน</p>
                 <div className="flex items-center justify-between gap-2 text-xs font-medium sm:text-sm">

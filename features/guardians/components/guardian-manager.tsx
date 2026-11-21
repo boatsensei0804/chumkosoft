@@ -11,6 +11,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PaginationBar from "@/components/ui/pagination-bar";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
+import SemanticStatusBadge from "@/components/ui/semantic-status-badge";
 import ClassroomFilter from "./classroom-filter";
 import GuardianFormDialog from "./guardian-form-dialog";
 import MobileRecordCard from "@/features/dashboard/components/mobile-record-card";
@@ -78,8 +80,8 @@ export default function GuardianManager({ page, query, classrooms, classroomId, 
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex flex-col gap-4">
-        <section className="flex flex-col gap-3 rounded-2xl border border-line bg-card p-4 shadow-sm sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 xl:min-h-0 xl:flex-1">
+        <section className="flex flex-col gap-3 rounded-[22px] border border-blue-100 bg-white p-3 shadow-[0_8px_24px_#225a9a0d] sm:flex-row sm:items-end sm:justify-between sm:px-4">
           <div className="flex flex-col gap-1.5">
             <h2 className="text-[14px] font-bold text-ink-strong">เลือกห้องเรียน</h2>
             <p className="text-[12px] text-muted">กรองรายชื่อนักเรียนและผู้ปกครองตามห้อง</p>
@@ -98,9 +100,7 @@ export default function GuardianManager({ page, query, classrooms, classroomId, 
         </section>
 
         {page.rows.length === 0 ? (
-          <div className="rounded-2xl border border-line bg-card px-6 py-14 text-center">
-            <p className="text-[15px] font-semibold text-ink-strong">ไม่พบนักเรียนในห้องที่เลือก</p>
-          </div>
+          <MascotEmptyState compact pose="family" title="ไม่พบนักเรียนในห้องที่เลือก" description="ลองเปลี่ยนห้องเรียนหรือคำค้นหา" className="xl:flex-1" />
         ) : (
           <>
           <div className={cn("grid gap-3 rounded-xl border border-line bg-card p-3 transition-opacity md:hidden", isPending && "opacity-60")}>
@@ -109,9 +109,9 @@ export default function GuardianManager({ page, query, classrooms, classroomId, 
               actions={<div className="w-full space-y-2">{canEditStudent(student) && <Button variant="outline" size="sm" className="min-h-10" onClick={() => setEditing({ studentId: student.studentId, studentName: student.name, guardian: null })}><Plus className="size-4" /> เพิ่มผู้ปกครอง</Button>}{student.guardians.map((g) => <div key={g.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-2 p-2.5"><div className="min-w-0"><p className="text-sm font-semibold text-ink">{[g.prefix, g.fullName].filter(Boolean).join(" ")}</p><p className="text-xs text-muted">{g.relation} · {g.lineStatus === "linked" ? "ผูก LINE แล้ว" : g.lineStatus === "pending" ? "รอผูก LINE" : "ยังไม่ผูก LINE"}</p></div><div className="flex gap-1"><Button variant="ghost" size="sm" className="min-h-10" onClick={() => setViewing({ studentId: student.studentId, studentName: student.name, guardian: g })}><Eye className="size-4" /> ดู</Button>{canEditStudent(student) && <><Button variant="ghost" size="sm" className="min-h-10" onClick={() => setEditing({ studentId: student.studentId, studentName: student.name, guardian: g })}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(g)}><Trash2 className="size-4" /> ลบ</Button></>}</div></div>)}</div>}
             />)}
           </div>
-          <div className={cn("hidden overflow-x-auto rounded-xl border border-line bg-card transition-opacity md:block", isPending && "opacity-60")}>
+          <div className={cn("hidden overflow-auto rounded-[22px] border border-blue-100 bg-white shadow-[0_8px_24px_#225a9a0d] transition-opacity md:block xl:min-h-0 xl:flex-1", isPending && "opacity-60")}>
             <Table className="min-w-[820px]">
-              <TableHeader>
+              <TableHeader className="sticky top-0 z-10 bg-[#eaf5ff]">
                 <TableRow>
                   <TableHead>นักเรียน</TableHead>
                   <TableHead>ห้องเรียน</TableHead>
@@ -145,16 +145,17 @@ export default function GuardianManager({ page, query, classrooms, classroomId, 
                       )}
                     </TableCell>
                     <TableCell className="min-w-36 whitespace-normal">
+                      {student.guardians.length === 0 && <SemanticStatusBadge tone="neutral">ยังไม่มีผู้ปกครอง</SemanticStatusBadge>}
                       {student.guardians.length > 0 && (
                         <div className="flex flex-col gap-2">
                           {student.guardians.map((g) => (
                             <div key={g.id} className="flex min-h-8 items-center">
                               {g.lineStatus === "linked" ? (
-                                <Badge variant="secondary" className="bg-success-soft text-[oklch(0.42_0.1_152)]">เชื่อมแล้ว</Badge>
+                                <SemanticStatusBadge tone="success">เชื่อมแล้ว</SemanticStatusBadge>
                               ) : g.lineStatus === "pending" ? (
-                                <Badge variant="secondary" className="bg-warning-soft text-[oklch(0.5_0.12_55)]">รอเชื่อม</Badge>
+                                <SemanticStatusBadge tone="warning">รอเชื่อม</SemanticStatusBadge>
                               ) : (
-                                <span className="text-[11.5px] text-muted">ยังไม่เชื่อม</span>
+                                <SemanticStatusBadge tone="neutral">ยังไม่เชื่อม</SemanticStatusBadge>
                               )}
                             </div>
                           ))}

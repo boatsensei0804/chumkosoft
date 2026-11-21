@@ -1,0 +1,29 @@
+import Image from "next/image";
+import type { ReactNode } from "react";
+import Mascot, { type MascotPose } from "@/components/ui/mascot";
+
+interface MascotBannerProps {
+  title: string;
+  subtitle?: string;
+  category: string;
+  pose: MascotPose;
+  illustration?: string;
+  scene?: string;
+  actions?: ReactNode;
+  compact?: boolean;
+}
+
+export default function MascotBanner({ title, subtitle, category, pose, illustration, scene, actions, compact = false }: MascotBannerProps): ReactNode {
+  return <header className={`relative mb-4 flex min-h-[132px] overflow-hidden rounded-[24px] border border-[#c9e4ff] bg-gradient-to-r from-[#f6fbff] via-[#e9f5ff] to-[#bdddff] shadow-[0_8px_24px_#225a9a12] ${compact ? "min-h-[116px]" : "sm:min-h-[158px]"}`}>
+    {scene ? <><Image src={scene} alt="" fill priority sizes="(min-width: 1280px) 1200px, 100vw" className="pointer-events-none object-cover object-right md:object-center" /><div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-white/95 via-white/80 to-white/15 md:from-white/65 md:via-white/30 md:to-transparent" /></> : <div aria-hidden="true" className="pointer-events-none absolute -bottom-16 right-4 size-48 rounded-full border-[26px] border-white/35" />}
+    <div className="relative z-10 flex min-w-0 flex-1 flex-col justify-center px-5 py-4 sm:px-7">
+      <p className="text-[11px] font-bold tracking-wide text-[#1769b3]">{category}</p>
+      <h1 className={`mt-1 font-extrabold leading-tight tracking-tight text-[#0b315f] ${compact ? "text-[22px] sm:text-[27px]" : "text-[26px] sm:text-[34px]"}`}>{title}</h1>
+      {subtitle && <p className={`mt-1 text-[13px] leading-5 text-[#365b80] sm:max-w-[720px] sm:text-sm ${scene ? "max-w-[64%]" : "max-w-full"}`}>{subtitle}</p>}
+      {actions && <div className="mt-3 flex flex-wrap gap-2">{actions}</div>}
+    </div>
+    {!scene && <div className="relative flex w-[76px] shrink-0 items-end justify-center overflow-hidden sm:w-[160px] lg:w-[220px]">
+      {illustration ? <Image src={illustration} alt="" width={196} height={196} className="absolute -bottom-2 -right-4 h-[96px] w-[96px] object-contain sm:-bottom-7 sm:right-1 sm:h-[175px] sm:w-[175px] lg:right-4 lg:h-[205px] lg:w-[205px]" priority /> : <Mascot pose={pose} size={190} decorative className="absolute -bottom-2 -right-4 h-[96px] w-[96px] sm:-bottom-6 sm:right-2 sm:h-[190px] sm:w-[190px]" priority />}
+    </div>}
+  </header>;
+}

@@ -75,7 +75,7 @@ export default function CoursesBrowser({ page, query, canManage }: CoursesBrowse
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
+      <div className="flex flex-col overflow-hidden rounded-[22px] border border-blue-100 bg-white shadow-[0_8px_24px_#225a9a0d] xl:min-h-0 xl:flex-1">
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-[14px] font-bold text-ink-strong">รายวิชาทั้งหมด</h2>
           <div className="flex flex-wrap items-center gap-2">
@@ -103,9 +103,9 @@ export default function CoursesBrowser({ page, query, canManage }: CoursesBrowse
               actions={<><Button variant="outline" size="sm" className="min-h-10" onClick={() => setViewing(c)}><Eye className="size-4" /> ดูข้อมูล</Button>{canManage && <><Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(c)}><Pencil className="size-4" /> แก้ไข</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(c)}><Trash2 className="size-4" /> ลบ</Button></>}</>}
             />)}
           </div>
-          <div className={cn("hidden overflow-x-auto border-t border-line transition-opacity md:block", isPending && "opacity-60")}>
+          <div className={cn("hidden overflow-x-auto border-t border-line transition-opacity md:block xl:min-h-0 xl:flex-1 xl:overflow-auto", isPending && "opacity-60")}>
             <Table className="min-w-[640px]">
-              <TableHeader>
+              <TableHeader className="sticky top-0 z-10 bg-[#eaf5ff]">
                 <TableRow>
                   <TableHead>รหัสวิชา</TableHead>
                   <TableHead>ชื่อรายวิชา</TableHead>

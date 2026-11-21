@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import StatusChip from "@/features/dashboard/components/status-chip";
 import SectionCard from "@/features/dashboard/components/section-card";
+import Mascot from "@/components/ui/mascot";
 import ClassroomOfferings from "@/features/classrooms/components/classroom-offerings";
 import { getClassroomDetail, listOfferingOptions } from "@/features/classrooms/services/classroom-service";
 import { requireRoles } from "@/lib/dal";
@@ -35,7 +36,7 @@ export default async function ClassroomDetailPage({ params }: ClassroomDetailPag
       </Link>
 
       {/* Header: the relationship anchor — classroom + homeroom teacher */}
-      <section className="flex flex-col gap-4 rounded-2xl border border-line bg-card p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <section className="flex flex-col gap-4 rounded-[24px] border border-blue-100 bg-gradient-to-r from-white to-[#eaf5ff] p-5 shadow-[0_8px_24px_#225a9a0d] sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3.5">
           <span className="grid size-12 place-items-center rounded-[12px] bg-brand-soft text-brand-ink">
             <Users className="size-6" />
@@ -49,7 +50,7 @@ export default async function ClassroomDetailPage({ params }: ClassroomDetailPag
           </div>
         </div>
 
-        <div className="flex items-start gap-3 rounded-[12px] border border-line bg-surface-2 px-4 py-3">
+        <div className="flex items-start gap-3 rounded-[12px] border border-blue-100 bg-white/80 px-4 py-3">
           <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand-soft text-brand-ink" aria-hidden="true">
             <UserCheck className="size-[19px]" />
           </span>
@@ -71,6 +72,7 @@ export default async function ClassroomDetailPage({ params }: ClassroomDetailPag
             )}
           </div>
         </div>
+        <Mascot pose="learning" size={72} decorative className="hidden xl:block" />
       </section>
 
       <WorkspacePanels sections={[{ title: "นักเรียนในห้อง", description: "รายชื่อและสถานะภาคเรียนปัจจุบัน", content: <>

@@ -1,11 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import WorkspacePanels from "@/features/dashboard/components/workspace-panels";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Copy, ExternalLink, RefreshCw, UsersRound, ClipboardCheck, Bell, ArrowRight } from "lucide-react";
+import { ArrowRight, Bell, CalendarClock, CheckCircle2, ClipboardCheck, Copy, ExternalLink, RefreshCw, School, UsersRound } from "lucide-react";
+import SemanticStatusBadge from "@/components/ui/semantic-status-badge";
 
 interface Props {
   linked: boolean;
@@ -21,10 +21,8 @@ interface Props {
 
 export default function AdvisorLineConnect({ linked, currentCode, friendUrl, friendQr, advisoryRooms, sendTime, studentCount, pendingLeaveCount, hasActiveTerm }: Props): React.ReactNode {
   const router = useRouter();
-  const code = currentCode;
   const [message, setMessage] = useState("");
 
-  // The teacher can leave this page open while sending the code in LINE.
   useEffect(() => {
     if (linked) return;
     const timer = window.setInterval(() => router.refresh(), 10_000);
@@ -32,74 +30,35 @@ export default function AdvisorLineConnect({ linked, currentCode, friendUrl, fri
   }, [linked, router]);
 
   async function copyCode(): Promise<void> {
-    if (!code) return;
-    try { await navigator.clipboard.writeText(code); setMessage("คัดลอกรหัสแล้ว"); }
+    if (!currentCode) return;
+    try { await navigator.clipboard.writeText(currentCode); setMessage("คัดลอกรหัสแล้ว"); }
     catch { setMessage("คัดลอกอัตโนมัติไม่ได้ กรุณาเลือกรหัสแล้วคัดลอกเอง"); }
   }
 
-  return <div className="space-y-5">
+  return <div className="flex flex-col gap-3 xl:min-h-0 xl:flex-1">
     <section aria-label="ภาพรวม LINE ของครู" className="grid gap-3 sm:grid-cols-3">
-      <div className="rounded-2xl border border-line bg-card p-4 shadow-sm"><p className="text-sm text-muted">ห้องที่ปรึกษา</p><p className="mt-2 text-3xl font-bold tabular text-ink-strong">{advisoryRooms.length}</p><p className="mt-1 text-xs text-muted">ห้องในปีการศึกษาปัจจุบัน</p></div>
-      <div className="rounded-2xl border border-line bg-card p-4 shadow-sm"><p className="text-sm text-muted">นักเรียนที่ดูแล</p><p className="mt-2 text-3xl font-bold tabular text-brand-ink">{studentCount.toLocaleString("th-TH")}</p><p className="mt-1 text-xs text-muted">{hasActiveTerm ? "คนในภาคเรียนปัจจุบัน" : "ยังไม่มีภาคเรียนที่เปิดใช้งาน"}</p></div>
-      <Link href="/dashboard/leave-requests" className="group rounded-2xl border border-line bg-card p-4 shadow-sm transition-colors hover:border-brand/40 hover:bg-brand-softer"><p className="flex items-center justify-between text-sm text-muted">คำขอลารอตรวจ <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></p><p className="mt-2 text-3xl font-bold tabular text-warning">{pendingLeaveCount.toLocaleString("th-TH")}</p><p className="mt-1 text-xs text-muted">รายการจากห้องที่ปรึกษาของคุณ</p></Link>
+      <div className="flex items-center gap-3 rounded-[20px] border border-blue-100 bg-white p-3 shadow-[0_6px_20px_#225a9a0a]"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-[#1769b3]"><School className="size-5" /></span><div><p className="text-xs text-muted">ห้องที่ปรึกษา</p><p className="text-2xl font-bold tabular text-ink-strong">{advisoryRooms.length} <span className="text-xs font-medium">ห้อง</span></p></div></div>
+      <div className="flex items-center gap-3 rounded-[20px] border border-blue-100 bg-white p-3 shadow-[0_6px_20px_#225a9a0a]"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><UsersRound className="size-5" /></span><div><p className="text-xs text-muted">นักเรียนที่ดูแล</p><p className="text-2xl font-bold tabular text-ink-strong">{studentCount.toLocaleString("th-TH")} <span className="text-xs font-medium">คน</span></p></div></div>
+      <Link href="/dashboard/leave-requests" className="flex items-center gap-3 rounded-[20px] border border-blue-100 bg-white p-3 shadow-[0_6px_20px_#225a9a0a] hover:border-[#1769b3]"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-700"><ClipboardCheck className="size-5" /></span><div className="flex-1"><p className="text-xs text-muted">คำขอลารอตรวจ</p><p className="text-2xl font-bold tabular text-ink-strong">{pendingLeaveCount.toLocaleString("th-TH")} <span className="text-xs font-medium">รายการ</span></p></div><ArrowRight className="size-4 text-[#1769b3]" /></Link>
     </section>
-    <WorkspacePanels sections={[{ title: "บัญชีและการเชื่อมต่อ", description: "สถานะ รหัส และ QR เพิ่มเพื่อน", content: <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_260px]">
-    <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-7">
-      <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ${linked ? "bg-success-soft text-success" : code ? "bg-warning-soft text-warning" : "bg-surface-2 text-muted"}`}>
-        {linked && <CheckCircle2 className="size-4" />}{linked ? "เชื่อม LINE แล้ว" : code ? "รอส่งรหัสใน LINE" : "ยังไม่เชื่อม LINE"}
-      </div>
-      {linked ? <>
-        <h2 className="mt-5 text-xl font-bold text-ink-strong">เชื่อมสำเร็จแล้ว</h2>
-        <p className="mt-2 text-sm leading-relaxed text-muted">{advisoryRooms.length ? `คุณจะได้รับสรุปการเข้าโรงเรียนของ ${advisoryRooms.join(", ")} ตามเวลาที่โรงเรียนตั้งไว้` : "คุณเชื่อม LINE แล้ว แต่ยังไม่มีห้องที่ปรึกษา จึงยังไม่มีสรุปรายห้องที่จะส่ง"} คุณยังรับประกาศที่โรงเรียนส่งถึงครูได้</p>
-        {friendUrl && <a href={friendUrl} target="_blank" rel="noopener noreferrer" className="mt-5 inline-flex items-center gap-2 rounded-lg border border-line px-4 py-2 text-sm font-semibold text-brand-ink"><ExternalLink className="size-4" /> เปิด LINE OA โรงเรียน</a>}
-      </> : <>
-        <h2 className="mt-5 text-xl font-bold text-ink-strong">เชื่อมบัญชี LINE ของคุณ</h2>
-        <ol className="mt-4 space-y-3 text-sm leading-relaxed text-ink">
-          <li><span className="mr-2 font-bold text-brand-ink">1.</span>เพิ่มเพื่อน LINE Official Account ของโรงเรียน</li>
-          <li><span className="mr-2 font-bold text-brand-ink">2.</span>รับรหัส 6 หลักที่แอดมินออกให้ แล้วส่งรหัสในแชทส่วนตัวกับ LINE OA</li>
-          <li><span className="mr-2 font-bold text-brand-ink">3.</span>รอข้อความยืนยัน หน้านี้จะเปลี่ยนเป็น “เชื่อม LINE แล้ว” โดยอัตโนมัติ</li>
-        </ol>
-        {friendUrl ? <div className="mt-5 flex flex-wrap items-center gap-5 rounded-xl border border-line bg-surface p-4">
-          {friendQr && <Image src={friendQr} alt="คิวอาร์โค้ดเพิ่มเพื่อน LINE OA ของโรงเรียน" width={136} height={136} unoptimized className="rounded-lg bg-white p-1" />}
-          <div><p className="text-sm font-semibold text-ink">เพิ่มเพื่อน LINE OA</p><a href={friendUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white"><ExternalLink className="size-4" /> เปิด LINE เพื่อเพิ่มเพื่อน</a></div>
-        </div> : <p className="mt-5 rounded-xl bg-warning-soft p-4 text-sm text-ink">ยังไม่ได้ตั้งลิงก์เพิ่มเพื่อน LINE OA กรุณาขอลิงก์หรือ QR จากผู้ดูแลระบบ</p>}
-        <div className="mt-6 border-t border-line pt-5">
-          <p className="text-sm font-semibold text-ink">รหัสเชื่อม LINE ของฉัน</p>
-          {code ? <div className="mt-2 flex flex-wrap items-center gap-3"><span className="rounded-xl border border-brand/30 bg-brand-soft px-5 py-3 font-mono text-3xl font-bold tracking-[0.22em] text-brand-ink select-all">{code}</span><button type="button" onClick={copyCode} className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink"><Copy className="size-4" /> คัดลอก</button></div> : <p className="mt-2 text-sm text-muted">แอดมินยังไม่ออกรหัสให้คุณ กรุณาติดต่อผู้ดูแลระบบ</p>}
-        </div>
-      </>}
-      {message && <p role="status" className="mt-4 rounded-lg bg-brand-soft px-3 py-2 text-sm text-ink">{message}</p>}
-    </section>
-    <aside className="space-y-4">
-      <div className="rounded-2xl border border-line bg-card p-5 shadow-sm">
-        <p className="text-sm font-semibold text-muted">ห้องที่ปรึกษาของคุณ</p>
-        {advisoryRooms.length ? <p className="mt-2 text-lg font-bold text-ink-strong">{advisoryRooms.join(", ")}</p> : <p className="mt-2 text-sm text-warning">ยังไม่ได้รับมอบหมายห้องที่ปรึกษา จึงยังไม่มีสรุปที่จะส่ง</p>}
-      </div>
-      <div className="rounded-2xl border border-line bg-card p-5 shadow-sm">
-        <p className="text-sm font-semibold text-muted">เวลาส่งสรุป</p>
-        <p className="mt-2 text-2xl font-bold tabular text-brand-ink">{sendTime} น.</p>
-        <p className="mt-1 text-xs text-muted">วันจันทร์–ศุกร์ · เวลาไทย · ผู้ดูแลระบบเป็นผู้ตั้งค่า</p>
-      </div>
-      {!linked && <button type="button" onClick={() => router.refresh()} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-ink"><RefreshCw className="size-4" /> ตรวจสถานะตอนนี้</button>}
-    </aside>
-    </div> }, { title: "การแจ้งเตือนและงานที่เกี่ยวข้อง", description: "สิ่งที่ได้รับและทางลัดงานที่ปรึกษา", content: <div className="grid gap-5 xl:grid-cols-2">
-      <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">
-        <h2 className="text-base font-bold text-ink-strong">LINE นี้ใช้รับอะไรบ้าง</h2>
-        <ul className="mt-4 space-y-3 text-sm text-ink">
-          <li className="flex gap-3"><UsersRound className="mt-0.5 size-5 shrink-0 text-brand-ink" /><span><b>สรุปการเข้าโรงเรียน</b><br /><span className="text-muted">ส่งวันจันทร์–ศุกร์ตามเวลาที่โรงเรียนกำหนด เมื่อมีห้องที่ปรึกษา</span></span></li>
-          <li className="flex gap-3"><ClipboardCheck className="mt-0.5 size-5 shrink-0 text-brand-ink" /><span><b>แจ้งคำขอลาของนักเรียน</b><br /><span className="text-muted">ตรวจรายละเอียดและพิจารณาคำขอในหน้าคำขอลา</span></span></li>
-          <li className="flex gap-3"><Bell className="mt-0.5 size-5 shrink-0 text-brand-ink" /><span><b>ประกาศจากโรงเรียน</b><br /><span className="text-muted">ข่าวสารและเหตุฉุกเฉินที่ส่งถึงบัญชี LINE ที่ผูกแล้ว</span></span></li>
-        </ul>
+
+    <div className="grid gap-3 xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+      <section aria-label="บัญชีและการเชื่อมต่อ" className="min-w-0 rounded-[22px] border border-blue-100 bg-white p-4 shadow-[0_8px_24px_#225a9a0d] xl:overflow-y-auto">
+        <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-base font-bold text-ink-strong">บัญชีและการเชื่อมต่อ</h2><SemanticStatusBadge tone={linked ? "success" : currentCode ? "warning" : "neutral"}>{linked ? "เชื่อม LINE แล้ว" : currentCode ? "รอส่งรหัส" : "ยังไม่เชื่อม LINE"}</SemanticStatusBadge></div>
+        {linked ? <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3"><p className="flex items-center gap-2 font-bold text-emerald-800"><CheckCircle2 className="size-5" /> เชื่อมบัญชีสำเร็จ</p><p className="mt-1 text-sm leading-6 text-ink">{advisoryRooms.length ? `ระบบสามารถส่งสรุปของ ${advisoryRooms.join(", ")} ตามเวลาที่โรงเรียนตั้งไว้` : "บัญชี LINE เชื่อมแล้ว แต่ยังไม่มีห้องที่ปรึกษา จึงยังไม่มีสรุปรายห้อง"} คุณยังรับประกาศที่โรงเรียนส่งถึงครูได้</p></div> : <>
+          <p className="mt-3 text-sm leading-6 text-ink">เพิ่มเพื่อน LINE OA ของโรงเรียน แล้วส่งรหัส 6 หลักที่แอดมินออกให้ในแชทส่วนตัว ระบบจะตรวจสถานะให้อัตโนมัติ</p>
+          {currentCode ? <div className="mt-3 flex flex-wrap items-center gap-2"><span className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 font-mono text-2xl font-bold tracking-[0.18em] text-[#0b4385] select-all">{currentCode}</span><button type="button" onClick={copyCode} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-blue-200 px-3 text-sm font-semibold text-[#0b4385] hover:bg-blue-50"><Copy className="size-4" /> คัดลอก</button></div> : <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">แอดมินยังไม่ออกรหัสให้คุณ กรุณาติดต่อผู้ดูแลระบบ</p>}
+          {friendUrl ? <div className="mt-3 flex items-center gap-3 rounded-xl border border-blue-100 bg-[#f8fbff] p-3">{friendQr && <Image src={friendQr} alt="QR เพิ่มเพื่อน LINE OA ของโรงเรียน" width={80} height={80} unoptimized className="rounded-lg bg-white p-1" />}<a href={friendUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#1769b3] px-3 text-sm font-semibold text-white hover:bg-[#0b4385]"><ExternalLink className="size-4" /> เปิด LINE OA</a></div> : <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">ยังไม่ได้ตั้งลิงก์เพิ่มเพื่อน LINE OA กรุณาขอลิงก์จากผู้ดูแลระบบ</p>}
+          <button type="button" onClick={() => router.refresh()} className="mt-3 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-[#1769b3]"><RefreshCw className="size-4" /> ตรวจสถานะตอนนี้</button>
+        </>}
+        {linked && friendUrl && <a href={friendUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-blue-200 px-3 text-sm font-semibold text-[#0b4385] hover:bg-blue-50"><ExternalLink className="size-4" /> เปิด LINE OA โรงเรียน</a>}
+        {message && <p role="status" className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-sm text-ink">{message}</p>}
       </section>
-      <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">
-        <h2 className="text-base font-bold text-ink-strong">งานที่เกี่ยวข้อง</h2>
-        <p className="mt-1 text-sm text-muted">เปิดงานบนเว็บไซต์ได้โดยตรง แม้ยังไม่ได้อ่านข้อความใน LINE</p>
-        <div className="mt-4 grid gap-2">
-          <Link href="/dashboard/leave-requests" className="flex items-center justify-between rounded-xl border border-line px-4 py-3 text-sm font-semibold text-brand-ink hover:bg-brand-softer">ตรวจคำขอลา <ArrowRight className="size-4" /></Link>
-          <Link href="/dashboard/attendance?mode=homeroom" className="flex items-center justify-between rounded-xl border border-line px-4 py-3 text-sm font-semibold text-brand-ink hover:bg-brand-softer">ดูการเช็คชื่อประจำห้อง <ArrowRight className="size-4" /></Link>
-        </div>
-        <p className="mt-4 text-xs leading-relaxed text-muted">หากเชื่อมแล้วแต่ไม่เห็นข้อความ ให้ตรวจว่าไม่ได้บล็อก LINE OA และเปิดการแจ้งเตือน LINE ไว้ หากยังมีปัญหาให้แจ้งผู้ดูแลระบบ</p>
-      </section>
-    </div> }]} />
+
+      <div className="flex min-w-0 flex-col gap-3 xl:min-h-0 xl:overflow-y-auto">
+        <section className="rounded-[22px] border border-blue-100 bg-white p-4 shadow-[0_8px_24px_#225a9a0d]"><h2 className="text-base font-bold text-ink-strong">ห้องที่ปรึกษาและเวลาส่งสรุป</h2><div className="mt-3 grid gap-2 sm:grid-cols-2"><div className="rounded-xl bg-blue-50 p-3"><p className="flex items-center gap-1.5 text-xs text-muted"><School className="size-4" /> ห้องที่ปรึกษา</p><p className="mt-1 font-bold text-[#0b4385]">{advisoryRooms.length ? advisoryRooms.join(", ") : "ยังไม่มีห้องที่ปรึกษา"}</p></div><div className="rounded-xl bg-blue-50 p-3"><p className="flex items-center gap-1.5 text-xs text-muted"><CalendarClock className="size-4" /> เวลาส่งสรุป</p><p className="mt-1 font-bold text-[#0b4385]">{sendTime} น.</p><p className="text-xs text-muted">จันทร์–ศุกร์ · เวลาไทย</p></div></div>{!hasActiveTerm && <p className="mt-2 text-xs text-amber-800">ยังไม่มีภาคเรียนที่เปิดใช้งาน</p>}</section>
+        <section className="rounded-[22px] border border-blue-100 bg-white p-4 shadow-[0_8px_24px_#225a9a0d]"><h2 className="text-base font-bold text-ink-strong">การแจ้งเตือนและงานที่เกี่ยวข้อง</h2><div className="mt-3 grid gap-2 text-sm"><p className="flex items-center gap-2 text-ink"><Bell className="size-4 text-[#1769b3]" /> สรุปการเข้าโรงเรียน · คำขอลา · ประกาศ</p><Link href="/dashboard/leave-requests" className="flex min-h-10 items-center justify-between rounded-xl border border-blue-100 px-3 font-semibold text-[#0b4385] hover:bg-blue-50">ตรวจคำขอลา <ArrowRight className="size-4" /></Link><Link href="/dashboard/attendance?mode=homeroom" className="flex min-h-10 items-center justify-between rounded-xl border border-blue-100 px-3 font-semibold text-[#0b4385] hover:bg-blue-50">ดูการเช็กชื่อประจำห้อง <ArrowRight className="size-4" /></Link></div><p className="mt-2 text-xs leading-5 text-muted">หากเชื่อมแล้วแต่ไม่ได้รับข้อความ ให้ตรวจการบล็อก LINE OA และสถานะการส่งของโรงเรียน</p></section>
+      </div>
+    </div>
   </div>;
 }

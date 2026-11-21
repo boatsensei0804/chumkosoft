@@ -29,7 +29,7 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps): P
   ]);
 
   return (
-    <>
+    <div className="xl:flex xl:h-full xl:min-h-0 xl:flex-col">
       <PageHeader
         title="รายวิชา"
         subtitle={`หลักสูตรทั้งหมด ${stats.total.toLocaleString("th-TH")} วิชา · ${termLabel}`}
@@ -42,6 +42,6 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps): P
         ]}
       />}
       <CoursesBrowser page={result} query={query} canManage={user.role === "ADMIN"} />
-    </>
+    </div>
   );
 }

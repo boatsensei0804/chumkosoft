@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft, MessageSquare } from "lucide-react";
 import SectionCard from "@/features/dashboard/components/section-card";
 import StatusChip from "@/features/dashboard/components/status-chip";
+import Mascot from "@/components/ui/mascot";
 import { getStudentDetail } from "@/services/student-service";
 
 export const metadata: Metadata = {
@@ -106,7 +107,7 @@ export default async function StudentDetailPage({ params }: StudentDetailPagePro
       </Link>
 
       {/* Header */}
-      <section className="flex flex-col gap-4 rounded-[16px] p-5 sm:flex-row sm:items-center sm:justify-between" style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)" }}>
+      <section className="flex flex-col gap-4 rounded-[24px] border border-blue-100 bg-gradient-to-r from-white to-[#eaf5ff] p-5 shadow-[0_8px_24px_#225a9a0d] sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3.5">
           <span className="grid size-14 place-items-center rounded-full text-[20px] font-semibold" style={{ backgroundColor: "var(--brand-soft)", color: "var(--brand-ink)" }} aria-hidden="true">
             {s.firstName.charAt(0)}
@@ -118,7 +119,7 @@ export default async function StudentDetailPage({ params }: StudentDetailPagePro
             </p>
           </div>
         </div>
-        <StatusChip status={s.status} />
+        <div className="flex items-center gap-3"><StatusChip status={s.status} /><Mascot pose="students" size={76} decorative className="hidden lg:block" /></div>
       </section>
 
       <RecordSections labels={["ข้อมูลตัวตน", "การเกิด การศึกษา และสุขภาพ", "ที่อยู่และการเดินทาง", "สถานภาพครอบครัว", "กลุ่มพิเศษ (DMC)", "บิดา มารดา และผู้ปกครอง"]}>

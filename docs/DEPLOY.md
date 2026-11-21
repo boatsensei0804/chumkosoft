@@ -124,6 +124,22 @@ same name. Recreate the app container so it reads the new environment value.
 Keep the secret out of Git and chat. The endpoint returns 401 until configured;
 Redis records which teachers have already received that day's summary.
 
+If the **Advisor LINE digest** workflow stops with
+`ADVISOR_LINE_DIGEST_SECRET is not configured`, the repository secret is
+missing. Add it at **GitHub → Settings → Secrets and variables → Actions →
+New repository secret**. Use the exact same random value as the production
+server's `.env` entry, then recreate only the app container so Compose reloads
+the environment:
+
+```sh
+cd ~/chumkosoft
+sudo docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.rustfs.yml --profile tunnel up -d --no-deps --force-recreate app
+```
+
+Running the workflow again may send real LINE summaries to connected teachers
+if the configured delivery time has passed. Never put the secret in a GitHub
+variable, workflow file, shell history, or issue comment.
+
 ### School-wide LINE announcements
 
 An admin can open **Send LINE announcement** in the dashboard to send news or

@@ -32,12 +32,12 @@ export default async function GuardiansPage({ searchParams }: GuardiansPageProps
   ]);
 
   return (
-    <>
+    <div className="xl:flex xl:h-full xl:min-h-0 xl:flex-col">
       <PageHeader
         title="ผู้ปกครอง"
         subtitle={user.role === "ADMIN" ? "จัดการข้อมูลบิดา มารดา และผู้ปกครองของนักเรียน — สำหรับการผูก LINE และแจ้งเตือน ดูที่เมนู LINE / แจ้งเตือน" : "ดูข้อมูลผู้ปกครอง และแก้ไขได้เฉพาะนักเรียนในห้องที่คุณเป็นครูที่ปรึกษา"}
       />
-      <StatStrip
+      <StatStrip className="mb-3 !grid-cols-1 sm:!grid-cols-3"
         items={[
           { label: "นักเรียนทั้งหมด", value: stats.students, hint: "คน", icon: GraduationCap, tone: "brand" },
           { label: "มีผู้ปกครองแล้ว", value: stats.withGuardian, hint: "คน", icon: UserCheck, tone: "success" },
@@ -45,6 +45,6 @@ export default async function GuardiansPage({ searchParams }: GuardiansPageProps
         ]}
       />
       <GuardianManager page={result} query={query} classrooms={classrooms} classroomId={classroomId} editableClassroomIds={editableClassroomIds} />
-    </>
+    </div>
   );
 }

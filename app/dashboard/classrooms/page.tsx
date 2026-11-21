@@ -18,7 +18,7 @@ export default async function ClassroomsPage(): Promise<React.ReactNode> {
   const withAdvisor = classrooms.filter((c) => c.advisors.length > 0).length;
 
   return (
-    <>
+    <div className="xl:flex xl:h-full xl:min-h-0 xl:flex-col">
       <PageHeader
         title="ห้องเรียน"
         subtitle={`ห้องเรียนและครูที่ปรึกษา ${classrooms.length.toLocaleString("th-TH")} ห้อง · ปีการศึกษาปัจจุบัน`}
@@ -31,6 +31,6 @@ export default async function ClassroomsPage(): Promise<React.ReactNode> {
         ]}
       />
       <ClassroomsBrowser classrooms={classrooms} teachers={teachers} canManage={user.role === "ADMIN"} />
-    </>
+    </div>
   );
 }

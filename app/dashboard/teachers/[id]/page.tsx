@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import SectionCard from "@/features/dashboard/components/section-card";
+import Mascot from "@/components/ui/mascot";
 import { getStaffDetail } from "@/services/staff-service";
 import { requireRoles } from "@/lib/dal";
 import type { StaffKind } from "@/features/teachers/types";
@@ -76,7 +77,7 @@ export default async function TeacherDetailPage({ params }: TeacherDetailPagePro
       </Link>
 
       {/* Header */}
-      <section className="flex flex-col gap-4 rounded-[16px] p-5 sm:flex-row sm:items-center sm:justify-between" style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)" }}>
+      <section className="flex flex-col gap-4 rounded-[24px] border border-blue-100 bg-gradient-to-r from-white to-[#eaf5ff] p-5 shadow-[0_8px_24px_#225a9a0d] sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3.5">
           <span className="grid size-14 place-items-center rounded-full text-[20px] font-semibold" style={{ backgroundColor: "var(--brand-soft)", color: "var(--brand-ink)" }} aria-hidden="true">
             {s.firstName.charAt(0)}
@@ -89,9 +90,7 @@ export default async function TeacherDetailPage({ params }: TeacherDetailPagePro
             </p>
           </div>
         </div>
-        <span className="inline-flex w-fit items-center rounded-full px-3 py-1.5 text-[13px] font-semibold" style={{ backgroundColor: "var(--brand-soft)", color: "var(--brand-ink)" }}>
-          {KIND_LABEL[s.type]}
-        </span>
+        <div className="flex items-center gap-3"><span className="inline-flex w-fit items-center rounded-full bg-brand-soft px-3 py-1.5 text-[13px] font-semibold text-brand-ink">{KIND_LABEL[s.type]}</span><Mascot pose="staff" size={76} decorative className="hidden lg:block" /></div>
       </section>
 
       <RecordSections labels={["ข้อมูลส่วนบุคคล", "ข้อมูลราชการและใบประกอบวิชาชีพ", "วุฒิการศึกษา", "วิชาที่สอน (ภาคเรียนปัจจุบัน)"]}>

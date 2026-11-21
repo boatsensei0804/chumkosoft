@@ -1,11 +1,11 @@
 import StatStrip from "@/components/ui/stat-strip";
 import type { Metadata } from "next";
-import { GraduationCap, CalendarDays } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import WeeklySchedule from "@/features/portal/components/weekly-schedule";
 import { getCurrentUser } from "@/lib/dal";
 import { getPortalOverview } from "@/features/portal/services/portal-service";
 import { thaiGreeting, formatThaiWeekdayLong } from "@/utils/thai-date";
-import Mascot from "@/components/ui/mascot";
+import MascotBanner from "@/features/dashboard/components/mascot-banner";
 import MascotEmptyState from "@/components/ui/mascot-empty-state";
 
 export const metadata: Metadata = {
@@ -25,22 +25,7 @@ export default async function PortalPage(): Promise<React.ReactNode> {
 
   return (
     <div className="flex flex-col gap-6">
-      <section
-        className="relative flex items-center justify-between overflow-hidden rounded-2xl border border-brand/15 bg-gradient-to-br from-brand-soft via-bg to-bg px-5 py-5 shadow-sm sm:px-7 sm:py-6"
-      >
-        <div>
-          <p className="text-[12.5px] text-muted">{formatThaiWeekdayLong(now)}</p>
-          <h1 className="mt-1 text-[24px] font-bold tracking-tight text-ink-strong sm:text-[28px]">{heading}</h1>
-          {overview.classroomCode && (
-            <p className="mt-2 inline-flex items-center gap-2 text-[13.5px] text-muted">
-              <GraduationCap className="size-4" />
-              ชั้น {overview.classroomCode} · {overview.gradeLevel}
-              {overview.termLabel ? ` · ${overview.termLabel}` : ""}
-            </p>
-          )}
-        </div>
-        <Mascot pose="welcome" size={132} decorative priority className="hidden sm:block" />
-      </section>
+      <MascotBanner title={heading} category={user.role === "PARENT" ? "พื้นที่ของผู้ปกครอง" : "พื้นที่ของนักเรียน"} pose={user.role === "PARENT" ? "family" : "students"} scene={user.role === "PARENT" ? "/mascot/guardians-banner.webp" : "/mascot/overview-scene.webp"} subtitle={[formatThaiWeekdayLong(now), overview.classroomCode ? `ชั้น ${overview.classroomCode} · ${overview.gradeLevel}` : null, overview.termLabel].filter(Boolean).join(" · ")} />
 
       <StatStrip items={[
         { label: "นักเรียน", value: overview.studentName ?? "ยังไม่ได้เชื่อมข้อมูล", tone: "brand" },

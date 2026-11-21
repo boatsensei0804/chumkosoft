@@ -43,7 +43,7 @@ export default async function TeachersPage({ searchParams }: TeachersPageProps):
   };
 
   return (
-    <>
+    <div className="xl:flex xl:h-full xl:min-h-0 xl:flex-col">
       <PageHeader
         title="ครูและบุคลากร"
         subtitle={`บุคลากรทางการศึกษาทั้งหมด ${stats.total.toLocaleString("th-TH")} คน · ${termLabel}`}
@@ -56,6 +56,6 @@ export default async function TeachersPage({ searchParams }: TeachersPageProps):
         ]}
       />}
       <TeachersBrowser page={visibleResult} query={query} filter={filter} canManageAccounts={currentUser.role === "ADMIN"} ownStaffId={currentUser.staffId} ownStaff={ownStaff} />
-    </>
+    </div>
   );
 }

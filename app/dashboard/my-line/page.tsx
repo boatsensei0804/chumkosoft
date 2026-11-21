@@ -36,7 +36,7 @@ export default async function MyLinePage(): Promise<React.ReactNode> {
   const friendUrl = setting?.oaAddFriendUrl ?? null;
   const friendQr = friendUrl ? await QRCode.toDataURL(friendUrl, { margin: 1, width: 184 }) : null;
 
-  return <>
+  return <div className="xl:flex xl:h-full xl:min-h-0 xl:flex-col">
     <PageHeader title="LINE ของฉัน" subtitle="เชื่อม LINE OA ของโรงเรียนด้วยรหัส 6 หลัก และตรวจสถานะการเชื่อมต่อได้ที่นี่" />
     <AdvisorLineConnect
       linked={Boolean(line?.lineUserId)}
@@ -49,5 +49,5 @@ export default async function MyLinePage(): Promise<React.ReactNode> {
       pendingLeaveCount={pendingLeaveCount}
       hasActiveTerm={Boolean(activeTerm)}
     />
-  </>;
+  </div>;
 }

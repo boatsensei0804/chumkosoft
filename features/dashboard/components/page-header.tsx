@@ -1,25 +1,26 @@
 import type { ReactNode } from "react";
-import Mascot, { type MascotPose } from "@/components/ui/mascot";
+import MascotBanner from "./mascot-banner";
+import type { MascotPose } from "@/components/ui/mascot";
 
-const sections: { match: string[]; pose: MascotPose; category: string; note: string }[] = [
-  { match: ["นักเรียน"], pose: "students", category: "ทะเบียนนักเรียน", note: "ข้อมูลประจำตัว · ห้องเรียน · สถานะการศึกษา" },
-  { match: ["ครู", "บุคลากร"], pose: "staff", category: "บุคลากรของโรงเรียน", note: "ประวัติบุคลากร · บัญชีใช้งาน · งานที่รับผิดชอบ" },
-  { match: ["ผู้ปกครอง"], pose: "family", category: "โรงเรียนและครอบครัว", note: "ข้อมูลติดต่อ · ความสัมพันธ์ · การเชื่อมบัญชี" },
-  { match: ["LINE", "ประกาศ"], pose: "notify", category: "ศูนย์การสื่อสาร", note: "สถานะการเชื่อม · รหัสบัญชี · ข่าวสารจากโรงเรียน" },
-  { match: ["เช็คชื่อ", "ตาราง", "ลา"], pose: "schedule", category: "การเรียนและงานประจำวัน", note: "เลือกช่วงเวลา · ดูภาพรวม · เปิดรายละเอียดเพื่อจัดการ" },
-  { match: ["ใบหน้า", "สแกน"], pose: "scan", category: "ระบบสแกนใบหน้า", note: "ข้อมูลสำหรับสแกน · อุปกรณ์ · การตั้งค่าจุดสแกน" },
-  { match: ["รายวิชา", "ห้อง"], pose: "learning", category: "ข้อมูลการเรียนการสอน", note: "ข้อมูลพื้นฐาน · ความสัมพันธ์ · การนำไปใช้ในตารางเรียน" },
-  { match: ["ตั้งค่า"], pose: "settings", category: "ตั้งค่าการทำงาน", note: "ปีการศึกษา · ภาคเรียน · เวลาและการทำงานของระบบ" },
+const sections: { match: string[]; pose: MascotPose; category: string; illustration?: string; scene?: string }[] = [
+  { match: ["แจ้งเหตุฉุกเฉิน"], pose: "notify", category: "ศูนย์ประสานงานฉุกเฉิน", scene: "/mascot/emergency-banner.webp" },
+  { match: ["LINE ของฉัน"], pose: "notify", category: "การสื่อสารของฉัน", scene: "/mascot/my-line-banner.webp" },
+  { match: ["LINE / แจ้งเตือนผู้ปกครอง"], pose: "notify", category: "ศูนย์การสื่อสาร" },
+  { match: ["ผู้ปกครอง"], pose: "family", category: "โรงเรียนและครอบครัว", scene: "/mascot/guardians-banner.webp" },
+  { match: ["คำขอลา", "ขอมาสาย"], pose: "schedule", category: "คำขอจากครอบครัว" },
+  { match: ["ห้องและสถานที่"], pose: "settings", category: "พื้นที่ของโรงเรียน" },
+  { match: ["สถานะ LINE", "ประวัติและการใช้งาน LINE"], pose: "notify", category: "การสื่อสารและการแจ้งเตือน" },
+  { match: ["คะแนนความประพฤติ"], pose: "success", category: "การดูแลนักเรียน" },
+  { match: ["นักเรียน"], pose: "students", category: "ทะเบียนนักเรียน" },
+  { match: ["ครู", "บุคลากร"], pose: "staff", category: "บุคลากรของโรงเรียน" },
+  { match: ["LINE", "ประกาศ"], pose: "notify", category: "ศูนย์การสื่อสาร" },
+  { match: ["เช็คชื่อ", "ตาราง", "ลา"], pose: "schedule", category: "การเรียนและงานประจำวัน" },
+  { match: ["ใบหน้า", "สแกน"], pose: "scan", category: "ระบบสแกนใบหน้า" },
+  { match: ["รายวิชา", "ห้อง"], pose: "learning", category: "ข้อมูลการเรียนการสอน" },
+  { match: ["ตั้งค่า"], pose: "settings", category: "ตั้งค่าการทำงาน" },
 ];
 
 export default function PageHeader({ title, subtitle, actions, compact = false }: { title: string; subtitle?: string; actions?: ReactNode; compact?: boolean }): ReactNode {
-  const section = sections.find((item) => item.match.some((word) => title.includes(word))) ?? { pose: "working" as const, category: "พื้นที่ทำงานโรงเรียน", note: "ดูภาพรวมและจัดการข้อมูลในที่เดียว" };
-  return <header className={`relative overflow-hidden border border-blue-100 bg-[#eaf5ff] ${compact ? "mb-3 rounded-2xl" : "mb-5 rounded-[28px]"}`}>
-    <div className="pointer-events-none absolute -right-8 -top-24 size-64 rounded-full border-[32px] border-white/50" aria-hidden="true" />
-    <div className={`relative flex items-center justify-between gap-4 ${compact ? "px-4 py-3" : "px-5 py-5 sm:px-7 sm:py-6"}`}>
-      <div className="min-w-0">{!compact && <p className="mb-2 text-[11px] font-bold tracking-wide text-brand-ink">{section.category}</p>}<h1 className={`font-bold leading-tight tracking-tight text-ink-strong ${compact ? "text-xl sm:text-2xl" : "text-[26px] sm:text-[34px]"}`}>{title}</h1>{subtitle && <p className={`${compact ? "mt-1 text-xs" : "mt-2 text-sm"} max-w-3xl leading-6 text-muted`}>{subtitle}</p>}</div>
-      <Mascot pose={section.pose} size={compact ? 64 : 132} decorative className="relative hidden md:block" />
-    </div>
-    {(!compact || actions) && <div className="relative flex flex-wrap items-center justify-between gap-3 border-t border-blue-100/80 bg-white/75 px-5 py-3 sm:px-7"><p className="text-xs leading-5 text-muted">{section.note}</p>{actions && <div className="flex w-full flex-wrap gap-2 sm:w-auto">{actions}</div>}</div>}
-  </header>;
+  const section = sections.find((item) => item.match.some((word) => title.includes(word))) ?? { pose: "working" as const, category: "พื้นที่ทำงานโรงเรียน" };
+  return <MascotBanner title={title} subtitle={subtitle} actions={actions} compact={compact} {...section} />;
 }

@@ -94,15 +94,15 @@
 
 :root {
   /* Quiet neutral surfaces: strong reading contrast without decorative noise. */
-  --bg: oklch(0.995 0.002 255);
-  --surface: oklch(0.979 0.004 255);
-  --surface-2: oklch(0.965 0.006 255);
+  --bg: #ffffff;
+  --surface: #f4f8fd;
+  --surface-2: #eaf5ff;
   --surface-sunken: oklch(0.946 0.008 255);
 
   /* Ink — cool near-black; strong contrast for hours of reading */
-  --ink: oklch(0.25 0.022 262);
-  --ink-strong: oklch(0.19 0.024 262);
-  --muted: oklch(0.48 0.03 258);
+  --ink: #172033;
+  --ink-strong: #102e56;
+  --muted: #64748b;
   /* Tertiary text (captions, placeholders, meta). Darkened from 0.6 → 0.54 so it
      clears WCAG AA (~4.8:1 on white) while staying a visibly lighter tier than muted. */
   --faint: oklch(0.54 0.028 256);
@@ -112,11 +112,11 @@
   --line-strong: oklch(0.82 0.012 255);
 
   /* Brand — azure blue identity: logo, active nav, selection, key figures, chart */
-  --brand: oklch(0.52 0.13 252);
-  --brand-strong: oklch(0.43 0.13 254);
-  --brand-ink: oklch(0.38 0.12 254);
-  --brand-soft: oklch(0.95 0.022 250);
-  --brand-softer: oklch(0.976 0.012 250);
+  --brand: #1769b3;
+  --brand-strong: #0b4385;
+  --brand-ink: #0b4385;
+  --brand-soft: #eaf5ff;
+  --brand-softer: #f4f8fd;
 
   /* Primary action — blue gradient (see MUI theme); solid values are the fallback */
   --primary: oklch(0.45 0.14 253);
@@ -143,11 +143,11 @@
   --band-line: oklch(0.98 0.006 250 / 0.14);
 
   /* Semantic states */
-  --success: oklch(0.58 0.12 152);
+  --success: #16a34a;
   --success-soft: oklch(0.955 0.03 152);
-  --warning: oklch(0.7 0.15 60);
+  --warning: #f59e0b;
   --warning-soft: oklch(0.96 0.04 65);
-  --danger: oklch(0.56 0.19 25);
+  --danger: #e54860;
   --danger-soft: oklch(0.96 0.035 25);
   --info: var(--blue);
   --info-soft: var(--blue-soft);

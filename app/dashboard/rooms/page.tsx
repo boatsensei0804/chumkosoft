@@ -18,7 +18,7 @@ export default async function RoomsPage(): Promise<React.ReactNode> {
   const inUse = rooms.filter((r) => r.offeringCount > 0).length;
 
   return (
-    <>
+    <div className="xl:flex xl:h-full xl:min-h-0 xl:flex-col">
       <PageHeader title="ห้องและสถานที่" subtitle={`ห้องเรียน ห้องปฏิบัติการ และสถานที่ ${rooms.length.toLocaleString("th-TH")} แห่ง`} />
       {rooms.length > 0 && <StatStrip
         items={[
@@ -28,6 +28,6 @@ export default async function RoomsPage(): Promise<React.ReactNode> {
         ]}
       />}
       <RoomsBrowser rooms={rooms} canManage={user.role === "ADMIN"} />
-    </>
+    </div>
   );
 }
