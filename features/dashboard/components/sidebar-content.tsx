@@ -25,12 +25,13 @@ export default function SidebarContent({ user, onNavigate }: SidebarContentProps
     .filter((g) => g.items.length > 0);
 
   return (
-    <div className="flex h-full flex-col bg-bg">
-      <div className="flex h-16 items-center px-5" style={{ borderBottom: "1px solid var(--line)" }}>
+    <div className="relative flex h-full flex-col overflow-hidden bg-bg">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-[url('/mascot/overview-scene.webp')] bg-left-bottom bg-no-repeat opacity-60 [background-size:auto_14rem]" />
+      <div className="relative z-10 flex h-16 items-center px-5" style={{ borderBottom: "1px solid var(--line)" }}>
         <BrandMark />
       </div>
 
-      <nav aria-label="เมนูหลัก" className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-4">
+      <nav aria-label="เมนูหลัก" className="relative z-10 flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-4">
         {groups.map((group, i) => {
           const active = group.items.some((item) => pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`)));
           if (!group.label) return <SidebarNav key={`group-${i}`} items={group.items} onNavigate={onNavigate} />;
@@ -43,8 +44,8 @@ export default function SidebarContent({ user, onNavigate }: SidebarContentProps
         })}
       </nav>
 
-      <div className="px-3 pb-4">
-        <div className="flex items-center gap-3 rounded-[12px] p-2.5" style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)" }}>
+      <div className="relative z-10 px-3 pb-4">
+        <div className="flex items-center gap-3 rounded-[12px] bg-white p-2.5 shadow-sm" style={{ border: "1px solid var(--line)" }}>
           <span
             className="grid size-[38px] shrink-0 place-items-center rounded-full text-[14px] font-semibold"
             style={{ backgroundColor: "var(--brand-soft)", color: "var(--brand-ink)" }}
