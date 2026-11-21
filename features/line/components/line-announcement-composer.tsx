@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { sendLineAnnouncementAction, retryLineAnnouncementAction, previewLineAudienceAction, deleteLineAnnouncementAction } from "@/features/line/announcement-actions";
 import { announcementText } from "@/features/line/announcement-text";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 import AnnouncementAudiencePicker from "./announcement-audience-picker";
 import type { AnnouncementAudience, AudienceOptions } from "@/features/line/announcement-audience";
 import type { LineAnnouncementKind } from "@prisma/client";
@@ -199,8 +200,8 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
 
     <section className="overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4"><h2 className="text-base font-bold text-ink-strong">รายการส่งล่าสุด</h2><div className="flex flex-wrap gap-2"><input aria-label="ค้นหาประกาศล่าสุด" value={historyQuery} onChange={(event) => setHistoryQuery(event.target.value)} placeholder="ค้นหาหัวข้อ" className="min-h-10 rounded-xl border border-line bg-surface px-3 text-sm" /><button type="button" aria-pressed={onlyIncomplete} onClick={() => setOnlyIncomplete(!onlyIncomplete)} className={`min-h-10 rounded-xl border px-3 text-xs font-semibold ${onlyIncomplete ? "border-brand bg-brand-soft text-brand-ink" : "border-line text-muted"}`}>ส่งยังไม่ครบ</button></div></div>
-      {history.length === 0 ? <p className="px-5 py-10 text-center text-sm text-muted">ยังไม่มีประกาศที่ส่งผ่าน LINE</p> :
-        <div className="divide-y divide-line">{visibleHistory.map((item) => {
+      {history.length === 0 ? <MascotEmptyState compact pose="notify" className="m-4" title="ยังไม่มีประกาศที่ส่งผ่าน LINE" description="เริ่มจากปุ่มเขียนประกาศใหม่ด้านบน" /> :
+        <div className="max-h-[48dvh] divide-y divide-line overflow-y-auto">{visibleHistory.map((item) => {
           const remaining = item.recipientCount - item.accepted;
           return <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
             <div className="min-w-0">

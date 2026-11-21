@@ -17,6 +17,7 @@ import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PaginationBar from "@/components/ui/pagination-bar";
 import StudentFormDialog from "@/features/students/components/student-form-dialog";
 import MobileRecordCard from "./mobile-record-card";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 import { deleteStudentAction, deleteStudentsAction } from "@/features/students/actions";
 import { useListParams } from "@/features/dashboard/hooks/use-list-params";
 import type { EnrolmentStatus, StudentSummary, ClassroomOption } from "../types";
@@ -207,9 +208,9 @@ export default function StudentsBrowser({ page, query, filter, classrooms, class
               actions={<><Button asChild variant="outline" size="sm" className="min-h-10"><Link href={`/dashboard/students/${s.id}`}><Eye className="size-4" /> ดูข้อมูล</Link></Button>{canEdit(s) && <Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(s)}><Pencil className="size-4" /> แก้ไข</Button>}{isAdmin && <Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(s)}><Trash2 className="size-4" /> ลบ</Button>}</>}
             />)}
           </div>
-          <div className={cn("hidden overflow-x-auto border-t border-line transition-opacity md:block", isPending && "opacity-60")}>
+          <div className={cn("hidden max-h-[52dvh] overflow-auto border-t border-line transition-opacity md:block", isPending && "opacity-60")}>
             <Table className="min-w-[720px]">
-              <TableHeader>
+              <TableHeader className="sticky top-0 z-10 bg-[#edf5ff] shadow-[0_1px_0_0_#d9e8f8]">
                 <TableRow>
                   {isAdmin && <TableHead className="w-11">
                     <Checkbox
@@ -261,17 +262,10 @@ export default function StudentsBrowser({ page, query, filter, classrooms, class
           </div>
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-3 border-t border-line px-6 py-16 text-center">
-            <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint" aria-hidden="true">
-              <Search className="size-6" />
-            </span>
-            <div>
-              <p className="text-[15px] font-semibold text-ink-strong">
-                {query || filter !== "all" || classroom || gender !== "all" || grade ? "ไม่พบนักเรียนที่ตรงกับเงื่อนไข" : "ยังไม่มีนักเรียน เริ่มด้วยการเพิ่มนักเรียนคนแรก"}
-              </p>
-              <p className="mt-1 text-[13.5px] text-muted">ลองปรับคำค้นหา หรือเลือกสถานะอื่น</p>
-            </div>
-          </div>
+          <MascotEmptyState pose="students" className="m-4 xl:flex-1"
+            title={query || filter !== "all" || classroom || gender !== "all" || grade ? "ไม่พบนักเรียนที่ตรงกับเงื่อนไข" : "ยังไม่มีนักเรียน"}
+            description={query || filter !== "all" || classroom || gender !== "all" || grade ? "ลองปรับคำค้นหา ห้องเรียน หรือสถานะการศึกษา" : "เพิ่มนักเรียนคนแรกเพื่อเริ่มจัดทะเบียนของโรงเรียน"}
+            action={isAdmin && !query && filter === "all" && !classroom && gender === "all" && !grade ? <Button onClick={openCreate}><Plus className="size-4" /> เพิ่มนักเรียน</Button> : undefined} />
         )}
 
         <PaginationBar

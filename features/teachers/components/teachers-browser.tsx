@@ -17,6 +17,7 @@ import PaginationBar from "@/components/ui/pagination-bar";
 import StaffFormDialog from "./staff-form-dialog";
 import OwnStaffDialog from "./own-staff-dialog";
 import MobileRecordCard from "@/features/dashboard/components/mobile-record-card";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 import { deleteStaffAction } from "@/features/teachers/actions";
 import { useListParams } from "@/features/dashboard/hooks/use-list-params";
 import type { StaffKind, StaffSummary } from "../types";
@@ -191,13 +192,10 @@ export default function TeachersBrowser({ page, query, filter, canManageAccounts
           </div>
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-3 border-t border-line px-6 py-16 text-center">
-            <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint" aria-hidden="true">
-              <Search className="size-6" />
-            </span>
-            <p className="text-[15px] font-semibold text-ink-strong">ไม่พบครูหรือบุคลากรที่ตรงกับเงื่อนไข</p>
-            <p className="text-[13.5px] text-muted">ลองปรับคำค้นหา หรือเลือกประเภทอื่น</p>
-          </div>
+          <MascotEmptyState pose="staff" className="m-4 xl:flex-1"
+            title={page.total === 0 && !query && filter === "all" ? "ยังไม่มีข้อมูลครูและบุคลากร" : "ไม่พบครูหรือบุคลากรที่ตรงกับเงื่อนไข"}
+            description={page.total === 0 && !query && filter === "all" ? "เพิ่มข้อมูลบุคลากรเพื่อเริ่มจัดห้องที่ปรึกษาและรายวิชา" : "ลองปรับคำค้นหาหรือเลือกประเภทอื่น"}
+            action={canManageAccounts && page.total === 0 && !query && filter === "all" ? <Button onClick={openCreate}><Plus className="size-4" /> เพิ่มบุคลากร</Button> : undefined} />
         )}
 
         <PaginationBar

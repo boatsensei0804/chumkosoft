@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import { addBehaviorPointsAction, updateBehaviorPointsAction, deleteBehaviorPointsAction } from "@/features/behavior/actions";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 
 interface StudentSummary { id: string; code: string; name: string; classroom: string; score: number }
 interface PointHistory { id: string; delta: number; source: "MANUAL" | "LATE_ENTRY"; title: string; note: string | null; actorName: string; createdAt: string; canManage: boolean }
@@ -62,7 +63,7 @@ export default function BehaviorBrowser({ data }: { data: Data }): React.ReactNo
 
   return <div className="space-y-5">
     <div className="rounded-xl border border-line bg-brand-soft p-4 text-sm text-ink">คะแนนเริ่มต้น <strong>100</strong> ต่อภาคเรียน · การเข้าโรงเรียนสายหัก <strong>10</strong> คะแนนต่อวัน ไม่หักซ้ำเมื่อสแกนหลายครั้ง · ยกเว้นวันที่ครูอนุมัติขอมาสาย</div>
-    {!data.term ? <p className="rounded-xl border border-line bg-card p-8 text-center text-sm text-muted">ยังไม่มีภาคเรียนที่ใช้งาน</p> : <>
+    {!data.term ? <MascotEmptyState pose="schedule" title="ยังไม่มีภาคเรียนที่ใช้งาน" description="เปิดภาคเรียนก่อนเริ่มบันทึกคะแนนความประพฤติ" /> : <>
       <p className="text-sm font-semibold text-muted">{data.term.name}</p>
       {message && <p role="status" className="rounded-lg bg-brand-soft px-4 py-3 text-sm text-ink">{message}</p>}
       <StatStrip items={[{ label: "นักเรียนในรายการ", value: data.students.length, hint: "คน", tone: "brand" }, { label: "ต่ำกว่า 50 คะแนน", value: data.students.filter((student) => student.score < 50).length, hint: "คน", tone: "danger" }, { label: "ตั้งแต่ 100 คะแนน", value: data.students.filter((student) => student.score >= 100).length, hint: "คน", tone: "success" }]} />
@@ -72,11 +73,11 @@ export default function BehaviorBrowser({ data }: { data: Data }): React.ReactNo
             <input aria-label="ค้นหานักเรียน" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหารหัสหรือชื่อนักเรียน" className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
             <select aria-label="กรองห้องเรียน" value={classroom} onChange={(event) => setClassroom(event.target.value)} className="rounded-lg border border-line bg-surface px-3 py-2 text-sm"><option value="">ทุกห้อง</option>{classrooms.map((code) => <option key={code} value={code}>{code}</option>)}</select>
           </div>
-          <div className="max-h-[65vh] overflow-y-auto divide-y divide-line">{visible.map((student) => <button key={student.id} type="button" onClick={() => router.push(`/dashboard/behavior?student=${encodeURIComponent(student.id)}`)} className={`flex w-full items-center justify-between gap-4 px-4 py-3 text-left hover:bg-surface-2 ${data.selectedStudent?.id === student.id ? "bg-brand-soft" : ""}`}>
+          <div className="max-h-[52dvh] overflow-y-auto divide-y divide-line">{visible.map((student) => <button key={student.id} type="button" onClick={() => router.push(`/dashboard/behavior?student=${encodeURIComponent(student.id)}`)} className={`flex w-full items-center justify-between gap-4 px-4 py-3 text-left hover:bg-surface-2 ${data.selectedStudent?.id === student.id ? "bg-brand-soft" : ""}`}>
             <span className="min-w-0"><span className="block truncate text-sm font-semibold text-ink">{student.name}</span><span className="text-xs text-muted">{student.code} · {student.classroom}</span></span>
             <span className={`shrink-0 text-lg font-bold tabular ${student.score < 50 ? "text-danger" : "text-brand-ink"}`}>{student.score}</span>
           </button>)}</div>
-          {visible.length === 0 && <p className="p-8 text-center text-sm text-muted">ไม่พบนักเรียน</p>}
+          {visible.length === 0 && <MascotEmptyState compact pose="students" className="m-3" title="ไม่พบนักเรียน" description="ลองเปลี่ยนคำค้นหาหรือเลือกห้องเรียนอื่น" />}
         </section>
         <Dialog open={data.selectedStudent !== null} onOpenChange={(open) => { if (!open && !pending) router.push("/dashboard/behavior"); }}><DialogContent className="sm:max-w-3xl"><DialogHeader className="text-left"><DialogTitle>ข้อมูลคะแนนความประพฤติ</DialogTitle><DialogDescription>ดูคะแนนและประวัติของนักเรียน พร้อมเพิ่ม หัก หรือแก้ไขรายการที่คุณมีสิทธิ์</DialogDescription></DialogHeader><section>
           {!data.selectedStudent ? <div className="py-12 text-center text-sm text-muted">เลือกนักเรียนจากตารางเพื่อดูคะแนนและบันทึกรายการ</div> : <>

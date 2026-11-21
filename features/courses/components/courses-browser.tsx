@@ -15,6 +15,7 @@ import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PaginationBar from "@/components/ui/pagination-bar";
 import CourseFormDialog from "./course-form-dialog";
 import MobileRecordCard from "@/features/dashboard/components/mobile-record-card";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 import RecordPreviewDialog from "@/features/dashboard/components/record-preview-dialog";
 import { deleteCourseAction } from "@/features/courses/actions";
 import { useListParams } from "@/features/dashboard/hooks/use-list-params";
@@ -139,14 +140,10 @@ export default function CoursesBrowser({ page, query, canManage }: CoursesBrowse
           </div>
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-3 border-t border-line px-6 py-16 text-center">
-            <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint" aria-hidden="true">
-              <Search className="size-6" />
-            </span>
-            <p className="text-[15px] font-semibold text-ink-strong">
-              {query ? "ไม่พบรายวิชาที่ค้นหา" : "ยังไม่มีรายวิชา เริ่มด้วยการเพิ่มรายวิชาแรก"}
-            </p>
-          </div>
+          <MascotEmptyState pose="learning" className="m-4 xl:flex-1"
+            title={query ? "ไม่พบรายวิชาที่ค้นหา" : "ยังไม่มีรายวิชา"}
+            description={query ? "ลองใช้รหัสหรือชื่อวิชาอื่น" : "เพิ่มรายวิชาแรกเพื่อเริ่มจัดการหลักสูตรของโรงเรียน"}
+            action={canManage && !query ? <Button onClick={openCreate}><Plus className="size-4" /> เพิ่มรายวิชา</Button> : undefined} />
         )}
 
         <PaginationBar

@@ -13,6 +13,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import ClassroomFormDialog from "./classroom-form-dialog";
 import MobileRecordCard from "@/features/dashboard/components/mobile-record-card";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 import { deleteClassroomAction } from "@/features/classrooms/actions";
 import type { ClassroomRow, TeacherOption } from "../types";
 
@@ -147,14 +148,10 @@ export default function ClassroomsBrowser({ classrooms, teachers, canManage }: C
           </div>
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-3 border-t border-line px-6 py-16 text-center">
-            <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint" aria-hidden="true">
-              <Users className="size-6" />
-            </span>
-            <p className="text-[15px] font-semibold text-ink-strong">
-              {classrooms.length === 0 ? "ยังไม่มีห้องเรียนในปีการศึกษานี้ เริ่มด้วยการเพิ่มห้องแรก" : "ไม่พบห้องเรียนที่ค้นหา"}
-            </p>
-          </div>
+          <MascotEmptyState pose="learning" className="m-4 xl:flex-1"
+            title={classrooms.length === 0 ? "ยังไม่มีห้องเรียนในปีการศึกษานี้" : "ไม่พบห้องเรียนที่ค้นหา"}
+            description={classrooms.length === 0 ? "เพิ่มห้องเรียนแรก แล้วกำหนดครูที่ปรึกษาและนักเรียน" : "ลองค้นด้วยรหัสห้อง ระดับชั้น หรือชื่อครูที่ปรึกษา"}
+            action={canManage && classrooms.length === 0 ? <Button onClick={openCreate}><Plus className="size-4" /> เพิ่มห้องเรียน</Button> : undefined} />
         )}
 
         <div className="flex items-center justify-between border-t border-line bg-surface px-5 py-3 text-[13px] text-muted">

@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Eye, Pencil, Trash2, KeyRound, ScanFace, CheckCircle2 } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, KeyRound, CheckCircle2 } from "lucide-react";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -83,9 +84,9 @@ export default function KioskManager({ accounts }: { accounts: KioskAccountRow[]
               actions={<><Button variant="outline" size="sm" className="min-h-10" onClick={() => setViewing(a)}><Eye className="size-4" /> ดูข้อมูล</Button><Button variant="outline" size="sm" className="min-h-10" onClick={() => openEdit(a)}><Pencil className="size-4" /> แก้ไข</Button><Button variant="outline" size="sm" className="min-h-10" onClick={() => setResetting(a)}><KeyRound className="size-4" /> เปลี่ยนรหัส</Button><Button variant="ghost" size="sm" className="min-h-10 text-danger" onClick={() => setDeleting(a)}><Trash2 className="size-4" /> ลบ</Button></>}
             />)}
           </div>
-          <div className="hidden border-t border-line md:block">
+          <div className="hidden max-h-[54dvh] overflow-auto border-t border-line md:block">
             <Table>
-              <TableHeader>
+              <TableHeader className="sticky top-0 z-10 bg-[#edf5ff] shadow-[0_1px_0_0_#d9e8f8]">
                 <TableRow>
                   <TableHead>อีเมล</TableHead>
                   <TableHead>สถานะ</TableHead>
@@ -130,13 +131,7 @@ export default function KioskManager({ accounts }: { accounts: KioskAccountRow[]
           </div>
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-3 border-t border-line px-6 py-14 text-center">
-            <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint">
-              <ScanFace className="size-6" />
-            </span>
-            <p className="text-[15px] font-semibold text-ink-strong">ยังไม่มีบัญชีจุดสแกน</p>
-            <p className="text-[13.5px] text-muted">เพิ่มบัญชีเพื่อเชื่อมต่อแอปสแกนใบหน้า</p>
-          </div>
+          <MascotEmptyState pose="scan" className="m-4" title="ยังไม่มีบัญชีจุดสแกน" description="เพิ่มบัญชีเพื่อเชื่อมต่อแอปสแกนใบหน้า" action={<Button onClick={openCreate}><Plus className="size-4" /> เพิ่มบัญชี</Button>} />
         )}
       </div>
 

@@ -20,6 +20,7 @@ import type { Paginated } from "@/types/pagination";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Mascot from "@/components/ui/mascot";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 
 const STATUS_META: Record<LineLinkStatus, { label: string; className: string }> = {
   linked: { label: "เชื่อม LINE แล้ว", className: "bg-success-soft text-[oklch(0.42_0.1_152)] border-success/30" },
@@ -208,13 +209,11 @@ export default function LineManager({ page, query, configured, classrooms, class
       </div>
 
       {page.rows.length === 0 ? (
-        <div className="rounded-2xl border border-line bg-card px-6 py-14 text-center">
-          <p className="text-[15px] font-semibold text-ink-strong">ไม่พบนักเรียน</p>
-        </div>
+        <MascotEmptyState compact pose="family" title="ไม่พบนักเรียน" description="ลองเปลี่ยนห้องเรียน คำค้นหา หรือสถานะการผูก LINE" />
       ) : (
-        <div className={cn("rounded-2xl border border-line bg-card transition-opacity lg:overflow-x-auto", isPending && "opacity-60")}>
+        <div className={cn("max-h-[52dvh] overflow-y-auto rounded-2xl border border-line bg-card transition-opacity lg:overflow-x-auto", isPending && "opacity-60")}>
           <table className="w-full border-collapse text-left lg:min-w-[560px]">
-            <thead className="hidden lg:table-header-group"><tr className="border-b border-line bg-surface text-[11.5px] font-semibold uppercase tracking-wide text-muted"><th className="px-4 py-3">นักเรียน / การเชื่อม LINE</th><th className="w-44 px-4 py-3 text-right">บัญชีและรหัส</th></tr></thead>
+            <thead className="sticky top-0 z-10 hidden bg-[#edf5ff] text-brand-ink lg:table-header-group"><tr className="border-b border-line text-[11.5px] font-semibold uppercase tracking-wide"><th className="px-4 py-3">นักเรียน / การเชื่อม LINE</th><th className="w-44 px-4 py-3 text-right">บัญชีและรหัส</th></tr></thead>
             <tbody className="block space-y-3 p-3 lg:table-row-group lg:space-y-0 lg:p-0">
               {page.rows.map((student) => {
                 const linkedCount = student.guardians.filter((guardian) => guardian.lineStatus === "linked").length + student.lineAccounts.filter((account) => account.linked).length;

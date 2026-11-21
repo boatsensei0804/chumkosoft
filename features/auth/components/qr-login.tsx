@@ -75,13 +75,13 @@ export default function QrLogin({ t }: { t: Dictionary["login"] }): React.ReactN
     return () => { stopped = true; window.clearInterval(clock); window.clearInterval(checker); };
   }, [challenge]);
 
-  return <div className="space-y-4">
+  return <div className="space-y-3">
     <p className="text-sm leading-6 text-muted">{t.qrIntro}</p>
     {error && <p role="alert" className="rounded-xl bg-danger-soft px-3 py-2 text-sm text-destructive">{error}</p>}
     {challenge ? <>
-      <div className="flex flex-col items-center rounded-2xl border border-blue-100 bg-white p-5 text-center">
-        <Image unoptimized src={challenge.qrDataUrl} width={240} height={240} alt={t.qrTab} className="size-60" />
-        <p className="mt-3 break-all font-mono text-base font-bold tracking-wide text-ink-strong">LOGIN {challenge.code}</p>
+      <div className="flex flex-col items-center rounded-2xl border border-blue-100 bg-white p-3 text-center">
+        <Image unoptimized src={challenge.qrDataUrl} width={240} height={240} alt={t.qrTab} className="size-[clamp(156px,22dvh,210px)]" />
+        <p className="mt-2 break-all font-mono text-base font-bold tracking-wide text-ink-strong">LOGIN {challenge.code}</p>
         <p className="mt-1 text-xs text-muted">{t.qrCode}</p>
       </div>
       <p role="status" className="text-center text-sm font-semibold text-brand-ink">{t.qrWaiting} · {t.qrExpires} {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, "0")}</p>

@@ -8,6 +8,7 @@ import { requestKindLabel } from "@/features/leave/request-kind";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { reviewLeaveRequestAction, retryLeaveAdvisorNotificationAction, deleteLeaveRequestAction } from "@/features/leave/actions";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 
 import { summarizeDailyLeave, type LeaveDailyReport, type LeaveItem, type LeaveKind, type LeaveStatus } from "@/features/leave/daily-report";
 
@@ -88,7 +89,7 @@ export default function LeaveRequestsBrowser({ report, isAdmin }: { report: Leav
           <option value="PENDING">รอพิจารณา</option><option value="APPROVED">อนุมัติแล้ว</option><option value="REJECTED">ไม่อนุมัติ</option><option value="ALL">ทั้งหมด</option>
         </select>
       </div>
-      {visible.length === 0 ? <p className="p-10 text-center text-sm text-muted">ไม่พบคำขอลาในตัวกรองนี้</p> : <div className="divide-y divide-line">{pageItems.map((item) => <article key={item.id} className="flex flex-wrap items-start justify-between gap-4 p-5">
+      {visible.length === 0 ? <MascotEmptyState compact pose="schedule" className="m-4" title="ไม่พบคำขอลาหรือขอมาสาย" description="ลองเปลี่ยนวันที่ ห้องเรียน ประเภท หรือสถานะที่เลือก" /> : <div className="max-h-[52dvh] divide-y divide-line overflow-y-auto">{pageItems.map((item) => <article key={item.id} className="flex flex-wrap items-start justify-between gap-4 p-5">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-ink-strong">{item.studentName}</span><span className="text-xs text-muted">{item.studentCode} · ห้อง {item.classroomCode}</span>

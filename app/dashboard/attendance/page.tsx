@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { UserCheck } from "lucide-react";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 import PageHeader from "@/features/dashboard/components/page-header";
 import AttendanceModeTabs from "@/features/attendance/components/attendance-mode-tabs";
 import AttendanceControls from "@/features/attendance/components/attendance-controls";
@@ -163,13 +164,5 @@ async function SchoolMode({
 }
 
 function PromptCard({ title, message }: { title: string; message: string }): React.ReactNode {
-  return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-line bg-card px-6 py-16 text-center">
-      <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint" aria-hidden="true">
-        <UserCheck className="size-6" />
-      </span>
-      <p className="text-[15px] font-semibold text-ink-strong">{title}</p>
-      <p className="max-w-sm text-[13.5px] text-muted">{message}</p>
-    </div>
-  );
+  return <MascotEmptyState pose="schedule" title={title} description={message} />;
 }

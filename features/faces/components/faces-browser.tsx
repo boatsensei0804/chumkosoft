@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 import FaceUploader from "./face-uploader";
 import { deleteFaceTemplateAction, setFaceConsentAction } from "@/features/faces/actions";
 import type { FaceStudentRow, FaceStudentDetail, FaceTemplateView } from "../types";
@@ -65,8 +66,8 @@ export default function FacesBrowser({ students, selected }: FacesBrowserProps):
             </div>
           </div>
 
-          <ul className="flex max-h-[560px] flex-col overflow-y-auto">
-            {results.length === 0 && <li className="px-4 py-8 text-center text-[13px] text-faint">ไม่พบนักเรียน</li>}
+          <ul className="flex max-h-[60dvh] flex-col overflow-y-auto">
+            {results.length === 0 && <li className="p-3"><MascotEmptyState compact pose="scan" title="ไม่พบนักเรียน" description="ลองค้นหาด้วยชื่อ รหัส หรือห้องเรียน" /></li>}
             {results.map((s) => {
               const active = selected?.id === s.id;
               return (

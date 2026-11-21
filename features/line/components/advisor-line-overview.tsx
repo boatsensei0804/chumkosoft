@@ -6,6 +6,7 @@ import { Copy } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { generateAdvisorLineCodeAction, unlinkAdvisorLineAction } from "@/features/line/advisor-code-actions";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 
 type Status = "CONNECTED" | "PENDING" | "UNLINKED" | "NO_ACCOUNT";
 interface TeacherRow { id: string; name: string; staffCode: string; code: string | null; lineDisplayName: string | null; type: string; classrooms: string[]; status: Status }
@@ -72,15 +73,15 @@ export default function AdvisorLineOverview({ rows }: { rows: TeacherRow[] }): R
           <option value="ALL">ทุกสถานะ</option><option value="CONNECTED">เชื่อมแล้ว</option><option value="PENDING">รอส่งรหัส</option><option value="UNLINKED">ยังไม่เชื่อม</option><option value="NO_ACCOUNT">ยังไม่มีบัญชีครู</option>
         </select>
       </div>
-      <div className="md:overflow-x-auto"><table className="w-full text-left text-sm md:min-w-[550px]">
-        <thead className="hidden bg-surface-2 text-muted md:table-header-group"><tr><th className="px-4 py-3 font-semibold">ครูและบุคลากร</th><th className="px-4 py-3 font-semibold">สถานะ LINE</th><th className="px-4 py-3 text-right font-semibold">จัดการ</th></tr></thead>
+      <div className="max-h-[52dvh] overflow-y-auto md:overflow-x-auto"><table className="w-full text-left text-sm md:min-w-[550px]">
+        <thead className="sticky top-0 z-10 hidden bg-[#edf5ff] text-brand-ink md:table-header-group"><tr><th className="px-4 py-3 font-semibold">ครูและบุคลากร</th><th className="px-4 py-3 font-semibold">สถานะ LINE</th><th className="px-4 py-3 text-right font-semibold">จัดการ</th></tr></thead>
         <tbody className="block space-y-3 p-3 md:table-row-group md:space-y-0 md:divide-y md:divide-line md:p-0">{visible.map((row) => <tr key={row.id} className="block rounded-xl border border-line p-1 md:table-row md:rounded-none md:border-0 md:p-0">
           <td className="block px-3 py-2 font-semibold text-ink md:table-cell md:px-4 md:py-3">{row.name}<p className="mt-1 text-xs font-normal text-muted">{row.staffCode} · ห้องที่ปรึกษา {row.classrooms.join(", ") || "—"}</p></td>
           <td className="block px-3 py-2 md:table-cell md:px-4 md:py-3"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS[row.status].className}`}>{STATUS[row.status].label}</span></td>
           <td className="block px-3 py-3 md:table-cell md:px-4 md:text-right"><button type="button" onClick={() => setViewingId(row.id)} className="min-h-10 rounded-lg border border-line px-3 py-2 font-semibold text-brand-ink hover:bg-surface-2">ดูและจัดการ</button></td>
         </tr>)}</tbody>
       </table></div>
-      {visible.length === 0 && <p className="p-8 text-center text-sm text-muted">ไม่พบครูที่ตรงกับตัวกรอง</p>}
+      {visible.length === 0 && <MascotEmptyState compact pose="staff" className="m-4" title="ไม่พบครูที่ตรงกับตัวกรอง" description="ลองค้นหาด้วยชื่อ รหัสบุคลากร หรือเปลี่ยนสถานะ LINE" />}
     </section>
     <Dialog open={viewing !== null} onOpenChange={(open) => { if (!open) setViewingId(null); }}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">

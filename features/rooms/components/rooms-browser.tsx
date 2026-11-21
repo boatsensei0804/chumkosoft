@@ -13,6 +13,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import RoomFormDialog from "./room-form-dialog";
 import MobileRecordCard from "@/features/dashboard/components/mobile-record-card";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 import RecordPreviewDialog from "@/features/dashboard/components/record-preview-dialog";
 import { deleteRoomAction } from "@/features/rooms/actions";
 import type { RoomRow } from "../types";
@@ -124,12 +125,10 @@ export default function RoomsBrowser({ rooms, canManage }: { rooms: RoomRow[]; c
           </div>
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-3 border-t border-line px-6 py-16 text-center">
-            <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-faint" aria-hidden="true">
-              <MapPin className="size-6" />
-            </span>
-            <p className="text-[15px] font-semibold text-ink-strong">{rooms.length === 0 ? "ยังไม่มีห้อง เริ่มด้วยการเพิ่มห้องแรก" : "ไม่พบห้องที่ค้นหา"}</p>
-          </div>
+          <MascotEmptyState pose="settings" className="m-4 xl:flex-1"
+            title={rooms.length === 0 ? "ยังไม่มีห้องหรือสถานที่" : "ไม่พบห้องที่ค้นหา"}
+            description={rooms.length === 0 ? "เพิ่มพื้นที่แรกเพื่อใช้จัดตารางเรียนและดูความพร้อมของอาคาร" : "ลองค้นด้วยรหัส ชื่อห้อง หรือชื่ออาคาร"}
+            action={canManage && rooms.length === 0 ? <Button onClick={openCreate}><Plus className="size-4" /> เพิ่มห้องหรือสถานที่</Button> : undefined} />
         )}
 
         <div className="flex items-center justify-between border-t border-line bg-surface px-5 py-3 text-[13px] text-muted">
