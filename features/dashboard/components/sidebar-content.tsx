@@ -25,9 +25,9 @@ export default function SidebarContent({ user, onNavigate }: SidebarContentProps
     .filter((g) => g.items.length > 0);
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden bg-bg">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-[url('/mascot/overview-scene.webp')] bg-left-bottom bg-no-repeat opacity-60 [background-size:auto_14rem]" />
-      <div className="relative z-10 flex h-16 items-center px-5" style={{ borderBottom: "1px solid var(--line)" }}>
+    <div className="relative flex h-full flex-col overflow-hidden bg-white">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-[url('/mascot/dashboard-overview.webp')] bg-left-bottom bg-no-repeat opacity-70 [background-size:auto_14rem]" />
+      <div className="relative z-10 flex h-20 items-center px-5" style={{ borderBottom: "1px solid var(--line)" }}>
         <BrandMark />
       </div>
 
@@ -35,7 +35,7 @@ export default function SidebarContent({ user, onNavigate }: SidebarContentProps
         {groups.map((group, i) => {
           const active = group.items.some((item) => pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`)));
           if (!group.label) return <SidebarNav key={`group-${i}`} items={group.items} onNavigate={onNavigate} />;
-          return <details key={`${group.label}-${active ? "active" : "inactive"}`} open={active || group.label === "ทะเบียนข้อมูล"} className="group/nav rounded-xl open:bg-surface-2/60">
+          return <details key={`${group.label}-${active ? "active" : "inactive"}`} open={active || group.label === "ทะเบียนข้อมูล"} className="group/nav rounded-xl">
             <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between rounded-lg px-3 text-[12px] font-bold text-muted hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
               {group.label}<ChevronDown className="size-4 transition-transform group-open/nav:rotate-180" />
             </summary>

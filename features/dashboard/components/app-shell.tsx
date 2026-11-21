@@ -40,7 +40,7 @@ export default function AppShell({ children, user, today }: AppShellProps): Reac
       <a href="#dashboard-main" className="sr-only z-50 rounded-xl bg-white px-4 py-3 font-semibold text-brand-ink shadow-lg focus:not-sr-only focus:fixed focus:left-4 focus:top-4">ข้ามไปยังเนื้อหาหลัก</a>
 
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-[var(--z-sticky)] hidden w-[264px] overflow-hidden border-r border-blue-100 bg-white shadow-[5px_0_20px_#1648780b] xl:block">
+      <aside className="fixed inset-y-0 left-0 z-[var(--z-sticky)] hidden w-[288px] overflow-hidden border-r border-blue-100 bg-white shadow-[5px_0_20px_#1648780b] xl:block">
         <SidebarContent user={user} />
       </aside>
 
@@ -55,7 +55,7 @@ export default function AppShell({ children, user, today }: AppShellProps): Reac
       </Sheet>
 
       {/* Content column */}
-      <div className="relative z-10 xl:flex xl:h-dvh xl:min-h-0 xl:flex-col xl:pl-[264px]">
+      <div className="relative z-10 xl:flex xl:h-dvh xl:min-h-0 xl:flex-col xl:pl-[288px]">
         <TopBar user={user} onOpenNav={() => setNavOpen(true)} today={today} onOpenPalette={() => setPaletteOpen(true)} />
         <main id="dashboard-main" tabIndex={-1} className="mx-auto w-full max-w-[1480px] px-4 py-4 sm:px-6 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overscroll-contain xl:px-7">{children}</main>
       </div>
