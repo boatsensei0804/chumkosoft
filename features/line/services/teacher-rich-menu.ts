@@ -1,7 +1,7 @@
 import "server-only";
 
 const API = "https://api.line.me/v2/bot";
-const TEACHER_MENU_NAMES = ["Chumkosoft teacher v2", "Chumkosoft teacher v1"];
+const TEACHER_MENU_NAMES = ["Chumkosoft teacher v3", "Chumkosoft teacher v2", "Chumkosoft teacher v1"];
 
 function token(): string | null {
   return process.env.LINE_CHANNEL_ACCESS_TOKEN || null;

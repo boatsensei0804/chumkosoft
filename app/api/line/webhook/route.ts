@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyLineSignature } from "@/lib/line";
+import { handleTeacherLinePostback } from "@/features/line/services/teacher-line-workspace";
 import { handleLinkMessage } from "@/features/line/services/line-service";
 import { handleQrLoginLineMessage } from "@/features/auth/services/qr-login-line";
 import { handleLeaveLineMessage } from "@/features/leave/services/line-leave-service";
@@ -21,7 +22,7 @@ interface LineTextMessageEvent {
   postback?: { data?: string; params?: { date?: string; time?: string } };
 }
 
-function isLeavePostback(event: unknown): event is LineTextMessageEvent & {
+function isPostback(event: unknown): event is LineTextMessageEvent & {
   webhookEventId: string; replyToken: string; source: { userId: string }; postback: { data: string; params?: { date?: string; time?: string } };
 } {
   if (typeof event !== "object" || event === null) return false;
@@ -65,7 +66,7 @@ export async function POST(request: Request): Promise<Response> {
       ? (payload as { events: unknown[] }).events
       : [];
 
-  let leaveProcessingFailed = false;
+  let processingFailed = false;
   await Promise.all(
     events.map(async (event) => {
       if (isTextMessage(event)) {
@@ -81,19 +82,23 @@ export async function POST(request: Request): Promise<Response> {
           }
         } catch (error) {
           console.error("[line webhook] message processing failed", error);
-          if (/^(?:แจ้งลา|ลา|แจ้งมาสาย|ขอมาสาย)(?:\s|$)/u.test(event.message.text.trim())) leaveProcessingFailed = true;
+          if (/^(?:แจ้งลา|ลา|แจ้งมาสาย|ขอมาสาย)(?:\s|$)/u.test(event.message.text.trim())) processingFailed = true;
         }
-      } else if (isLeavePostback(event)) {
+      } else if (isPostback(event)) {
         try {
+          if (event.postback.data.startsWith("teacher|")) {
+            if (event.source.type === "user") await handleTeacherLinePostback(event.source.userId, event.postback.data, event.replyToken);
+            return;
+          }
           await handleLeavePostback(event.source.userId, event.postback.data, event.postback.params?.date, event.replyToken, event.webhookEventId, event.postback.params?.time);
         } catch (error) {
-          console.error("[line webhook] leave postback processing failed", error);
-          leaveProcessingFailed = true;
+          console.error("[line webhook] postback processing failed", error);
+          processingFailed = true;
         }
       }
     }),
   );
 
   // LINE can redeliver failed leave events; lineMessageId prevents duplicates.
-  return leaveProcessingFailed ? new NextResponse("retry leave event", { status: 503 }) : NextResponse.json({ ok: true });
+  return processingFailed ? new NextResponse("retry event", { status: 503 }) : NextResponse.json({ ok: true });
 }

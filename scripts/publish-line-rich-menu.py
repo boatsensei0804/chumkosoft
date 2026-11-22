@@ -45,7 +45,11 @@ TEACHER_MENU = {
                 "width": (column + 1) * TEACHER_WIDTH // len(row) - column * TEACHER_WIDTH // len(row),
                 "height": TEACHER_ROW_HEIGHT,
             },
-            "action": {"type": "uri", "label": button["label"], "uri": f"https://chumkosoft.com{button['path']}"},
+            "action": (
+                {"type": "postback", "label": button["label"], "data": button["postback"]}
+                if "postback" in button
+                else {"type": "uri", "label": button["label"], "uri": f"https://chumkosoft.com{button['path']}"}
+            ),
         }
         for index, row in enumerate(TEACHER_CONFIG["rows"])
         for column, button in enumerate(row)

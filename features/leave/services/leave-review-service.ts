@@ -15,7 +15,7 @@ function daysInRange(start: Date, end: Date): Date[] {
   return dates;
 }
 
-export async function reviewLeaveRequest(id: string, decision: "APPROVED" | "REJECTED", note: string, user: CurrentUser): Promise<{ ok: boolean; message: string }> {
+export async function reviewLeaveRequest(id: string, decision: "APPROVED" | "REJECTED", note: string, user: Pick<CurrentUser, "id" | "role" | "staffId">): Promise<{ ok: boolean; message: string }> {
   if (typeof id !== "string" || !id || typeof note !== "string" || note.length > 500 || (decision === "REJECTED" && note.trim().length < 3)) return { ok: false, message: "กรุณาระบุเหตุผลเมื่อไม่อนุมัติ และตรวจข้อมูลอีกครั้ง" };
   const request = await prisma.leaveRequest.findUnique({ where: { id }, include: { classroom: { select: { advisors: { select: { staffId: true } } } } } });
   if (!request || request.isDeleted) return { ok: false, message: "ไม่พบคำขอลา" };

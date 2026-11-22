@@ -1,13 +1,13 @@
 {
-  "name": "Chumkosoft teacher v2",
+  "name": "Chumkosoft teacher v3",
   "rows": [
     [
       { "label": "เช็กชื่อวันนี้", "description": "เปิดเช็กชื่อประจำห้อง", "path": "/dashboard/attendance?mode=homeroom" },
-      { "label": "คำขอรอตรวจ", "description": "ตรวจคำขอลาและขอมาสาย", "path": "/dashboard/leave-requests?status=pending" }
+      { "label": "คำขอรอตรวจ", "description": "ตรวจคำขอลาและขอมาสาย", "postback": "teacher|pending" }
     ],
     [
       { "label": "ตารางสอนของฉัน", "description": "ดูคาบเรียนของครู", "path": "/dashboard/timetable" },
-      { "label": "สรุปวันนี้", "description": "ดูผลเข้าโรงเรียน", "path": "/dashboard/attendance?mode=school" },
+      { "label": "สรุปวันนี้", "description": "ดูสรุปเช็กชื่อ", "postback": "teacher|summary" },
       { "label": "LINE ของฉัน", "description": "ตรวจบัญชีที่เชื่อม", "path": "/dashboard/my-line" }
     ]
   ]
