@@ -9,7 +9,7 @@ import { isLinePushEnabled } from "@/features/line/services/line-delivery-settin
 import { randomUUID } from "node:crypto";
 import prisma from "@/lib/prisma";
 import { sendLineTextToUsers } from "@/lib/line";
-import { linkTeacherRichMenu, teacherRichMenuId, unlinkTeacherRichMenu } from "@/features/line/services/teacher-rich-menu";
+import { linkTeacherRichMenu, unlinkTeacherRichMenu } from "@/features/line/services/teacher-rich-menu";
 import type { ActionResult } from "@/types/form";
 
 /** Pushes a gate check-in notification to every linked guardian of the student. */
@@ -66,8 +66,7 @@ export async function unlinkAdvisorLine(staffId: string): Promise<ActionResult> 
   await repo.clearAdvisorLine(staffId);
   if (lineUserId && !usedByOtherStaff) {
     try {
-      const menuId = await teacherRichMenuId();
-      if (!menuId || !(await unlinkTeacherRichMenu(lineUserId, menuId))) {
+      if (!(await unlinkTeacherRichMenu(lineUserId))) {
         return { ok: true, message: "ยกเลิกการเชื่อมแล้ว แต่ไม่สามารถอัปเดตริชเมนู LINE ได้ กรุณาตรวจการเชื่อมต่อ" };
       }
     } catch {

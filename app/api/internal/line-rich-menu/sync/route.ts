@@ -31,7 +31,7 @@ export async function POST(request: Request): Promise<Response> {
         if (active.has(lineUserId)) {
           if (await linkTeacherRichMenu(lineUserId, menuId)) linked += 1;
           else failed += 1;
-        } else if (await unlinkTeacherRichMenu(lineUserId, menuId)) unlinked += 1;
+        } else if (await unlinkTeacherRichMenu(lineUserId)) unlinked += 1;
         else failed += 1;
       } catch {
         failed += 1;

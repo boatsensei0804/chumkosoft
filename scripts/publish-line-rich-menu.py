@@ -29,27 +29,26 @@ MENU = {
         "action": {"type": "postback", "data": "leave|start"},
     }],
 }
-TEACHER_NAME = "Chumkosoft teacher v1"
-TEACHER_ACTIONS = [
-    {"type": "uri", "label": "เช็กชื่อ", "uri": "https://chumkosoft.com/dashboard/attendance"},
-    {"type": "uri", "label": "คำขอลา", "uri": "https://chumkosoft.com/dashboard/leave-requests"},
-    {"type": "uri", "label": "ตารางสอน", "uri": "https://chumkosoft.com/dashboard/timetable"},
-    {"type": "uri", "label": "สรุปวันนี้", "uri": "https://chumkosoft.com/dashboard/attendance?mode=school"},
-    {"type": "uri", "label": "LINE ของฉัน", "uri": "https://chumkosoft.com/dashboard/my-line"},
-    {"type": "postback", "data": "leave|start"},
-]
+TEACHER_CONFIG = json.loads((ROOT / "scripts/line-teacher-menu.json").read_text(encoding="utf-8"))
+TEACHER_WIDTH = 2500
+TEACHER_ROW_HEIGHT = 843
 TEACHER_MENU = {
-    "size": {"width": 2500, "height": 1686},
+    "size": {"width": TEACHER_WIDTH, "height": TEACHER_ROW_HEIGHT * len(TEACHER_CONFIG["rows"])},
     "selected": True,
-    "name": TEACHER_NAME,
+    "name": TEACHER_CONFIG["name"],
     "chatBarText": "เมนูครู",
     "areas": [
         {
-            "bounds": {"x": (index % 3) * 833, "y": (index // 3) * 843,
-                       "width": 834 if index % 3 == 2 else 833, "height": 843},
-            "action": action,
+            "bounds": {
+                "x": column * TEACHER_WIDTH // len(row),
+                "y": index * TEACHER_ROW_HEIGHT,
+                "width": (column + 1) * TEACHER_WIDTH // len(row) - column * TEACHER_WIDTH // len(row),
+                "height": TEACHER_ROW_HEIGHT,
+            },
+            "action": {"type": "uri", "label": button["label"], "uri": f"https://chumkosoft.com{button['path']}"},
         }
-        for index, action in enumerate(TEACHER_ACTIONS)
+        for index, row in enumerate(TEACHER_CONFIG["rows"])
+        for column, button in enumerate(row)
     ],
 }
 
