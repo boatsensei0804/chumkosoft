@@ -22,19 +22,28 @@ const STATUS_STYLE: Record<DailyRollCallStatusKey, { idle: string; active: strin
   PERSONAL_LEAVE: { idle: "text-muted hover:bg-surface-2", active: "bg-surface-2 text-ink-strong ring-1 ring-line-strong" },
 };
 
-export default function DailyRollCallRoster({ roster, uncheckedOnly = false }: { roster: DailyClassRoster; uncheckedOnly?: boolean }): React.ReactNode {
+type RosterFilter = "all" | "unchecked" | DailyRollCallStatusKey;
+
+export default function DailyRollCallRoster({ roster, initialFilter }: { roster: DailyClassRoster; initialFilter?: string }): React.ReactNode {
+  const filter = initialFilter === "unchecked"
+    ? "unchecked"
+    : DAILY_ROLL_CALL_STATUSES.find((status) => status === initialFilter) ?? "all";
   const rosterKey = `${roster.date}:${roster.classroomId}:${roster.students.map((student) => `${student.studentId}:${student.status ?? "unchecked"}`).join(",")}`;
-  return <DailyRollCallRosterEditor key={`${rosterKey}:${uncheckedOnly}`} roster={roster} uncheckedOnly={uncheckedOnly} />;
+  return <DailyRollCallRosterEditor key={`${rosterKey}:${filter}`} roster={roster} initialFilter={filter} />;
 }
 
-function DailyRollCallRosterEditor({ roster, uncheckedOnly }: { roster: DailyClassRoster; uncheckedOnly: boolean }): React.ReactNode {
+function DailyRollCallRosterEditor({ roster, initialFilter }: { roster: DailyClassRoster; initialFilter: RosterFilter }): React.ReactNode {
   const router = useRouter();
   const [statuses, setStatuses] = useState<Record<string, DailyRollCallStatusKey | null>>(() =>
     Object.fromEntries(roster.students.map((student) => [student.studentId, student.status])),
   );
   const [isSaving, startSaving] = useTransition();
-  const [showUnchecked, setShowUnchecked] = useState(uncheckedOnly);
-  const visibleStudents = showUnchecked ? roster.students.filter((student) => student.status === null) : roster.students;
+  const [filter, setFilter] = useState(initialFilter);
+  // Use saved statuses so a row stays visible while the teacher edits it.
+  const visibleStudents = roster.students.filter((student) =>
+    filter === "all" || (filter === "unchecked" ? student.status === null : student.status === filter),
+  );
+  const uncheckedIds = visibleStudents.filter((student) => statuses[student.studentId] === null).map((student) => student.studentId);
   const changedEntries = roster.students.flatMap((student) => {
     const status = statuses[student.studentId];
     return status && status !== student.status ? [{ studentId: student.studentId, status }] : [];
@@ -46,8 +55,8 @@ function DailyRollCallRosterEditor({ roster, uncheckedOnly }: { roster: DailyCla
     return { ...result, unchecked: roster.students.length - Object.values(statuses).filter(Boolean).length };
   }, [roster.students.length, statuses]);
 
-  function markEveryonePresent(): void {
-    const present = Object.fromEntries(visibleStudents.map((student) => [student.studentId, "PRESENT" as const]));
+  function markUncheckedPresent(): void {
+    const present = Object.fromEntries(uncheckedIds.map((id) => [id, "PRESENT" as const]));
     setStatuses((previous) => ({ ...previous, ...present }));
   }
 
@@ -80,8 +89,8 @@ function DailyRollCallRosterEditor({ roster, uncheckedOnly }: { roster: DailyCla
           <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/attendance?mode=homeroom&date=${roster.date}`)}>
             <ArrowLeft className="size-4" /> ภาพรวมห้อง
           </Button>
-          <Button variant="ghost" size="sm" disabled={isSaving || visibleStudents.length === 0} onClick={markEveryonePresent}>
-            <Check className="size-4" /> {showUnchecked ? "เลือกว่ามาเฉพาะรายชื่อที่แสดง" : "มาทั้งห้อง"}
+          <Button variant="ghost" size="sm" disabled={isSaving || uncheckedIds.length === 0} onClick={markUncheckedPresent}>
+            <Check className="size-4" /> ระบุว่ามาเรียนให้ {uncheckedIds.length} คนที่ยังไม่เช็ก
           </Button>
         </div>
       </header>
@@ -95,11 +104,18 @@ function DailyRollCallRosterEditor({ roster, uncheckedOnly }: { roster: DailyCla
         <Count label="ยังไม่เช็ค" count={counts.unchecked} color="text-muted" />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3" aria-label="กรองรายชื่อนักเรียน">
-        <Button type="button" size="sm" variant={showUnchecked ? "outline" : "default"} aria-pressed={!showUnchecked} onClick={() => setShowUnchecked(false)}>ทุกคน</Button>
-        <Button type="button" size="sm" variant={showUnchecked ? "default" : "outline"} aria-pressed={showUnchecked} onClick={() => setShowUnchecked(true)}>ยังไม่เช็ก {counts.unchecked} คน</Button>
+      <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
+        <label className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink">
+          กรองตามสถานะที่บันทึก
+          <select className="min-h-10 rounded-lg border border-line bg-card px-3" value={filter} onChange={(event) => setFilter(event.target.value as RosterFilter)}>
+            <option value="all">ทุกสถานะ</option>
+            <option value="unchecked">ยังไม่เช็ก</option>
+            {DAILY_ROLL_CALL_STATUSES.map((status) => <option key={status} value={status}>{status === "PRESENT" ? "มาตรงเวลา" : DAILY_ROLL_CALL_LABELS[status]}</option>)}
+          </select>
+        </label>
+        <p className="text-xs text-muted" aria-live="polite">แสดง {visibleStudents.length} จาก {roster.students.length} คน</p>
       </div>
-      {visibleStudents.length === 0 && <p className="px-4 py-8 text-center text-sm text-muted">เช็กชื่อครบแล้ว</p>}
+      {visibleStudents.length === 0 && <p className="px-4 py-8 text-center text-sm text-muted">ไม่มีนักเรียนในสถานะนี้</p>}
       <div className="grid gap-3 p-3 md:hidden">
         {visibleStudents.map((student, index) => {
           const selected = statuses[student.studentId];

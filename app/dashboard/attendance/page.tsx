@@ -65,7 +65,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         ) : mode === "school" ? (
           <SchoolMode classroomId={params.classroom ?? ""} date={date} month={month} teacherScope={teacherScope} />
         ) : (
-          <HomeroomMode classroomId={params.classroom ?? ""} date={date} month={month} teacherScope={teacherScope} uncheckedOnly={params.filter === "unchecked"} />
+          <HomeroomMode classroomId={params.classroom ?? ""} date={date} month={month} teacherScope={teacherScope} filter={params.filter} />
         )}
       </div>
     </>
@@ -77,17 +77,17 @@ async function HomeroomMode({
   date,
   month,
   teacherScope,
-  uncheckedOnly,
+  filter,
 }: {
   classroomId: string;
   date: string;
   month: string;
   teacherScope: string | null;
-  uncheckedOnly: boolean;
+  filter?: string;
 }): Promise<React.ReactNode> {
   if (classroomId) {
     const [roster, calendar] = await Promise.all([getDailyClassRoster(date, classroomId, teacherScope), getDailyRollCallCalendar(month, teacherScope, classroomId)]);
-    return roster ? <>{calendar && <AttendanceDateOverview mode="homeroom" month={month} selectedDate={date} days={calendar} classroomId={classroomId} />}<DailyRollCallRoster roster={roster} uncheckedOnly={uncheckedOnly} /></> : <PromptCard title="ไม่พบห้องเรียน" message="ห้องเรียนนี้ไม่มีในภาคเรียนปัจจุบัน หรือคุณไม่มีสิทธิ์เข้าถึง" />;
+    return roster ? <>{calendar && <AttendanceDateOverview mode="homeroom" month={month} selectedDate={date} days={calendar} classroomId={classroomId} />}<DailyRollCallRoster roster={roster} initialFilter={filter} /></> : <PromptCard title="ไม่พบห้องเรียน" message="ห้องเรียนนี้ไม่มีในภาคเรียนปัจจุบัน หรือคุณไม่มีสิทธิ์เข้าถึง" />;
   }
 
   const [calendar, rooms] = await Promise.all([

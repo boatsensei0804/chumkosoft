@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, BarChart3, BookOpen, BriefcaseMedical, CalendarDays, CircleHelp, Clock3, GraduationCap, Search, UserRoundCheck, X } from "lucide-react";
 import type { DailyClassSummary } from "@/features/attendance/types";
@@ -8,12 +8,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import Mascot from "@/components/ui/mascot";
 
 const metrics = [
-  { key: "present", label: "มาเรียน", color: "#16a34a", icon: UserRoundCheck, chip: "bg-emerald-100 text-emerald-700" },
-  { key: "late", label: "มาสาย", color: "#e99b07", icon: Clock3, chip: "bg-amber-100 text-amber-700" },
-  { key: "absent", label: "ขาดเรียน", color: "#e24957", icon: X, chip: "bg-rose-100 text-rose-700" },
-  { key: "sickLeave", label: "ลาป่วย", color: "#7954db", icon: BriefcaseMedical, chip: "bg-violet-100 text-violet-700" },
-  { key: "personalLeave", label: "ลากิจ", color: "#1885e3", icon: CalendarDays, chip: "bg-sky-100 text-sky-700" },
-  { key: "unchecked", label: "ยังไม่เช็ค", color: "#7189a7", icon: CircleHelp, chip: "bg-slate-100 text-slate-700" },
+  { key: "present", filter: "PRESENT", label: "มาตรงเวลา", color: "#16a34a", icon: UserRoundCheck, chip: "bg-emerald-100 text-emerald-700" },
+  { key: "late", filter: "LATE", label: "มาสาย", color: "#e99b07", icon: Clock3, chip: "bg-amber-100 text-amber-700" },
+  { key: "absent", filter: "ABSENT", label: "ขาดเรียน", color: "#e24957", icon: X, chip: "bg-rose-100 text-rose-700" },
+  { key: "sickLeave", filter: "SICK_LEAVE", label: "ลาป่วย", color: "#7954db", icon: BriefcaseMedical, chip: "bg-violet-100 text-violet-700" },
+  { key: "personalLeave", filter: "PERSONAL_LEAVE", label: "ลากิจ", color: "#1885e3", icon: CalendarDays, chip: "bg-sky-100 text-sky-700" },
+  { key: "unchecked", filter: "unchecked", label: "ยังไม่เช็ก", color: "#7189a7", icon: CircleHelp, chip: "bg-slate-100 text-slate-700" },
 ] as const;
 const number = (value: number) => value.toLocaleString("th-TH");
 
@@ -21,6 +21,8 @@ export default function DailySchoolOverview({ rooms, date, scoped }: { rooms: Da
   const [query, setQuery] = useState("");
   const [attentionOnly, setAttentionOnly] = useState(false);
   const [selected, setSelected] = useState<DailyClassSummary | null>(null);
+  const [selectedMetric, setSelectedMetric] = useState<(typeof metrics)[number] | null>(null);
+  const metricTrigger = useRef<HTMLButtonElement>(null);
   const total = rooms.reduce((sum, room) => sum + room.total, 0);
   const unchecked = rooms.reduce((sum, room) => sum + room.unchecked, 0);
   const checked = Math.max(0, total - unchecked);
@@ -45,7 +47,22 @@ export default function DailySchoolOverview({ rooms, date, scoped }: { rooms: Da
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {metrics.map((metric) => {
           const count = rooms.reduce((sum, room) => sum + room[metric.key], 0);
-          return <div key={metric.key} className="min-w-0 rounded-[16px] border border-school-panel-border bg-linear-to-br from-white to-school-panel-tint px-3 py-2 shadow-[0_2px_7px_#2c78bd0d]"><p className="flex items-center gap-2 text-xs font-bold text-[#183b68]"><span className={`grid size-7 shrink-0 place-items-center rounded-full ${metric.chip}`}><metric.icon className="size-4" aria-hidden="true" /></span>{metric.label}</p><p className="mt-0.5 pl-9 text-2xl font-extrabold tabular text-[#0b315f]">{number(count)}<span className="ml-1 text-[11px] font-normal text-[#5b7795]">คน</span></p><p className="pl-9 text-[11px] text-[#5b7795]">{total ? (count / total * 100).toFixed(1) : "0.0"}% ของนักเรียนทั้งหมด</p></div>;
+          return (
+            <button key={metric.key} type="button" aria-haspopup="dialog"
+              onClick={(event) => {
+                metricTrigger.current = event.currentTarget;
+                setSelectedMetric(metric);
+              }}
+              className="min-w-0 rounded-[16px] border border-school-panel-border bg-linear-to-br from-white to-school-panel-tint px-3 py-2 text-left shadow-[0_2px_7px_#2c78bd0d] hover:border-brand focus-visible:outline-2 focus-visible:outline-brand">
+              <span className="flex items-center gap-2 text-xs font-bold text-[#183b68]">
+                <span className={`grid size-7 shrink-0 place-items-center rounded-full ${metric.chip}`}><metric.icon className="size-4" aria-hidden="true" /></span>
+                {metric.label}
+                <ArrowUpRight className="ml-auto size-3.5 shrink-0 text-brand" aria-hidden="true" />
+              </span>
+              <span className="mt-0.5 block pl-9 text-2xl font-extrabold tabular-nums text-[#0b315f]">{number(count)}<span className="ml-1 text-[11px] font-normal text-[#5b7795]">คน</span></span>
+              <span className="block pl-9 text-[11px] text-[#5b7795]">{total ? (count / total * 100).toFixed(1) : "0.0"}% · ดูแยกห้อง</span>
+            </button>
+          );
         })}
       </div>
     </div>
@@ -66,6 +83,35 @@ export default function DailySchoolOverview({ rooms, date, scoped }: { rooms: Da
     })}</div>
     {visible.length === 0 && <div className="flex flex-col items-center px-5 pb-8 text-center"><Mascot pose="empty" size={90} decorative /><p className="text-sm text-muted">{rooms.length ? "ไม่มีห้องที่ตรงกับตัวกรอง" : "ยังไม่มีห้องเรียนในขอบเขตนี้ กรุณาตรวจภาคเรียนและห้องที่ปรึกษา"}</p></div>}
     </section>
+    <Dialog open={selectedMetric !== null} onOpenChange={(open) => { if (!open) setSelectedMetric(null); }}>
+      {selectedMetric && <DialogContent className="sm:max-w-lg" onCloseAutoFocus={(event) => {
+        if (!metricTrigger.current?.isConnected) return;
+        event.preventDefault();
+        metricTrigger.current.focus();
+      }}>
+        <DialogHeader>
+          <DialogTitle>{selectedMetric.label} · แยกตามห้อง</DialogTitle>
+          <DialogDescription>
+            {number(rooms.reduce((sum, room) => sum + room[selectedMetric.key], 0))} จาก {number(total)} คน
+            {' · '}{scoped ? "ห้องที่คุณเป็นที่ปรึกษา" : "ทุกห้องในภาคเรียนปัจจุบัน"}
+            {' · '}{new Date(`${date}T00:00:00+07:00`).toLocaleDateString("th-TH", { dateStyle: "medium", timeZone: "Asia/Bangkok" })}
+          </DialogDescription>
+        </DialogHeader>
+        {rooms.some((room) => room[selectedMetric.key] > 0) ? (
+          <ul className="max-h-[50dvh] divide-y divide-line overflow-y-auto">
+            {rooms.filter((room) => room[selectedMetric.key] > 0).sort((a, b) => b[selectedMetric.key] - a[selectedMetric.key]).map((room) => (
+              <li key={room.classroomId}>
+                <Link href={`${rosterUrl(room.classroomId)}&filter=${selectedMetric.filter}#daily-roster`}
+                  className="flex min-h-11 items-center justify-between gap-3 rounded-lg px-3 py-2 hover:bg-school-panel-tint">
+                  <span className="text-sm font-semibold text-brand-ink">ห้อง {room.classroomCode}</span>
+                  <span className="inline-flex items-center gap-2 text-sm text-ink">{number(room[selectedMetric.key])} คน <ArrowUpRight className="size-3.5" aria-hidden="true" /></span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="rounded-xl bg-school-panel-tint p-4 text-sm text-muted">ไม่มีนักเรียนในสถานะนี้</p>}
+      </DialogContent>}
+    </Dialog>
     <Dialog open={selected !== null} onOpenChange={(open) => { if (!open) setSelected(null); }}><DialogContent className="sm:max-w-xl"><DialogHeader><DialogTitle>สรุปห้อง {selected?.classroomCode}</DialogTitle><DialogDescription>ผลเช็คชื่อประจำห้อง วันที่ {new Date(`${date}T00:00:00+07:00`).toLocaleDateString("th-TH", { dateStyle: "long", timeZone: "Asia/Bangkok" })}</DialogDescription></DialogHeader>{selected && <><div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{metrics.map((metric) => <div key={metric.key} className="rounded-2xl bg-surface p-4"><p className="text-xs text-muted">{metric.label}</p><p className="mt-2 text-2xl font-bold">{selected[metric.key]} <span className="text-xs font-normal text-muted">คน</span></p><p className="mt-1 text-xs text-muted">{selected.total ? (selected[metric.key] / selected.total * 100).toFixed(1) : "0"}%</p></div>)}</div><Link href={rosterUrl(selected.classroomId)} className="mt-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-white">เปิดรายชื่อนักเรียนและแก้ไขสถานะ <ArrowUpRight className="size-4" /></Link></>}</DialogContent></Dialog>
   </div>;
 }
