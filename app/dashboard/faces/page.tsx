@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { ScanFace, CircleCheck, CircleDashed } from "lucide-react";
 import PageHeader from "@/features/dashboard/components/page-header";
@@ -34,7 +35,7 @@ export default async function FacesPage({ searchParams }: FacesPageProps): Promi
 
   return (
     <>
-      <PageHeader title="ชุดข้อมูลใบหน้า" subtitle={subtitle} />
+      <PageHeader title="ชุดข้อมูลใบหน้า" subtitle={subtitle} actions={<Link href="/scanner-devices" className="inline-flex min-h-10 items-center rounded-xl border border-line bg-white px-3 text-sm font-semibold text-brand-ink">ตรวจสถานะซิงก์ของเครื่องสแกน</Link>} />
 
       <StatStrip
         items={[

@@ -53,7 +53,8 @@ export default function Home(): React.ReactNode {
               <p className="mt-5 max-w-lg text-base leading-8 text-muted sm:text-lg">พื้นที่กลางของโรงเรียน ครู และครอบครัว<br className="hidden sm:block" /> ให้การเช็คชื่อ การแจ้งข่าว และการดูแลนักเรียน<br className="hidden lg:block" /> เป็นเรื่องที่ติดตามได้ง่ายขึ้น</p>
               <div className="mt-7 flex flex-wrap gap-3">
                 <Link href="/login" className={primaryButton}>เข้าสู่ระบบโรงเรียน <ArrowRight className="size-4" aria-hidden="true" /></Link>
-                <a href="#manual" className="inline-flex min-h-12 items-center gap-2 rounded-full border border-blue-200 bg-white px-6 text-sm font-semibold text-brand-ink hover:bg-blue-50">ฉันเป็นผู้ปกครอง <ChevronDown className="size-4" aria-hidden="true" /></a>
+                <Link href="/guide?role=parent" className="inline-flex min-h-12 items-center rounded-full border border-blue-200 bg-white px-5 text-sm font-semibold text-brand-ink hover:bg-blue-50">คู่มือผู้ปกครอง</Link>
+                <Link href="/guide?role=teacher" className="inline-flex min-h-12 items-center rounded-full border border-blue-200 bg-white px-5 text-sm font-semibold text-brand-ink hover:bg-blue-50">คู่มือครู</Link>
               </div>
               <p className="mt-5 text-xs leading-6 text-muted">ครูและเจ้าหน้าที่ใช้บัญชีที่โรงเรียนออกให้</p>
             </div>

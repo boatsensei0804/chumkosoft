@@ -97,6 +97,7 @@ export interface SchoolEntryStudent {
   name: string;
   classroomCode: string;
   /** Bangkok HH:mm, or null. */
+  checkInMethod: "CARD" | "QR" | "MANUAL" | "FACE" | null;
   checkInAt: string | null;
   checkOutAt: string | null;
   /** Checked in at/after the school's late cutoff. */

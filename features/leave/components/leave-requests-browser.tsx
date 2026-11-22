@@ -16,7 +16,7 @@ function thaiDate(iso: string): string {
   return new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
 }
 
-export default function LeaveRequestsBrowser({ report, isAdmin }: { report: LeaveDailyReport; isAdmin: boolean }): React.ReactNode {
+export default function LeaveRequestsBrowser({ report, isAdmin, initialFilter }: { report: LeaveDailyReport; isAdmin: boolean; initialFilter: "ALL" | "PENDING" }): React.ReactNode {
   const { items } = report;
   const summary = summarizeDailyLeave(items.filter(item => item.startDate <= report.date && item.endDate >= report.date), report.totalStudents);
   const router = useRouter();
@@ -24,7 +24,7 @@ export default function LeaveRequestsBrowser({ report, isAdmin }: { report: Leav
   const [classroom, setClassroom] = useState("");
   const [kind, setKind] = useState<LeaveKind | "ALL">("ALL");
   const classrooms = [...new Set(items.map((item) => item.classroomCode))].sort();
-  const [filter, setFilter] = useState<LeaveStatus | "ALL">("ALL");
+  const [filter, setFilter] = useState<LeaveStatus | "ALL">(initialFilter);
   const [selected, setSelected] = useState<{ item: LeaveItem; decision: "APPROVED" | "REJECTED" } | null>(null);
   const [viewing, setViewing] = useState<LeaveItem | null>(null);
   const [deleting, setDeleting] = useState<LeaveItem | null>(null);
@@ -79,7 +79,7 @@ export default function LeaveRequestsBrowser({ report, isAdmin }: { report: Leav
       ผู้ปกครองกดเมนู “แจ้งลา” ใน LINE OA แล้วเลือกนักเรียน ประเภท วันลา และเหตุผล ก่อนยืนยันส่งคำขอ · กด “ดูสถานะคำขอ” เพื่อติดตามผลได้ · ต้องผูก LINE กับนักเรียนก่อน
     </div>
     {message && <p role="status" className="rounded-lg bg-brand-soft px-4 py-3 text-sm font-semibold text-ink">{message}</p>}
-    <section className="overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
+    <section id="leave-list" className="scroll-mt-4 overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
       <div className="flex flex-wrap items-center gap-2 border-b border-line p-4"><Link href={`/dashboard/leave-requests?date=${report.date}`} className={`min-h-10 rounded-lg px-3 py-2 text-sm font-semibold ${report.allDates ? "border border-line" : "bg-brand text-white"}`}>รายการวันที่เลือก</Link><Link href={`/dashboard/leave-requests?date=${report.date}&view=all`} className={`min-h-10 rounded-lg px-3 py-2 text-sm font-semibold ${report.allDates ? "bg-brand text-white" : "border border-line"}`}>ทุกวันในภาคเรียนนี้</Link><p className="text-xs text-muted">{report.allDates ? "ใช้ค้นหาคำขอเก่าหรือข้อมูลทดสอบได้" : `คำขอที่ครอบคลุมวันที่ ${thaiDate(report.date)}`}</p></div>
       <div className="flex flex-wrap gap-3 border-b border-line p-4">
         <input aria-label="ค้นหาคำขอลา" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="ค้นหานักเรียน ห้อง ผู้ปกครอง หรือชื่อ LINE" className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm" />

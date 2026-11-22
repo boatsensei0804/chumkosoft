@@ -3,7 +3,8 @@ import "server-only";
 import type { Role } from "@prisma/client";
 import { getPeriods } from "@/repositories/timetable-repository";
 import {
-  resolvePortalStudent,
+  listPortalStudents,
+  findPortalEntries,
   findActivePlacement,
   findWeeklySlots,
 } from "@/features/portal/repositories/portal-repository";
@@ -41,19 +42,28 @@ const EMPTY_OVERVIEW: PortalOverview = {
 };
 
 /** Assembles the read-only weekly class schedule for a portal viewer. */
-export async function getPortalOverview(userId: string, role: Role): Promise<PortalOverview> {
-  const student = await resolvePortalStudent(userId, role);
-  if (!student) return EMPTY_OVERVIEW;
+export async function getPortalOverview(userId: string, role: Role, today: string, requestedStudentId?: string) {
+  const students = await listPortalStudents(userId, role);
+  const options = students.map((student) => ({ id: student.id, name: formatStudentName(student) }));
+  const student = requestedStudentId
+    ? students.find((candidate) => candidate.id === requestedStudentId)
+    : students[0];
+  if (!student) return {
+    overview: EMPTY_OVERVIEW, options, selectedId: null, entry: null,
+    unavailable: Boolean(requestedStudentId),
+  };
 
   const studentName = formatStudentName(student);
   const placement = await findActivePlacement(student.id);
-  if (!placement) {
-    return { ...EMPTY_OVERVIEW, studentName };
-  }
+  const selection = { options, selectedId: student.id, unavailable: false };
+  if (!placement) return {
+    ...selection, overview: { ...EMPTY_OVERVIEW, studentName }, entry: null,
+  };
 
-  const [periodRows, slots] = await Promise.all([
+  const [periodRows, slots, entry] = await Promise.all([
     getPeriods(),
     findWeeklySlots(placement.termId, placement.classroomId),
+    findPortalEntries(placement.termId, student.id, new Date(`${today}T00:00:00Z`)),
   ]);
 
   const byCell = new Map<string, { subject: string; room: string; teacher: string }>();
@@ -73,13 +83,14 @@ export async function getPortalOverview(userId: string, role: Role): Promise<Por
     return { periodId: p.id, label: p.label, start: p.startTime, end: p.endTime, isBreak: p.isBreak, cells };
   });
 
-  return {
+  const overview: PortalOverview = {
     studentName,
     classroomCode: placement.classroomCode,
     gradeLevel: placement.gradeLevel,
     termLabel: placement.termName,
     days: DAYS,
     periods,
-    hasSchedule: true,
+    hasSchedule: slots.length > 0,
   };
+  return { ...selection, overview, entry };
 }

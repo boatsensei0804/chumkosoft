@@ -2,7 +2,7 @@ import DailySchoolOverview from "@/features/dashboard/components/daily-school-ov
 import { getDailyRollCallOverview } from "@/features/attendance/services/daily-roll-call-service";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, CalendarX2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import WelcomeBand from "@/features/dashboard/components/welcome-band";
 import SummaryFigures from "@/features/dashboard/components/summary-figures";
@@ -20,6 +20,7 @@ import {
 } from "@/services/dashboard-service";
 import { listStudentSummaries } from "@/services/student-service";
 import { getCurrentUser } from "@/lib/dal";
+import prisma from "@/lib/prisma";
 import { thaiGreeting, formatThaiWeekdayLong } from "@/utils/thai-date";
 
 export const metadata: Metadata = {
@@ -41,6 +42,17 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
   ]);
   const date = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(now);
   const rooms = await getDailyRollCallOverview(date, user.role === "ADMIN" ? null : user.staffId ?? "__no_staff__");
+  const pendingLeave = await prisma.leaveRequest.count({
+    where: {
+      status: "PENDING", isDeleted: false,
+      term: { isActive: true, isDeleted: false, academicYear: { isActive: true, isDeleted: false } },
+      student: { isDeleted: false },
+      classroom: {
+        isDeleted: false,
+        ...(user.role === "ADMIN" ? {} : { advisors: { some: { staffId: user.staffId ?? "__no_staff__" } } }),
+      },
+    },
+  });
   const greeting = user.firstName ? `${thaiGreeting(now)} คุณ${user.firstName}` : thaiGreeting(now);
   return (
     <>
@@ -51,6 +63,13 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
           term={termLabel}
           date={formatThaiWeekdayLong(now)}
         />
+        {pendingLeave > 0 && (
+          <Link href="/dashboard/leave-requests?view=all&status=pending#leave-list" className="flex min-h-11 items-center gap-3 rounded-2xl border border-[var(--overview-border)] bg-[var(--overview-card)] px-4 py-2.5 text-sm font-semibold text-brand-ink hover:bg-[var(--overview-tint)]">
+            <CalendarX2 className="size-5 shrink-0" aria-hidden="true" />
+            <span className="flex-1">คำขอลา / ขอมาสายรอพิจารณา {pendingLeave.toLocaleString("th-TH")} รายการ</span>
+            <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
+          </Link>
+        )}
         <DailySchoolOverview rooms={rooms ?? []} date={date} scoped={user.role !== "ADMIN"} />
         <details className="group rounded-[20px] border border-[var(--overview-border)] bg-[var(--overview-card)] px-4 py-3 shadow-[var(--overview-shadow)]">
           <summary className="cursor-pointer font-semibold text-brand-ink">ข้อมูลเพิ่มเติม: ทะเบียน ตารางเรียน และประกาศ</summary>

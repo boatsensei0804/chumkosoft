@@ -52,7 +52,7 @@ export async function findEnrolledStudents(termId: string, classroomId?: string,
 export async function findEntries(termId: string, date: Date) {
   return prisma.schoolEntry.findMany({
     where: { termId, date, isDeleted: false },
-    select: { studentId: true, checkInAt: true, checkOutAt: true, isLate: true },
+    select: { studentId: true, checkInAt: true, checkOutAt: true, isLate: true, method: true },
   });
 }
 
@@ -79,7 +79,7 @@ export async function upsertCheckIn(termId: string, studentId: string, date: Dat
   await prisma.$transaction(async (tx) => {
     await tx.schoolEntry.upsert({
       where: { studentId_date: { studentId, date } },
-      update: { checkInAt: at, isLate, isDeleted: false, deletedAt: null },
+      update: { checkInAt: at, isLate, method: "MANUAL", isDeleted: false, deletedAt: null },
       create: { termId, studentId, date, checkInAt: at, isLate, method: "MANUAL" },
     });
     if (syncPoints) await syncLateBehaviorPoints(tx, termId, studentId, date, isLate, actorUserId);

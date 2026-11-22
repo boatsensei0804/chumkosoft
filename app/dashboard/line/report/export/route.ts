@@ -10,13 +10,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const querySchema = z.object({ view: z.enum(["details", "charts"]), format: z.enum(["csv", "pdf"]), classroom: z.string().min(1).max(150), filter: z.enum(["all", "unlinked", "linked", "pending", "unprepared"]), q: z.string().max(100) });
 export async function GET(request: Request): Promise<Response> {
-  await requireRoles(STAFF_ROLES);
+  const user = await requireRoles(STAFF_ROLES);
+  const advisorScope = user.role === "ADMIN" ? undefined : user.staffId ?? "__no_staff__";
   const params = new URL(request.url).searchParams;
   const parsed = querySchema.safeParse({ view: params.get("view") ?? "details", format: params.get("format") ?? "csv", classroom: params.get("classroom") ?? "all", filter: params.get("filter") ?? "all", q: params.get("q") ?? "" });
   if (!parsed.success) return new Response("ตัวกรองรายงานไม่ถูกต้อง", { status: 400 });
   if (parsed.data.view === "charts" && parsed.data.format !== "pdf") return new Response("กราฟสรุปรองรับ PDF เท่านั้น", { status: 400 });
   try {
-    const report = await getLineLinkReport(parsed.data.classroom);
+    const report = await getLineLinkReport(parsed.data.classroom, advisorScope);
     if (!report.hasActiveTerm) return new Response("ยังไม่มีภาคเรียนปัจจุบัน", { status: 409 });
     const students = filterLinkStudents(report.students, parsed.data.filter, parsed.data.q);
     const pdf = parsed.data.format === "pdf";

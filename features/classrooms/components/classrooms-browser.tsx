@@ -26,6 +26,7 @@ interface ClassroomsBrowserProps {
 export default function ClassroomsBrowser({ classrooms, teachers, canManage }: ClassroomsBrowserProps): React.ReactNode {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ClassroomRow | null>(null);
   const [deleting, setDeleting] = useState<ClassroomRow | null>(null);
@@ -33,14 +34,14 @@ export default function ClassroomsBrowser({ classrooms, teachers, canManage }: C
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return classrooms;
-    return classrooms.filter(
-      (c) =>
-        c.code.toLowerCase().includes(q) ||
-        c.gradeLevel.toLowerCase().includes(q) ||
-        c.advisors.some((a) => a.name.toLowerCase().includes(q)),
-    );
-  }, [classrooms, query]);
+    return classrooms.filter((room) => {
+      if (filter === "no-advisor" && room.advisors.length > 0) return false;
+      if (filter === "no-students" && room.studentCount > 0) return false;
+      return !q || room.code.toLowerCase().includes(q) ||
+        room.gradeLevel.toLowerCase().includes(q) ||
+        room.advisors.some((advisor) => advisor.name.toLowerCase().includes(q));
+    });
+  }, [classrooms, query, filter]);
 
   function openCreate(): void {
     setEditing(null);
@@ -85,6 +86,11 @@ export default function ClassroomsBrowser({ classrooms, teachers, canManage }: C
                 className="min-w-0 w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"
               />
             </div>
+            <select aria-label="กรองห้องเรียน" value={filter} onChange={(event) => setFilter(event.target.value)} className="min-h-10 rounded-lg border border-line bg-white px-2 text-sm">
+              <option value="all">ทุกห้อง</option>
+              <option value="no-advisor">ยังไม่มีครูที่ปรึกษา</option>
+              <option value="no-students">ยังไม่มีนักเรียน</option>
+            </select>
             {canManage && <Button onClick={openCreate}>
               <Plus className="size-4" /> เพิ่มห้องเรียน
             </Button>}

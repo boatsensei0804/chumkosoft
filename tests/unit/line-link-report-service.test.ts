@@ -14,6 +14,14 @@ describe("binding report data scope", () => {
     await expect(getLineLinkReport("other-year")).rejects.toBeInstanceOf(InvalidReportClassroom);
     expect(mocks.enrollments).not.toHaveBeenCalled();
   });
+  it("rejects a room outside a teacher's advisory scope before reading link codes", async () => {
+    mocks.rooms.mockResolvedValue([{ id: "a", code: "ม.1/1" }]);
+    await expect(getLineLinkReport("b", "advisor-1")).rejects.toBeInstanceOf(InvalidReportClassroom);
+    expect(mocks.rooms).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ advisors: { some: { staffId: "advisor-1" } } }),
+    }));
+    expect(mocks.enrollments).not.toHaveBeenCalled();
+  });
   it("keeps school totals while returning names and codes only for the selected classroom", async () => {
     mocks.enrollments.mockResolvedValue(["a", "b"].map(id => ({ classroomId: id, classroom: { code: id }, student: { id, studentCode: id, prefix: null, firstName: "ตัวอย่าง", lastName: id, guardians: [], lineAccounts: [{ lineUserId: `U${id}`, lineLinkCode: null }] } })));
     const result = await getLineLinkReport("a");

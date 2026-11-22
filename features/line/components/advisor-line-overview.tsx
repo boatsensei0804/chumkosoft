@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Copy } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,7 +16,7 @@ const STATUS: Record<Status, { label: string; className: string }> = {
   CONNECTED: { label: "เชื่อมแล้ว", className: "bg-success-soft text-success" },
   PENDING: { label: "รอส่งรหัส", className: "bg-warning-soft text-warning" },
   UNLINKED: { label: "ยังไม่เชื่อม", className: "bg-surface-2 text-muted" },
-  NO_ACCOUNT: { label: "ยังไม่มีบัญชีครู", className: "bg-danger-soft text-danger" },
+  NO_ACCOUNT: { label: "ยังไม่มีบัญชีเว็บที่ใช้งานได้", className: "bg-danger-soft text-danger" },
 };
 
 export default function AdvisorLineOverview({ rows }: { rows: TeacherRow[] }): React.ReactNode {
@@ -29,7 +30,8 @@ export default function AdvisorLineOverview({ rows }: { rows: TeacherRow[] }): R
   const counts = useMemo(() => ({
     connected: rows.filter((row) => row.status === "CONNECTED").length,
     pending: rows.filter((row) => row.status === "PENDING").length,
-    unlinked: rows.filter((row) => row.status === "UNLINKED" || row.status === "NO_ACCOUNT").length,
+    unlinked: rows.filter((row) => row.status === "UNLINKED").length,
+    noAccount: rows.filter((row) => row.status === "NO_ACCOUNT").length,
   }), [rows]);
   const visible = rows.filter((row) => (filter === "ALL" || row.status === filter) && `${row.name} ${row.staffCode} ${row.classrooms.join(" ")}`.toLowerCase().includes(query.trim().toLowerCase()));
   const viewing = rows.find((row) => row.id === viewingId) ?? null;
@@ -58,10 +60,11 @@ export default function AdvisorLineOverview({ rows }: { rows: TeacherRow[] }): R
   }
 
   return <div className="space-y-5">
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <div className="rounded-xl border border-line bg-card p-4"><p className="text-sm text-muted">เชื่อมแล้ว</p><p className="mt-1 text-3xl font-bold tabular text-success">{counts.connected}</p></div>
       <div className="rounded-xl border border-line bg-card p-4"><p className="text-sm text-muted">รอส่งรหัส</p><p className="mt-1 text-3xl font-bold tabular text-warning">{counts.pending}</p></div>
       <div className="rounded-xl border border-line bg-card p-4"><p className="text-sm text-muted">ยังไม่เชื่อม</p><p className="mt-1 text-3xl font-bold tabular text-ink-strong">{counts.unlinked}</p></div>
+      <button type="button" onClick={() => setFilter("NO_ACCOUNT")} aria-pressed={filter === "NO_ACCOUNT"} className="rounded-xl border border-line bg-card p-4 text-left hover:border-brand"><span className="text-sm text-muted">ยังไม่มีบัญชีเว็บที่ใช้งานได้</span><span className="mt-1 block text-3xl font-bold tabular text-danger">{counts.noAccount}</span></button>
     </div>
     <p className="text-sm text-muted">สถานะ “เชื่อมแล้ว” หมายถึงครูส่งรหัสในแชท LINE OA และระบบบันทึกสำเร็จ การเพิ่มเพื่อนอย่างเดียวยังไม่ทำให้เชื่อมบัญชี</p>
     <p className="text-sm text-muted">แอดมินเป็นผู้ออกรหัสให้ครู ครูดูรหัสได้ในหน้า LINE ของฉันและส่งรหัสในแชท LINE OA</p>
@@ -70,7 +73,7 @@ export default function AdvisorLineOverview({ rows }: { rows: TeacherRow[] }): R
       <div className="flex flex-wrap gap-3 border-b border-line p-4">
         <input aria-label="ค้นหาครู" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหาชื่อ รหัส หรือห้องที่ปรึกษา" className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
         <select aria-label="กรองสถานะ LINE" value={filter} onChange={(event) => setFilter(event.target.value as Status | "ALL")} className="rounded-lg border border-line bg-surface px-3 py-2 text-sm">
-          <option value="ALL">ทุกสถานะ</option><option value="CONNECTED">เชื่อมแล้ว</option><option value="PENDING">รอส่งรหัส</option><option value="UNLINKED">ยังไม่เชื่อม</option><option value="NO_ACCOUNT">ยังไม่มีบัญชีครู</option>
+          <option value="ALL">ทุกสถานะ</option><option value="CONNECTED">เชื่อมแล้ว</option><option value="PENDING">รอส่งรหัส</option><option value="UNLINKED">ยังไม่เชื่อม</option><option value="NO_ACCOUNT">ยังไม่มีบัญชีเว็บที่ใช้งานได้</option>
         </select>
       </div>
       <div className="max-h-[52dvh] overflow-y-auto md:overflow-x-auto"><table className="w-full text-left text-sm md:min-w-[550px]">
@@ -95,6 +98,7 @@ export default function AdvisorLineOverview({ rows }: { rows: TeacherRow[] }): R
             {(viewing.status === "CONNECTED" || viewing.status === "PENDING") && <button type="button" disabled={pending} onClick={() => setUnlinking(viewing)} className="min-h-10 rounded-lg border border-line px-3 py-2 font-semibold text-danger hover:bg-danger-soft disabled:opacity-50">{viewing.status === "CONNECTED" ? "ยกเลิกการผูก" : "ลบรหัส"}</button>}
           </div>}
         </div>}
+        {viewing && <Link href={`/dashboard/teachers/${encodeURIComponent(viewing.id)}`} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-line px-3 text-sm font-semibold text-brand-ink">เปิดข้อมูลบุคลากรและบัญชีเว็บ</Link>}
       </DialogContent>
     </Dialog>
     <ConfirmDialog open={unlinking !== null} title="ยกเลิกการผูก LINE ครู" message={unlinking ? `ยืนยันยกเลิกบัญชีของ ${unlinking.name}${unlinking.lineDisplayName ? ` (LINE: ${unlinking.lineDisplayName})` : ""} ใช่ไหม? ครูจะไม่ได้รับสรุปและประกาศผ่านบัญชีนี้จนกว่าจะผูกใหม่` : ""} confirmLabel="ยืนยันยกเลิก" destructive pending={pending} onConfirm={unlink} onClose={() => setUnlinking(null)} />

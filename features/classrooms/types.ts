@@ -51,6 +51,7 @@ export interface OfferingRow {
 }
 
 export interface AdvisorDetail {
+  id: string;
   name: string;
   position: string | null;
 }

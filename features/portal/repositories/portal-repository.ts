@@ -10,29 +10,34 @@ export interface PortalStudent {
   lastName: string;
 }
 
-/**
- * Resolves the student a portal viewer is looking at: a STUDENT account maps to
- * its own linked record; a PARENT account maps to the first student they guard.
- */
-export async function resolvePortalStudent(userId: string, role: Role): Promise<PortalStudent | null> {
+export async function listPortalStudents(userId: string, role: Role): Promise<PortalStudent[]> {
+  const studentFields = { id: true, prefix: true, firstName: true, lastName: true } as const;
   if (role === "STUDENT") {
     const user = await prisma.user.findFirst({
-      where: { id: userId, isDeleted: false },
-      select: { student: { select: { id: true, prefix: true, firstName: true, lastName: true } } },
+      where: { id: userId, isDeleted: false, student: { isDeleted: false } },
+      select: { student: { select: studentFields } },
     });
-    return user?.student ?? null;
+    return user?.student ? [user.student] : [];
   }
 
   if (role === "PARENT") {
-    const guardian = await prisma.guardian.findFirst({
+    const guardians = await prisma.guardian.findMany({
       where: { userId, isDeleted: false, student: { isDeleted: false } },
-      orderBy: { createdAt: "asc" },
-      select: { student: { select: { id: true, prefix: true, firstName: true, lastName: true } } },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      select: { student: { select: studentFields } },
     });
-    return guardian?.student ?? null;
+    const students = new Map(guardians.map(({ student }) => [student.id, student]));
+    return [...students.values()];
   }
 
-  return null;
+  return [];
+}
+
+export async function findPortalEntries(termId: string, studentId: string, date: Date) {
+  return prisma.schoolEntry.findFirst({
+    where: { termId, studentId, date, isDeleted: false },
+    select: { checkInAt: true, checkOutAt: true, isLate: true },
+  });
 }
 
 export interface PortalPlacement {

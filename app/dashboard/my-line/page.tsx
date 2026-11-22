@@ -31,7 +31,7 @@ export default async function MyLinePage(): Promise<React.ReactNode> {
   const classroomIds = advisoryRooms.map((room) => room.classroomId);
   const [studentCount, pendingLeaveCount] = activeTerm && classroomIds.length > 0 ? await Promise.all([
     prisma.enrollment.count({ where: { termId: activeTerm.id, classroomId: { in: classroomIds }, isDeleted: false, student: { isDeleted: false } } }),
-    prisma.leaveRequest.count({ where: { termId: activeTerm.id, classroomId: { in: classroomIds }, status: "PENDING" } }),
+    prisma.leaveRequest.count({ where: { termId: activeTerm.id, classroomId: { in: classroomIds }, status: "PENDING", isDeleted: false } }),
   ]) : [0, 0];
   const friendUrl = setting?.oaAddFriendUrl ?? null;
   const friendQr = friendUrl ? await QRCode.toDataURL(friendUrl, { margin: 1, width: 184 }) : null;

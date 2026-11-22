@@ -2,6 +2,7 @@
 
 import { Printer } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 interface PrintableGuardian {
@@ -23,13 +24,14 @@ interface PrintableStudent {
 }
 
 interface LinePrintSheetProps {
+  classroomId: string;
   classroom: string;
   oaUrl: string;
   qrDataUrl: string;
   records: PrintableStudent[];
 }
 
-export default function LinePrintSheet({ classroom, oaUrl, qrDataUrl, records }: LinePrintSheetProps): React.ReactNode {
+export default function LinePrintSheet({ classroomId, classroom, oaUrl, qrDataUrl, records }: LinePrintSheetProps): React.ReactNode {
   const cards = records.flatMap((student) => [
     ...student.lineAccounts.filter((account) => account.linkCode).map((account) => ({ student, guardian: { id: account.id, prefix: null, fullName: "ผู้ปกครองของนักเรียน", relation: "", linked: false, linkCode: account.linkCode } })),
     ...student.guardians.filter((guardian) => guardian.linkCode).map((guardian) => ({ student, guardian })),
@@ -41,7 +43,12 @@ export default function LinePrintSheet({ classroom, oaUrl, qrDataUrl, records }:
     <main className="line-print-root min-h-screen bg-surface px-4 py-5 sm:px-8">
       <header className="line-print-toolbar mx-auto mb-5 flex max-w-5xl flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-bg p-4 shadow-sm">
         <div><p className="text-sm font-bold text-ink-strong">เอกสารเชื่อม LINE · {classroom}</p><p className="mt-0.5 text-xs text-muted">{cards.length.toLocaleString("th-TH")} ใบ · A4 แนวตั้ง · QR เพิ่มเพื่อน LINE OA</p></div>
-        <div className="flex gap-2"><Button variant="outline" onClick={() => window.close()}>ปิด</Button><Button onClick={() => window.print()}><Printer className="size-4" /> พิมพ์ / บันทึก PDF</Button></div>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline"><Link href={`/dashboard/line/report?classroom=${encodeURIComponent(classroomId)}`}>กลับรายงาน</Link></Button>
+          <Button asChild variant="outline"><a href={`/dashboard/line/export/pdf?${new URLSearchParams({ oa: oaUrl, classroom: classroomId })}`}>PDF ห้องนี้</a></Button>
+          <Button asChild variant="outline"><a href={`/dashboard/line/export/pdf?${new URLSearchParams({ oa: oaUrl })}`}>PDF ทุกห้องที่ดูแลได้</a></Button>
+          <Button onClick={() => window.print()}><Printer className="size-4" /> พิมพ์</Button>
+        </div>
       </header>
       {cards.length === 0 ? (
         <div className="mx-auto max-w-xl rounded-2xl border border-line bg-bg p-10 text-center text-sm text-muted">ชั้นเรียนนี้ยังไม่มีรหัสที่รอผูก LINE</div>

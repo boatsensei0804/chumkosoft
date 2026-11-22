@@ -8,13 +8,14 @@ import { requireRoles } from "@/lib/dal";
 export const metadata: Metadata = { title: "คำขอลา / ขอมาสาย · chumkosoft" };
 export const dynamic = "force-dynamic";
 
-export default async function LeaveRequestsPage({ searchParams }: { searchParams: Promise<{ date?: string; view?: string }> }): Promise<React.ReactNode> {
+export default async function LeaveRequestsPage({ searchParams }: { searchParams: Promise<{ date?: string; view?: string; status?: string }> }): Promise<React.ReactNode> {
   const user = await requireRoles(["ADMIN", "TEACHER"]);
   const params = await searchParams;
   const date = typeof params.date === "string" && validReportDate(params.date) ? params.date : bangkokToday();
   const report = await getLeaveDailyReport(user, date, params.view === "all");
+  const initialFilter = params.status === "pending" || (!params.view && params.status !== "all") ? "PENDING" : "ALL";
   return <>
     <PageHeader title="คำขอลา / ขอมาสายจากผู้ปกครอง" subtitle="ภาพรวมรายวัน · รายละเอียด LINE ผู้ส่ง · ตรวจและพิจารณาคำขอ" />
-    <LeaveRequestsBrowser key={`${date}-${report.allDates}`} report={report} isAdmin={user.role === "ADMIN"} />
+    <LeaveRequestsBrowser key={`${date}-${report.allDates}-${initialFilter}`} report={report} initialFilter={initialFilter} isAdmin={user.role === "ADMIN"} />
   </>;
 }

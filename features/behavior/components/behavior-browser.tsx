@@ -30,6 +30,10 @@ export default function BehaviorBrowser({ data }: { data: Data }): React.ReactNo
   const classrooms = [...new Set(data.students.map((student) => student.classroom))].sort();
   const visible = data.students.filter((student) => (!classroom || student.classroom === classroom) && `${student.code} ${student.name}`.toLowerCase().includes(query.trim().toLowerCase()));
 
+  const previousDelta = data.history.find((entry) => entry.id === editingId)?.delta ?? 0;
+  const currentScore = data.selectedStudent?.score ?? 0;
+  const projectedScore = currentScore - previousDelta + Number(points) * (direction === "ADD" ? 1 : -1);
+
   function save(): void {
     if (!data.selectedStudent || pending) return;
 
@@ -100,7 +104,7 @@ export default function BehaviorBrowser({ data }: { data: Data }): React.ReactNo
           </>}
         </section></DialogContent></Dialog>
       </div>
-      <ConfirmDialog open={saveReview} title="ยืนยันบันทึกคะแนน" message={`${data.selectedStudent?.name ?? ""} · ${direction === "ADD" ? "เพิ่ม" : "หัก"} ${points} คะแนน · ${title}`} confirmLabel="ยืนยันบันทึก" pending={pending} onConfirm={save} onClose={() => setSaveReview(false)} />
+      <ConfirmDialog open={saveReview} title="ยืนยันบันทึกคะแนน" message={`${data.selectedStudent?.name ?? ""} · ${direction === "ADD" ? "เพิ่ม" : "หัก"} ${points} คะแนน · ${title} · คะแนนรวม ${currentScore} → ${projectedScore}`} confirmLabel="ยืนยันบันทึก" pending={pending} onConfirm={save} onClose={() => setSaveReview(false)} />
       <ConfirmDialog open={deleting !== null} title="ลบรายการคะแนนที่บันทึกผิด" message={deleting ? `ยืนยันลบ “${deleting.title}” (${deleting.delta > 0 ? "+" : ""}${deleting.delta} คะแนน) ของ ${data.selectedStudent?.name ?? "นักเรียน"} ใช่ไหม? คะแนนรวมจะคำนวณใหม่ และระบบจะบันทึกประวัติการลบ` : ""} confirmLabel="ลบรายการ" destructive pending={pending} onConfirm={confirmDelete} onClose={() => setDeleting(null)} />
     </>}
   </div>;

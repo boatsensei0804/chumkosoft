@@ -123,3 +123,16 @@ export async function upsertAttendance(
     ),
   );
 }
+
+export async function findNextTeachingSlot(termId: string, teacherId: string, day: DayOfWeek, time: string) {
+  return prisma.timetableSlot.findFirst({
+    where: {
+      termId, teacherId, dayOfWeek: day, isDeleted: false,
+      period: { isDeleted: false, isBreak: false, endTime: { gt: time } },
+      courseOffering: { isDeleted: false, teacherId, termId },
+      classroom: { isDeleted: false },
+    },
+    orderBy: [{ period: { startTime: "asc" } }, { id: "asc" }],
+    select: { courseOfferingId: true, period: { select: { startTime: true, endTime: true } } },
+  });
+}

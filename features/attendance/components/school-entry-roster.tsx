@@ -11,13 +11,19 @@ import { checkInAction, checkOutAction } from "@/features/attendance/school-entr
 import type { SchoolEntryRoster as Roster, SchoolEntryState, SchoolEntryStudent } from "@/features/attendance/types";
 
 const STATE_META: Record<SchoolEntryState, { label: string; className: string }> = {
-  ABSENT: { label: "ยังไม่มา", className: "bg-surface-sunken text-muted" },
+  ABSENT: { label: "ยังไม่พบรายการเข้า", className: "bg-surface-sunken text-muted" },
   IN: { label: "อยู่ในโรงเรียน", className: "bg-success-soft text-[oklch(0.42_0.1_152)]" },
   OUT: { label: "กลับแล้ว", className: "bg-brand-soft text-brand-ink" },
 };
 
+const METHOD_LABELS = { FACE: "สแกนใบหน้า", MANUAL: "เจ้าหน้าที่บันทึก", QR: "QR", CARD: "บัตร" } as const;
+
 export default function SchoolEntryRoster({ roster }: { roster: Roster }): React.ReactNode {
   const router = useRouter();
+  const [query, setQuery] = useState("");
+  const visible = roster.students.filter((student) =>
+    `${student.name} ${student.code} ${student.classroomCode}`.toLowerCase().includes(query.trim().toLowerCase()),
+  );
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startAction] = useTransition();
 
@@ -63,16 +69,21 @@ export default function SchoolEntryRoster({ roster }: { roster: Roster }): React
           มาแล้ว <span className="tabular">{counts.present}</span>
         </span>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-sunken px-2.5 py-1 font-semibold text-muted">
-          ยังไม่มา <span className="tabular">{counts.absent}</span>
+          ยังไม่พบรายการเข้า <span className="tabular">{counts.absent}</span>
         </span>
       </div>
 
+      <label className="flex flex-col gap-1 text-sm font-medium text-ink-strong">
+        ค้นหาผลเข้า–ออกโรงเรียน
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ชื่อ รหัสนักเรียน หรือห้อง" className="min-h-11 w-full rounded-xl border border-line bg-card px-3 sm:max-w-sm" />
+      </label>
       <div className="overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
         <ul className="flex flex-col">
-          {roster.students.map((s) => (
+          {visible.map((s) => (
             <EntryRow key={s.studentId} student={s} pending={pendingId === s.studentId} onCheckIn={() => run(s.studentId, checkInAction)} onCheckOut={() => run(s.studentId, checkOutAction)} />
           ))}
         </ul>
+        {!visible.length && <p className="p-4 text-sm text-muted">ไม่พบรายชื่อที่ตรงกับคำค้น</p>}
       </div>
     </div>
   );
@@ -113,6 +124,7 @@ function EntryRow({
           <span className="tabular text-[12.5px] text-muted">
             เข้า {student.checkInAt}
             {student.checkOutAt ? ` · ออก ${student.checkOutAt}` : ""}
+            {student.checkInMethod ? ` · ${METHOD_LABELS[student.checkInMethod]}` : ""}
           </span>
         )}
 

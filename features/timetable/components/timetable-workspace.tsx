@@ -19,6 +19,9 @@ type OverviewView = "all" | "classroom" | "teacher";
 interface TimetableWorkspaceProps {
   initialView?: MainView;
   canManage: boolean;
+  initialClassroomId?: string;
+  ownTeacherId?: string;
+  today: string;
   context: { termId: string; termName: string; classroomId: string; classroomCode: string } | null;
   terms: ContextOption[];
   classrooms: ContextOption[];
@@ -60,9 +63,10 @@ function MainTab({ active, onClick, icon: Icon, children }: { active: boolean; o
 
 function TimetableOverview(props: TimetableWorkspaceProps): React.ReactNode {
   const router = useRouter();
-  const [view, setView] = useState<OverviewView>("all");
-  const [classroomId, setClassroomId] = useState(props.context?.classroomId ?? props.overview.classrooms[0]?.id ?? "");
-  const [teacherId, setTeacherId] = useState(props.overview.teachers[0]?.id ?? "");
+  const ownTeacher = props.overview.teachers.find((teacher) => teacher.id === props.ownTeacherId);
+  const [view, setView] = useState<OverviewView>(props.initialClassroomId ? "classroom" : ownTeacher ? "teacher" : "all");
+  const [classroomId, setClassroomId] = useState(props.initialClassroomId ?? props.context?.classroomId ?? props.overview.classrooms[0]?.id ?? "");
+  const [teacherId, setTeacherId] = useState(ownTeacher?.id ?? props.overview.teachers[0]?.id ?? "");
   const activeTermId = props.context?.termId ?? "";
 
   const colorByOffering = useMemo(() => {
@@ -119,6 +123,7 @@ function TimetableOverview(props: TimetableWorkspaceProps): React.ReactNode {
           <ReadOnlyGrid
             days={props.days}
             periods={props.periods}
+            today={props.today}
             slots={props.overview.slots.filter((slot) => slot.classroomId === classroomId)}
             colorByOffering={colorByOffering}
             secondary="teacher"
@@ -135,6 +140,7 @@ function TimetableOverview(props: TimetableWorkspaceProps): React.ReactNode {
           <ReadOnlyGrid
             days={props.days}
             periods={props.periods}
+            today={props.today}
             slots={props.overview.slots.filter((slot) => slot.teacherId === teacherId)}
             colorByOffering={colorByOffering}
             secondary="classroom"
@@ -206,12 +212,14 @@ function ReadOnlyGrid({
   slots,
   colorByOffering,
   secondary,
+  today,
 }: {
   days: DayInfo[];
   periods: PeriodRow[];
   slots: ScheduleOverviewSlot[];
   colorByOffering: Map<string, keyof typeof subjectColors>;
   secondary: "teacher" | "classroom";
+  today: string;
 }): React.ReactNode {
   const [selected, setSelected] = useState<{ slot: ScheduleOverviewSlot; time: string; day: string } | null>(null);
   const selectSlot = (slot: ScheduleOverviewSlot, time: string, day: string) => setSelected({ slot, time, day });
@@ -223,7 +231,7 @@ function ReadOnlyGrid({
       {slots.length === 0 ? <EmptySchedule message="ยังไม่มีวิชาจัดลงในตารางของรายการนี้" /> : (
         <>
         <div className="space-y-2 p-3 md:hidden">
-          {days.map((day, index) => <details key={day.key} open={index === 0} className="rounded-xl border border-line bg-bg">
+          {days.map((day) => <details key={day.key} open={day.key === (days.find((item) => item.key === today)?.key ?? days[0]?.key)} className="rounded-xl border border-line bg-bg">
             <summary className="min-h-11 cursor-pointer px-3 py-2.5 text-sm font-bold text-brand-ink">{day.label}</summary>
             <div className="divide-y divide-line border-t border-line">{periods.map((period) => {
               if (period.kind === "break") return <p key={period.id} className="bg-surface-2 px-3 py-2 text-xs text-muted">{period.label} · {period.start}–{period.end}</p>;

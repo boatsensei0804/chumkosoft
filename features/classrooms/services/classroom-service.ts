@@ -75,7 +75,7 @@ export async function getClassroomDetail(id: string): Promise<ClassroomDetail | 
     id: classroom.id,
     code: classroom.code,
     gradeLevel: classroom.gradeLevel,
-    advisors: classroom.advisors.map((a) => ({ name: personName(a.staff) ?? "—", position: a.staff.position ?? null })),
+    advisors: classroom.advisors.map((a) => ({ id: a.staffId, name: personName(a.staff) ?? "—", position: a.staff.position ?? null })),
     termLabel,
     roster: roster.map((s) => ({
       id: s.id,

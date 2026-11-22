@@ -22,17 +22,23 @@ const STATUS_STYLE: Record<DailyRollCallStatusKey, { idle: string; active: strin
   PERSONAL_LEAVE: { idle: "text-muted hover:bg-surface-2", active: "bg-surface-2 text-ink-strong ring-1 ring-line-strong" },
 };
 
-export default function DailyRollCallRoster({ roster }: { roster: DailyClassRoster }): React.ReactNode {
+export default function DailyRollCallRoster({ roster, uncheckedOnly = false }: { roster: DailyClassRoster; uncheckedOnly?: boolean }): React.ReactNode {
   const rosterKey = `${roster.date}:${roster.classroomId}:${roster.students.map((student) => `${student.studentId}:${student.status ?? "unchecked"}`).join(",")}`;
-  return <DailyRollCallRosterEditor key={rosterKey} roster={roster} />;
+  return <DailyRollCallRosterEditor key={`${rosterKey}:${uncheckedOnly}`} roster={roster} uncheckedOnly={uncheckedOnly} />;
 }
 
-function DailyRollCallRosterEditor({ roster }: { roster: DailyClassRoster }): React.ReactNode {
+function DailyRollCallRosterEditor({ roster, uncheckedOnly }: { roster: DailyClassRoster; uncheckedOnly: boolean }): React.ReactNode {
   const router = useRouter();
   const [statuses, setStatuses] = useState<Record<string, DailyRollCallStatusKey | null>>(() =>
     Object.fromEntries(roster.students.map((student) => [student.studentId, student.status])),
   );
   const [isSaving, startSaving] = useTransition();
+  const [showUnchecked, setShowUnchecked] = useState(uncheckedOnly);
+  const visibleStudents = showUnchecked ? roster.students.filter((student) => student.status === null) : roster.students;
+  const changedEntries = roster.students.flatMap((student) => {
+    const status = statuses[student.studentId];
+    return status && status !== student.status ? [{ studentId: student.studentId, status }] : [];
+  });
 
   const counts = useMemo(() => {
     const result: Record<DailyRollCallStatusKey, number> = { PRESENT: 0, LATE: 0, ABSENT: 0, SICK_LEAVE: 0, PERSONAL_LEAVE: 0 };
@@ -41,20 +47,13 @@ function DailyRollCallRosterEditor({ roster }: { roster: DailyClassRoster }): Re
   }, [roster.students.length, statuses]);
 
   function markEveryonePresent(): void {
-    setStatuses(Object.fromEntries(roster.students.map((student) => [student.studentId, "PRESENT" as const])));
+    const present = Object.fromEntries(visibleStudents.map((student) => [student.studentId, "PRESENT" as const]));
+    setStatuses((previous) => ({ ...previous, ...present }));
   }
 
   function save(): void {
-    const entries = roster.students.flatMap((student) => {
-      const status = statuses[student.studentId];
-      return status ? [{ studentId: student.studentId, status }] : [];
-    });
-    if (entries.length === 0) {
-      toast.error("เลือกสถานะนักเรียนก่อนบันทึก");
-      return;
-    }
     startSaving(async () => {
-      const result = await saveDailyRollCallAction(roster.date, roster.classroomId, entries);
+      const result = await saveDailyRollCallAction(roster.date, roster.classroomId, changedEntries);
       if (result.ok) {
         toast.success(result.message ?? "บันทึกแล้ว");
         router.refresh();
@@ -71,7 +70,7 @@ function DailyRollCallRosterEditor({ roster }: { roster: DailyClassRoster }): Re
   }
 
   return (
-    <section className="overflow-hidden rounded-xl border border-line bg-bg">
+    <section id="daily-roster" className="scroll-mt-4 overflow-hidden rounded-xl border border-line bg-bg">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3.5 sm:px-5">
         <div>
           <p className="text-xs text-muted">{dateLabel}</p>
@@ -81,8 +80,8 @@ function DailyRollCallRosterEditor({ roster }: { roster: DailyClassRoster }): Re
           <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/attendance?mode=homeroom&date=${roster.date}`)}>
             <ArrowLeft className="size-4" /> ภาพรวมห้อง
           </Button>
-          <Button variant="ghost" size="sm" onClick={markEveryonePresent}>
-            <Check className="size-4" /> มาทั้งห้อง
+          <Button variant="ghost" size="sm" disabled={isSaving || visibleStudents.length === 0} onClick={markEveryonePresent}>
+            <Check className="size-4" /> {showUnchecked ? "เลือกว่ามาเฉพาะรายชื่อที่แสดง" : "มาทั้งห้อง"}
           </Button>
         </div>
       </header>
@@ -96,8 +95,13 @@ function DailyRollCallRosterEditor({ roster }: { roster: DailyClassRoster }): Re
         <Count label="ยังไม่เช็ค" count={counts.unchecked} color="text-muted" />
       </div>
 
+      <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3" aria-label="กรองรายชื่อนักเรียน">
+        <Button type="button" size="sm" variant={showUnchecked ? "outline" : "default"} aria-pressed={!showUnchecked} onClick={() => setShowUnchecked(false)}>ทุกคน</Button>
+        <Button type="button" size="sm" variant={showUnchecked ? "default" : "outline"} aria-pressed={showUnchecked} onClick={() => setShowUnchecked(true)}>ยังไม่เช็ก {counts.unchecked} คน</Button>
+      </div>
+      {visibleStudents.length === 0 && <p className="px-4 py-8 text-center text-sm text-muted">เช็กชื่อครบแล้ว</p>}
       <div className="grid gap-3 p-3 md:hidden">
-        {roster.students.map((student, index) => {
+        {visibleStudents.map((student, index) => {
           const selected = statuses[student.studentId];
           return <article key={student.studentId} className="rounded-xl border border-line bg-bg p-3">
             <div className="flex items-start justify-between gap-2"><div><p className="text-sm font-semibold text-ink-strong">{index + 1}. {student.name}</p><p className="text-xs text-muted">รหัส {student.code}</p></div><span className="text-xs font-semibold text-brand-ink">{selected ? DAILY_ROLL_CALL_LABELS[selected] : "ยังไม่เช็ค"}</span></div>
@@ -107,7 +111,7 @@ function DailyRollCallRosterEditor({ roster }: { roster: DailyClassRoster }): Re
           </article>;
         })}
       </div>
-      <div className="hidden overflow-x-auto md:block">
+      <div className={cn("overflow-x-auto", visibleStudents.length ? "hidden md:block" : "hidden")}>
         <table className="w-full min-w-[970px] border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-line bg-surface text-xs font-semibold text-muted">
@@ -118,7 +122,7 @@ function DailyRollCallRosterEditor({ roster }: { roster: DailyClassRoster }): Re
             </tr>
           </thead>
           <tbody>
-            {roster.students.map((student, index) => {
+            {visibleStudents.map((student, index) => {
               const selected = statuses[student.studentId];
               return (
                 <tr key={student.studentId} className="border-b border-line last:border-0 hover:bg-brand-softer">
@@ -165,7 +169,7 @@ function DailyRollCallRosterEditor({ roster }: { roster: DailyClassRoster }): Re
 
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-surface px-4 py-3 sm:px-5">
         <p className="text-xs text-muted">ยังไม่เช็ค {counts.unchecked} คน · รายชื่อที่ยังไม่เลือกสถานะจะไม่ถูกบันทึก</p>
-        <Button onClick={save} disabled={isSaving || counts.unchecked === roster.students.length}>
+        <Button onClick={save} disabled={isSaving || changedEntries.length === 0}>
           <Save className="size-4" /> {isSaving ? "กำลังบันทึก…" : "บันทึกการเช็คชื่อ"}
         </Button>
       </footer>

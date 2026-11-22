@@ -6,9 +6,9 @@ import { Clock, MapPin } from "lucide-react";
 import type { PortalOverview } from "@/features/portal/types";
 
 /** Read-only weekly class schedule (ตารางเรียน) for the portal viewer. */
-export default function WeeklySchedule({ overview }: { overview: PortalOverview }): React.ReactNode {
+export default function WeeklySchedule({ overview, initialDay }: { overview: PortalOverview; initialDay: string }): React.ReactNode {
   const { days, periods } = overview;
-  const [day, setDay] = useState(days[0]?.key ?? "MON");
+  const [day, setDay] = useState(days.find((item) => item.key === initialDay)?.key ?? days[0]?.key ?? "MON");
   const [selected, setSelected] = useState<{ subject: string; room: string; teacher: string; time: string; day: string } | null>(null);
   const gridCols = `92px repeat(${days.length}, minmax(120px, 1fr))`;
 

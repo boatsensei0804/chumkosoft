@@ -101,6 +101,19 @@ export async function listAttendanceOfferings(teacherStaffId?: string | null): P
   return offerings.map((o) => ({ id: o.id, label: `${o.classroom.code} · ${o.course.name}` }));
 }
 
+export async function getNextTeachingSlot(dateISO: string, teacherId: string, now = new Date()) {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(now);
+  const parsed = parseCalendarDate(dateISO);
+  if (!parsed || dateISO !== today) return null;
+  const term = await repo.getActiveTerm();
+  if (!term) return null;
+  const time = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).format(now);
+  const slot = await repo.findNextTeachingSlot(term.id, teacherId, parsed.day, time);
+  return slot ? { ...slot, inProgress: slot.period.startTime <= time } : null;
+}
+
 /**
  * Builds the roster (with any saved statuses) for one offering on one date.
  * When `teacherStaffId` is given, a non-owned offering returns null so a teacher

@@ -17,7 +17,7 @@ interface MascotBannerProps {
 
 export default function MascotBanner({ title, subtitle, category, pose, icon: Icon, illustration, scene, actions, compact = false }: MascotBannerProps): ReactNode {
   return <div className="mb-4">
-  <header className={`relative flex min-h-[132px] overflow-hidden rounded-[24px] border border-[#c9e4ff] bg-gradient-to-r from-[#f6fbff] via-[#e9f5ff] to-[#bdddff] shadow-[0_8px_24px_#225a9a12] ${compact ? "min-h-[116px]" : "sm:min-h-[158px]"}`}>
+  <header className={`relative flex min-h-[132px] overflow-hidden rounded-[24px] border border-[#cbdff2] bg-linear-to-r from-[#fbfdff] via-[#edf5fd] to-[#d9eafa] shadow-[0_5px_18px_#234f7a14] ${compact ? "min-h-[116px]" : "sm:min-h-[158px]"}`}>
     {scene ? <>
       <Image src={scene} alt="" fill priority sizes="(min-width: 1280px) 1200px, 100vw" className="pointer-events-none object-cover object-right opacity-20 blur-xl" />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#f6fbff] via-[#eaf6ff]/85 to-transparent" />
@@ -33,6 +33,6 @@ export default function MascotBanner({ title, subtitle, category, pose, icon: Ic
       {illustration ? <Image src={illustration} alt="" width={196} height={196} className="absolute -bottom-2 -right-4 h-[96px] w-[96px] object-contain sm:-bottom-7 sm:right-1 sm:h-[175px] sm:w-[175px] lg:right-4 lg:h-[205px] lg:w-[205px]" priority /> : <Mascot pose={pose} size={190} decorative className="absolute -bottom-2 -right-4 h-[96px] w-[96px] sm:-bottom-6 sm:right-2 sm:h-[190px] sm:w-[190px]" priority />}
     </div>}
   </header>
-  {actions && <div className="mt-2 flex flex-wrap items-center gap-2 rounded-[18px] border border-blue-100 bg-white px-3 py-2 shadow-[0_5px_16px_#225a9a0b]">{actions}</div>}
+  {actions && <div className="mt-2 flex flex-wrap items-center gap-2 rounded-[18px] border border-[#cbdff2] bg-[#fbfdff] px-3 py-2 shadow-[0_5px_18px_#234f7a14]">{actions}</div>}
   </div>;
 }

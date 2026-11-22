@@ -8,8 +8,9 @@ import { STAFF_ROLES } from "@/features/auth/roles";
 export const metadata: Metadata = { title: "สรุปการผูกบัญชี LINE · chumkosoft" };
 export const dynamic = "force-dynamic";
 export default async function LineLinkReportPage({ searchParams }: { searchParams: Promise<{ classroom?: string }> }): Promise<React.ReactNode> {
-  await requireRoles(STAFF_ROLES);
+  const user = await requireRoles(STAFF_ROLES);
+  const advisorScope = user.role === "ADMIN" ? undefined : user.staffId ?? "__no_staff__";
   const { classroom } = await searchParams;
-  const report = await getLineLinkReport(classroom ?? "all").catch(error => { if (error instanceof InvalidReportClassroom) notFound(); throw error; });
+  const report = await getLineLinkReport(classroom ?? "all", advisorScope).catch(error => { if (error instanceof InvalidReportClassroom) notFound(); throw error; });
   return <><PageHeader compact title="สรุปการผูกบัญชี LINE" subtitle="เปอร์เซ็นต์ภาพรวมและรายห้อง · รายชื่อ บัญชี และรหัสรอผูก · ส่งออก CSV / PDF" /><LineLinkReportView key={report.selectedId} report={report} /></>;
 }

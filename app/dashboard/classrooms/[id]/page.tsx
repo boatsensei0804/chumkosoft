@@ -75,6 +75,13 @@ export default async function ClassroomDetailPage({ params }: ClassroomDetailPag
         <Mascot pose="learning" size={72} decorative className="hidden xl:block" />
       </section>
 
+      <nav aria-label="งานของห้องเรียนนี้" className="flex flex-wrap gap-2">
+        {(user.role === "ADMIN" || detail.advisors.some((advisor) => advisor.id === user.staffId)) && (
+          <Link href={`/dashboard/attendance?mode=homeroom&classroom=${encodeURIComponent(id)}`} className="inline-flex min-h-11 items-center rounded-xl bg-brand px-4 text-sm font-semibold text-white">เช็กชื่อห้องนี้</Link>
+        )}
+        <Link href={`/dashboard/timetable?classroom=${encodeURIComponent(id)}`} className="inline-flex min-h-11 items-center rounded-xl border border-line bg-white px-4 text-sm font-semibold text-brand-ink">ดูตารางห้องนี้</Link>
+        {user.role === "ADMIN" && <Link href={`/dashboard/line/report?classroom=${encodeURIComponent(id)}`} className="inline-flex min-h-11 items-center rounded-xl border border-line bg-white px-4 text-sm font-semibold text-brand-ink">ดูการผูก LINE</Link>}
+      </nav>
       <WorkspacePanels sections={[{ title: "นักเรียนในห้อง", description: "รายชื่อและสถานะภาคเรียนปัจจุบัน", content: <>
         {/* Roster: students in this homeroom this term */}
         <SectionCard title="รายชื่อนักเรียนในห้อง" caption={`${detail.roster.length.toLocaleString("th-TH")} คน · ภาคเรียนปัจจุบัน`} bodyClassName="p-0">

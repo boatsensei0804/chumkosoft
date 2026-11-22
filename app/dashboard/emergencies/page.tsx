@@ -23,7 +23,7 @@ export default async function EmergencyIncidentsPage(): Promise<React.ReactNode>
   await requireRoles(["ADMIN", "TEACHER"]);
   const [incidents, lineDelivery, statusCounts] = await Promise.all([
     prisma.emergencyIncident.findMany({
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       take: 100,
       include: {
         acknowledgedBy: { select: { email: true } },
@@ -48,7 +48,7 @@ export default async function EmergencyIncidentsPage(): Promise<React.ReactNode>
       { label: "ดำเนินการแล้ว", value: countFor("RESOLVED"), icon: CheckCircle2, tone: "success" },
     ]} />
     <section aria-label="รายการแจ้งเหตุ" className="min-h-0 flex-1 overflow-y-auto rounded-[22px] border border-blue-100 bg-white p-3 shadow-[0_8px_24px_#225a9a0d] sm:p-4">
-      <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-base font-bold text-ink-strong">รายการแจ้งเหตุ</h2><p className="text-xs text-muted">ล่าสุด {incidents.length} รายการ</p></div>
+      <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-base font-bold text-ink-strong">รายการแจ้งเหตุ</h2><p className="text-xs text-muted">แสดง {incidents.length} รายการ · เหตุรอรับเรื่องอยู่ด้านบน</p></div>
       {incidents.length ? <div className="space-y-3">{incidents.map((incident) => <article key={incident.id} className="rounded-2xl border border-blue-100 bg-[#fbfdff] p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="font-bold text-ink-strong">{incident.category}</h3><SemanticStatusBadge tone={STATUS[incident.status].tone}>{STATUS[incident.status].label}</SemanticStatusBadge></div><p className="mt-1 text-sm text-muted">จุดแจ้งเหตุ: {incident.deviceNameSnapshot}</p><time className="mt-1 block text-xs text-muted" dateTime={incident.createdAt.toISOString()}>{new Intl.DateTimeFormat("th-TH", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Bangkok" }).format(incident.createdAt)} น.</time></div>
@@ -56,7 +56,7 @@ export default async function EmergencyIncidentsPage(): Promise<React.ReactNode>
         </div>
         {incident.detail && <p className="mt-3 whitespace-pre-wrap rounded-xl bg-blue-50/70 p-3 text-sm text-ink">{incident.detail}</p>}
         {incident.lineMessages.length > 0 && <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3"><p className="mb-2 text-sm font-semibold text-rose-800">LINE ส่งไม่สำเร็จ {incident.lineMessages.length} บัญชี · ส่งซ้ำรายบัญชีได้</p><div className="space-y-2">{incident.lineMessages.map((message) => <div key={message.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white p-2"><span className="text-sm text-ink">{message.recipientLabel ?? "บัญชี LINE"} · {message.errorCode ?? "ไม่ทราบสาเหตุ"} · ลองแล้ว {message.attempts} ครั้ง</span><RetryEmergencyMessageButton id={message.id} /></div>)}</div></div>}
-        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-blue-100 pt-3 text-xs text-muted"><span>LINE เป้าหมาย {incident.lineTargetCount} บัญชี</span><span className="text-emerald-700">LINE รับคำขอ {incident.lineAcceptedCount}</span>{incident.lineFailedCount > 0 && <span className="text-rose-700">ส่งไม่สำเร็จ {incident.lineFailedCount}</span>}{incident.lineTargetCount === 0 && <span className="text-rose-700">ยังไม่มีบัญชี LINE แอดมิน/ครูที่เชื่อมไว้</span>}{incident.status === "ACKNOWLEDGED" && incident.acknowledgedBy && <span>รับเรื่องโดย {incident.acknowledgedBy.email}</span>}{incident.status === "RESOLVED" && incident.resolvedBy && <span>ปิดเหตุโดย {incident.resolvedBy.email}</span>}</div>
+        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-blue-100 pt-3 text-xs text-muted"><span>LINE เป้าหมาย {incident.lineTargetCount} บัญชี</span><span className="text-emerald-700">LINE รับคำขอ {incident.lineAcceptedCount}</span>{incident.lineFailedCount > 0 && <span className="text-rose-700">ส่งไม่สำเร็จ {incident.lineFailedCount}</span>}{incident.lineTargetCount === 0 && <span className="text-rose-700">ยังไม่มีบัญชี LINE แอดมิน/ครูที่เชื่อมไว้</span>}{incident.acknowledgedBy && <span>รับเรื่องโดย {incident.acknowledgedBy.email}</span>}{incident.status === "RESOLVED" && incident.resolvedBy && <span>ปิดเหตุโดย {incident.resolvedBy.email}</span>}</div>
       </article>)}</div> : <MascotEmptyState compact pose="empty" title="ยังไม่มีรายการแจ้งเหตุ" description="เมื่อมีเหตุจากจุดสแกน รายการจริงจะปรากฏที่นี่" className="min-h-52" />}
     </section>
   </div>;

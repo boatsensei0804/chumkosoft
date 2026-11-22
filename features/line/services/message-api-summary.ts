@@ -1,24 +1,50 @@
 import "server-only";
 import prisma from "@/lib/prisma";
 
-export async function getLineApiSummary() {
+async function getLineQuota(): Promise<{ quota: number | null; used: number | null; error: string | null }> {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-  if (!token) return { configured: false, quota: null, used: null, error: "ยังไม่ได้ตั้งค่า LINE" };
+  if (!token) return { quota: null, used: null, error: "ยังไม่ได้ตั้งค่า LINE" };
   const headers = { Authorization: `Bearer ${token}` };
-  const [quotaRes, usageRes] = await Promise.all([
-    fetch("https://api.line.me/v2/bot/message/quota", { headers, cache: "no-store", signal: AbortSignal.timeout(8000) }),
-    fetch("https://api.line.me/v2/bot/message/quota/consumption", { headers, cache: "no-store", signal: AbortSignal.timeout(8000) }),
-  ]);
-  if (!quotaRes.ok || !usageRes.ok) return { configured: true, quota: null, used: null, error: `LINE API ตอบกลับ ${!quotaRes.ok ? quotaRes.status : usageRes.status}` };
-  const [quota, usage] = await Promise.all([quotaRes.json(), usageRes.json()]);
-  const [accepted, failed, failedRecent, announcements] = await Promise.all([
-    prisma.lineOutboundMessage.count({ where: { status: "ACCEPTED", createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } } }),
+  try {
+    const [quotaRes, usageRes] = await Promise.all([
+      fetch("https://api.line.me/v2/bot/message/quota", { headers, cache: "no-store", signal: AbortSignal.timeout(8000) }),
+      fetch("https://api.line.me/v2/bot/message/quota/consumption", { headers, cache: "no-store", signal: AbortSignal.timeout(8000) }),
+    ]);
+    if (!quotaRes.ok || !usageRes.ok) return { quota: null, used: null, error: `LINE API ตอบกลับ ${!quotaRes.ok ? quotaRes.status : usageRes.status}` };
+    const [quota, usage] = await Promise.all([quotaRes.json(), usageRes.json()]);
+    return { quota: quota.value ?? null, used: usage.totalUsage ?? null, error: null };
+  } catch {
+    return { quota: null, used: null, error: "อ่านโควตาจาก LINE ไม่สำเร็จ กรุณาลองใหม่" };
+  }
+}
+
+export async function getLineApiSummary(filters: { kind?: string; status?: string; date?: string }) {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
+  const monthStart = new Date(`${today.slice(0, 7)}-01T00:00:00+07:00`);
+  const rangeStart = new Date(`${today}T00:00:00+07:00`);
+  rangeStart.setUTCDate(rangeStart.getUTCDate() - 29);
+  const dayStart = filters.date && /^\d{4}-\d{2}-\d{2}$/.test(filters.date)
+    ? new Date(`${filters.date}T00:00:00+07:00`)
+    : null;
+  const validDay = dayStart && Number.isFinite(dayStart.getTime());
+  const [quota, accepted, failed, recent, announcements, byDay] = await Promise.all([
+    getLineQuota(),
+    prisma.lineOutboundMessage.count({ where: { status: "ACCEPTED", createdAt: { gte: monthStart } } }),
     prisma.lineOutboundMessage.count({ where: { status: "FAILED" } }),
-    prisma.lineOutboundMessage.findMany({ where: { status: "FAILED" }, orderBy: { createdAt: "desc" }, take: 100 }),
+    prisma.lineOutboundMessage.findMany({
+      where: {
+        ...(filters.kind === "ATTENDANCE" || filters.kind === "TEACHER_DIGEST" ? { kind: filters.kind } : {}),
+        ...(filters.status === "ACCEPTED" || filters.status === "FAILED" ? { status: filters.status } : {}),
+        ...(validDay ? { createdAt: { gte: dayStart, lt: new Date(dayStart.getTime() + 86400000) } } : {}),
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: 100,
+      select: { id: true, title: true, kind: true, status: true, recipientLabel: true, createdAt: true, updatedAt: true, errorCode: true, attempts: true, requestId: true, acceptedRequestId: true },
+    }),
     prisma.lineAnnouncement.findMany({ where: { isDeleted: false }, orderBy: { createdAt: "desc" }, take: 100, include: { batches: { select: { status: true, recipientCount: true, errorCode: true } } } }),
+    prisma.lineOutboundMessage.findMany({ where: { createdAt: { gte: rangeStart } }, select: { createdAt: true, kind: true, status: true }, orderBy: { createdAt: "desc" } }),
   ]);
-  const byDay = await prisma.lineOutboundMessage.findMany({ where: { createdAt: { gte: new Date(Date.now() - 30 * 86400000) } }, select: { createdAt: true, kind: true, status: true }, orderBy: { createdAt: "desc" }, take: 2000 });
-  return { configured: true, quota: quota.value as number, used: usage.totalUsage as number, accepted, failed, failedRecent, announcements, byDay, error: null };
+  return { ...quota, accepted, failed, recent, announcements, byDay };
 }
 
 export async function retryFailedLineDelivery(id: string) {

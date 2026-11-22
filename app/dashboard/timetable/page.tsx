@@ -18,6 +18,7 @@ interface TimetablePageProps {
 export default async function TimetablePage({ searchParams }: TimetablePageProps): Promise<React.ReactNode> {
   const user = await requireRoles(["ADMIN", "TEACHER"]);
   const { term, classroom, view } = await searchParams;
+  const today = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Bangkok", weekday: "short" }).format(new Date()).toUpperCase();
   const [board, offeringOptions] = await Promise.all([
     getTimetableBoard({ termId: term, classroomId: classroom }),
     listOfferingOptions(),
@@ -34,6 +35,9 @@ export default async function TimetablePage({ searchParams }: TimetablePageProps
       <TimetableWorkspace
         initialView={user.role === "ADMIN" && view === "edit" ? "edit" : "overview"}
         canManage={user.role === "ADMIN"}
+        initialClassroomId={classroom && overview.classrooms.some((room) => room.id === classroom) ? classroom : undefined}
+        today={today}
+        ownTeacherId={user.role === "TEACHER" ? user.staffId ?? undefined : undefined}
         key={`${board.context?.termId ?? "none"}:${board.context?.classroomId ?? "none"}`}
         context={board.context}
         terms={board.terms}

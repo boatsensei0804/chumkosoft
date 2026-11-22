@@ -5,7 +5,7 @@ import RecordActions from "@/features/dashboard/components/record-actions";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Search, Plus, Eye, Pencil, Trash2, MapPin } from "lucide-react";
+import { Search, Plus, Eye, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -143,7 +143,7 @@ export default function RoomsBrowser({ rooms, canManage }: { rooms: RoomRow[]; c
         <ConfirmDialog
           open={deleting !== null}
           title="ลบห้อง"
-          message={deleting ? `ต้องการลบห้อง “${deleting.code}” ใช่หรือไม่? ข้อมูลจะถูกซ่อนแต่ยังเก็บประวัติไว้` : ""}
+          message={deleting ? `ต้องการลบห้อง “${deleting.code}” ใช่หรือไม่? ข้อมูลจะถูกซ่อนแต่ยังเก็บประวัติไว้${deleting.offeringCount ? ` · ห้องนี้มีรายวิชาที่ใช้งานอยู่ ${deleting.offeringCount} วิชา` : ""}` : ""}
           confirmLabel="ลบห้อง"
           destructive
           pending={isDeletePending}

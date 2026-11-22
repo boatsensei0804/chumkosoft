@@ -51,12 +51,13 @@ export default async function ScannerDevicesPage() {
                   </span>
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-5">
-                  <p className="rounded-xl bg-sky-50 p-3"><span className="block text-slate-500">กล้อง</span><strong>{device.cameraActive ? "ทำงาน" : "หยุด"}</strong></p>
+                  <p className="rounded-xl bg-sky-50 p-3"><span className="block text-slate-500">กล้อง</span><strong>{online ? (device.cameraActive ? "ทำงาน" : "หยุด") : "ไม่มีสถานะล่าสุด"}</strong></p>
                   <p className="rounded-xl bg-sky-50 p-3"><span className="block text-slate-500">หน้าจอ</span><strong>{online ? (device.screenActive === null ? "ยังไม่รายงาน" : device.screenActive ? "เปิดอยู่" : "พักจอ") : "ไม่ทราบ · เครื่องออฟไลน์"}</strong></p>
-                  <p className="rounded-xl bg-sky-50 p-3"><span className="block text-slate-500">รอส่ง</span><strong>{device.pendingCount} รายการ</strong></p>
+                  <p className="rounded-xl bg-sky-50 p-3"><span className="block text-slate-500">{online ? "รอส่ง" : "รอส่งตามรายงานล่าสุด"}</span><strong>{device.pendingCount} รายการ</strong></p>
                   <p className="rounded-xl bg-sky-50 p-3"><span className="block text-slate-500">โมเดล</span><strong>{device.modelVersion ?? "—"}</strong></p>
                   <p className="rounded-xl bg-sky-50 p-3"><span className="block text-slate-500">พบล่าสุด</span><strong>{device.lastSeenAt ? device.lastSeenAt.toLocaleString("th-TH", { timeZone: "Asia/Bangkok" }) : "ยังไม่พบ"}</strong></p>
                 </div>
+                <p className="mt-3 text-sm text-slate-600">ซิงก์ล่าสุด {device.lastSyncAt ? device.lastSyncAt.toLocaleString("th-TH", { timeZone: "Asia/Bangkok" }) : "ยังไม่เคยซิงก์"}</p>
                 <DeviceSettingsDialog title={device.name} action={saveScannerDevice}>
                   <input type="hidden" name="id" value={device.id} />
                   <label className="text-sm font-semibold">ชื่อเครื่อง<input name="name" defaultValue={device.name} required maxLength={80} className={field} /></label>

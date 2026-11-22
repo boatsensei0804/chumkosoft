@@ -1,4 +1,5 @@
 import { requireRoles } from "@/lib/dal";
+import { advisoryClassroomIds } from "@/lib/teacher-data-access";
 import { STAFF_ROLES } from "@/features/auth/roles";
 import { getClassroomGuardianPrintData, listGuardianClassrooms } from "@/features/guardians/services/guardian-service";
 import { createLinePrintPdf } from "@/features/line/services/line-print-pdf";
@@ -17,11 +18,16 @@ function safeLineOaUrl(value: string | null): URL | null {
 }
 
 export async function GET(request: Request): Promise<Response> {
-  await requireRoles(STAFF_ROLES);
-  const oaUrl = safeLineOaUrl(new URL(request.url).searchParams.get("oa"));
+  const user = await requireRoles(STAFF_ROLES);
+  const params = new URL(request.url).searchParams;
+  const oaUrl = safeLineOaUrl(params.get("oa"));
+  const selectedId = params.get("classroom");
   if (!oaUrl) return new Response("Invalid LINE OA URL", { status: 400 });
 
-  const classrooms = await listGuardianClassrooms();
+  const teacherRooms = user.role === "ADMIN" ? null : new Set(await advisoryClassroomIds(user));
+  const classrooms = (await listGuardianClassrooms()).filter((room) =>
+    (!teacherRooms || teacherRooms.has(room.id)) && (!selectedId || selectedId === room.id),
+  );
   if (classrooms.length === 0) return new Response("No classrooms", { status: 404 });
   const rooms = [];
   for (const classroom of classrooms) {
@@ -31,7 +37,7 @@ export async function GET(request: Request): Promise<Response> {
   return new Response(Buffer.from(pdf), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": 'attachment; filename="chumkosoft-line-codes-all-classrooms.pdf"',
+      "Content-Disposition": 'attachment; filename="chumkosoft-line-codes.pdf"',
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
     },

@@ -38,6 +38,7 @@ export default function NotFound(): React.ReactNode {
               <LayoutDashboard className="size-[18px]" />
               กลับสู่หน้าหลัก
             </Link>
+            <Link href="/guide" className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-brand-ink hover:underline">เปิดคู่มือใช้งาน</Link>
           </div>
         </section>
       </div>

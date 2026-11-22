@@ -11,11 +11,13 @@ export default function QrLogin({ t }: { t: Dictionary["login"] }): React.ReactN
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [approved, setApproved] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
 
   async function createChallenge(): Promise<void> {
     if (busy) return;
     setBusy(true);
+    setApproved(false);
     setError("");
     setChallenge(null);
     try {
@@ -53,6 +55,7 @@ export default function QrLogin({ t }: { t: Dictionary["login"] }): React.ReactN
         if (stopped) return;
         if (response.ok && data.state === "approved" && data.redirectTo) {
           stopped = true;
+          setApproved(true);
           window.location.assign(data.redirectTo);
         } else if (response.ok && data.state === "pending") {
           setError("");
@@ -84,7 +87,10 @@ export default function QrLogin({ t }: { t: Dictionary["login"] }): React.ReactN
         <p className="mt-2 break-all font-mono text-base font-bold tracking-wide text-ink-strong">LOGIN {challenge.code}</p>
         <p className="mt-1 text-xs text-muted">{t.qrCode}</p>
       </div>
-      <p role="status" className="text-center text-sm font-semibold text-brand-ink">{t.qrWaiting} · {t.qrExpires} {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, "0")}</p>
+      <div className="flex flex-wrap justify-center gap-x-2 text-center text-sm font-semibold text-brand-ink">
+        <p role="status">{approved ? t.submitting : t.qrWaiting}</p>
+        {!approved && <p role="timer">{t.qrExpires} {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, "0")}</p>}
+      </div>
       <div className="flex flex-wrap justify-center gap-2">
         <Button asChild variant="outline"><a href={challenge.lineUrl} target="_blank" rel="noreferrer">{t.qrOpenLine}</a></Button>
         <Button type="button" variant="outline" onClick={() => void createChallenge()} disabled={busy}>{t.qrRefresh}</Button>

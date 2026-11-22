@@ -5,11 +5,11 @@ import { reportStudent, summarizeLinks, type LineLinkReport, type RawLinkStudent
 
 export class InvalidReportClassroom extends Error {}
 
-export async function getLineLinkReport(classroomId = "all"): Promise<LineLinkReport> {
+export async function getLineLinkReport(classroomId = "all", advisorStaffId?: string): Promise<LineLinkReport> {
   const generatedAt = new Date().toISOString();
   const term = await prisma.term.findFirst({ where: { isActive: true, isDeleted: false, academicYear: { isActive: true, isDeleted: false } }, select: { id: true, name: true, academicYearId: true } });
   if (!term) return { term: "ยังไม่มีภาคเรียนปัจจุบัน", hasActiveTerm: false, generatedAt, rooms: [], overall: summarizeLinks([]), selectedId: "all", students: [] };
-  const rooms = await prisma.classroom.findMany({ where: { academicYearId: term.academicYearId, isDeleted: false }, orderBy: { code: "asc" }, select: { id: true, code: true } });
+  const rooms = await prisma.classroom.findMany({ where: { academicYearId: term.academicYearId, isDeleted: false, ...(advisorStaffId ? { advisors: { some: { staffId: advisorStaffId } } } : {}) }, orderBy: { code: "asc" }, select: { id: true, code: true } });
   if (classroomId !== "all" && !rooms.some(room => room.id === classroomId)) throw new InvalidReportClassroom("ไม่พบห้องในภาคเรียนปัจจุบัน");
   const enrollments = await prisma.enrollment.findMany({
     where: { termId: term.id, isDeleted: false, classroomId: { in: rooms.map(room => room.id) }, student: { isDeleted: false } },

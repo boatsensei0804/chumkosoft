@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { Users, GraduationCap, Briefcase } from "lucide-react";
 import PageHeader from "@/features/dashboard/components/page-header";
@@ -46,6 +47,7 @@ export default async function TeachersPage({ searchParams }: TeachersPageProps):
     <div className="xl:flex xl:h-full xl:min-h-0 xl:flex-col">
       <PageHeader
         title="ครูและบุคลากร"
+        actions={currentUser.role === "ADMIN" && <Link href="/dashboard/line/teachers" className="inline-flex min-h-10 items-center rounded-xl border border-line bg-white px-3 text-sm font-semibold text-brand-ink">ดูสถานะบัญชีเว็บและ LINE</Link>}
         subtitle={`บุคลากรทางการศึกษาทั้งหมด ${stats.total.toLocaleString("th-TH")} คน · ${termLabel}`}
       />
       {stats.total > 0 && <StatStrip
