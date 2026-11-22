@@ -18,7 +18,7 @@ const sections: { match: string[]; pose: MascotPose; category: string; icon: Luc
   { match: ["ครู", "บุคลากร"], pose: "staff", category: "บุคลากรของโรงเรียน", icon: Users, scene: "/mascot/teachers-scene.webp" },
   { match: ["LINE", "ประกาศ"], pose: "notify", category: "ศูนย์การสื่อสาร", icon: Megaphone, scene: "/mascot/communication-scene.webp" },
   { match: ["เช็คชื่อ", "ตาราง", "ลา"], pose: "schedule", category: "การเรียนและงานประจำวัน", icon: CalendarCheck2, scene: "/mascot/schedule-scene.webp" },
-  { match: ["ใบหน้า", "สแกน"], pose: "scan", category: "ระบบสแกนใบหน้า", icon: ScanFace, scene: "/mascot/communication-scene.webp" },
+  { match: ["ใบหน้า", "สแกน"], pose: "scan", category: "ระบบสแกนใบหน้า", icon: ScanFace, scene: "/mascot/scanner-scene.webp" },
   { match: ["ตั้งค่า"], pose: "settings", category: "ตั้งค่าการทำงาน", icon: Settings, scene: "/mascot/settings-scene.webp" },
 ];
 
