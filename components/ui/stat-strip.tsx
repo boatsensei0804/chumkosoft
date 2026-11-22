@@ -49,17 +49,17 @@ export default function StatStrip({ items, className }: { items: StatItem[]; cla
         const tone = item.tone ?? "default";
         const Icon = item.icon;
         return (
-          <div key={item.label} className="relative flex min-w-0 flex-col gap-2 overflow-hidden rounded-[22px] border border-[#d1e7fb] bg-gradient-to-br from-white via-white to-[#edf7ff] p-4 shadow-[0_7px_18px_#225a9a10] sm:p-5">
+          <div key={item.label} className="relative flex min-w-0 flex-col gap-2 overflow-hidden rounded-2xl school-card bg-linear-to-br from-school-panel to-school-panel-tint p-3 sm:p-4">
             <div className="flex items-center gap-2">
               {Icon && (
-                <span className={cn("grid size-10 shrink-0 place-items-center rounded-2xl", toneChip[tone])} aria-hidden="true">
+                <span className={cn("grid size-8 shrink-0 place-items-center rounded-xl", toneChip[tone])} aria-hidden="true">
                   <Icon className="size-5" />
                 </span>
               )}
               <p className="text-[12px] font-medium leading-snug text-muted">{item.label}</p>
             </div>
             <div className="flex flex-wrap items-baseline gap-1.5">
-              <span className={cn("tabular text-[30px] font-bold leading-none tracking-tight", toneValue[tone])}>{formatValue(item.value)}</span>
+              <span className={cn("tabular max-w-full break-words text-[25px] font-bold sm:text-[28px] leading-none tracking-tight", toneValue[tone])}>{formatValue(item.value)}</span>
               {item.hint && <span className="text-[11.5px] font-medium text-faint">{item.hint}</span>}
             </div>
           </div>

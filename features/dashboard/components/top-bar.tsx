@@ -27,7 +27,7 @@ export default function TopBar({ user, onOpenNav, today, onOpenPalette }: TopBar
   const pathname = usePathname();
   const current = navGroups.flatMap((group) => group.items).filter((item) => pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`))).sort((a, b) => b.href.length - a.href.length)[0];
   return (
-    <header className="sticky top-0 z-[var(--z-sticky)] flex h-16 items-center gap-3 border-b border-blue-100/70 bg-white/90 px-4 backdrop-blur-xl xl:px-7">
+    <header className="sticky top-0 z-[var(--z-sticky)] flex h-16 items-center gap-3 border-b border-school-panel-border bg-school-panel/95 px-4 backdrop-blur-xl xl:px-7">
       <Button variant="ghost" size="icon" onClick={onOpenNav} aria-label="เปิดเมนู" className="xl:hidden">
         <Menu className="size-5" />
       </Button>
@@ -40,10 +40,10 @@ export default function TopBar({ user, onOpenNav, today, onOpenPalette }: TopBar
         onClick={onOpenPalette}
         aria-label="ค้นหาและไปยังหน้า (⌘K)"
         aria-keyshortcuts="Meta+K Control+K"
-        className="flex w-full max-w-sm items-center gap-2.5 rounded-full border border-blue-100 bg-blue-50/60 px-3 py-2 text-left transition-colors hover:border-line-strong"
+        className="flex min-w-0 w-full max-w-sm items-center gap-2.5 rounded-full border border-blue-100 bg-blue-50/60 px-3 py-2 text-left transition-colors hover:border-line-strong"
       >
         <Search className="size-[19px] text-faint" />
-        <span className="flex-1 text-[14px] text-faint">ค้นหาเมนู ไปยังหน้า…</span>
+        <span className="min-w-0 flex-1 truncate text-[14px] text-faint">ค้นหาเมนู ไปยังหน้า…</span>
         <kbd className="hidden shrink-0 rounded-md border border-line bg-bg px-1.5 py-0.5 text-[11px] font-medium text-muted sm:block">⌘K</kbd>
       </button>
 

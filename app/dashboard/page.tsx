@@ -56,7 +56,7 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
   const greeting = user.firstName ? `${thaiGreeting(now)} คุณ${user.firstName}` : thaiGreeting(now);
   return (
     <>
-      <div className="flex flex-col gap-3 [--overview-border:#cbdff2] [--overview-card:#fbfdff] [--overview-shadow:0_5px_18px_#234f7a14] [--overview-tint:#edf5fd]">
+      <div className="flex flex-col gap-3">
         <WelcomeBand
           greeting={greeting}
           subtitle="จัดการงานโรงเรียนในที่เดียว ดูการเช็คชื่อ ทะเบียนนักเรียน และการสื่อสารกับผู้ปกครองได้ทันที"
@@ -64,14 +64,14 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
           date={formatThaiWeekdayLong(now)}
         />
         {pendingLeave > 0 && (
-          <Link href="/dashboard/leave-requests?view=all&status=pending#leave-list" className="flex min-h-11 items-center gap-3 rounded-2xl border border-[var(--overview-border)] bg-[var(--overview-card)] px-4 py-2.5 text-sm font-semibold text-brand-ink hover:bg-[var(--overview-tint)]">
+          <Link href="/dashboard/leave-requests?view=all&status=pending#leave-list" className="flex min-h-11 items-center gap-3 rounded-2xl border border-school-panel-border bg-school-panel px-4 py-2.5 text-sm font-semibold text-brand-ink hover:bg-school-panel-tint">
             <CalendarX2 className="size-5 shrink-0" aria-hidden="true" />
             <span className="flex-1">คำขอลา / ขอมาสายรอพิจารณา {pendingLeave.toLocaleString("th-TH")} รายการ</span>
             <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
           </Link>
         )}
         <DailySchoolOverview rooms={rooms ?? []} date={date} scoped={user.role !== "ADMIN"} />
-        <details className="group rounded-[20px] border border-[var(--overview-border)] bg-[var(--overview-card)] px-4 py-3 shadow-[var(--overview-shadow)]">
+        <details className="group rounded-[20px] border border-school-panel-border bg-school-panel px-4 py-3 shadow-school-panel">
           <summary className="cursor-pointer font-semibold text-brand-ink">ข้อมูลเพิ่มเติม: ทะเบียน ตารางเรียน และประกาศ</summary>
           <div className="mt-4"><h2 className="mb-3 text-lg font-bold text-ink-strong">ข้อมูลทะเบียนของโรงเรียน</h2><SummaryFigures figures={figures} /></div>
 

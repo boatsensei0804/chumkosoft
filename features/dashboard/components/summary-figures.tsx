@@ -42,7 +42,7 @@ export default function SummaryFigures({ figures }: SummaryFiguresProps): React.
         return (
           <div
             key={figure.key}
-            className="flex min-w-0 items-start gap-3 rounded-[18px] border border-[var(--overview-border)] bg-[var(--overview-tint)] p-4 shadow-sm sm:p-5"
+            className="flex min-w-0 items-start gap-3 rounded-[18px] border border-school-panel-border bg-school-panel-tint p-4 shadow-sm sm:p-5"
           >
             <span
               className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg"

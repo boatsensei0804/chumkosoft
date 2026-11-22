@@ -47,7 +47,7 @@ export default async function EmergencyIncidentsPage(): Promise<React.ReactNode>
       { label: "รับเรื่องแล้ว", value: countFor("ACKNOWLEDGED"), icon: Clock3, tone: "warning" },
       { label: "ดำเนินการแล้ว", value: countFor("RESOLVED"), icon: CheckCircle2, tone: "success" },
     ]} />
-    <section aria-label="รายการแจ้งเหตุ" className="min-h-0 flex-1 overflow-y-auto rounded-[22px] border border-blue-100 bg-white p-3 shadow-[0_8px_24px_#225a9a0d] sm:p-4">
+    <section aria-label="รายการแจ้งเหตุ" className="min-h-0 flex-1 overflow-y-auto rounded-[22px] school-card p-3 sm:p-4">
       <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-base font-bold text-ink-strong">รายการแจ้งเหตุ</h2><p className="text-xs text-muted">แสดง {incidents.length} รายการ · เหตุรอรับเรื่องอยู่ด้านบน</p></div>
       {incidents.length ? <div className="space-y-3">{incidents.map((incident) => <article key={incident.id} className="rounded-2xl border border-blue-100 bg-[#fbfdff] p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">

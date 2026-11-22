@@ -98,6 +98,10 @@
   --surface: #f4f8fd;
   --surface-2: #eaf5ff;
   --surface-sunken: oklch(0.946 0.008 255);
+  --school-panel: #fbfdff;
+  --school-panel-border: #cbdff2;
+  --school-panel-tint: #edf5fd;
+  --school-panel-wash: #d9eafa;
 
   /* Ink — cool near-black; strong contrast for hours of reading */
   --ink: #172033;
@@ -164,8 +168,21 @@
   --shadow-lg: 0 12px 32px oklch(0.3 0.02 255 / 0.12);
 }
 
+@layer components {
+  .school-card {
+    border: 1px solid var(--school-panel-border);
+    background-color: var(--school-panel);
+    box-shadow: 0 5px 18px #234f7a14;
+  }
+}
+
 @theme inline {
   --color-bg: var(--bg);
+  --color-school-panel: var(--school-panel);
+  --color-school-panel-border: var(--school-panel-border);
+  --color-school-panel-tint: var(--school-panel-tint);
+  --color-school-panel-wash: var(--school-panel-wash);
+  --shadow-school-panel: 0 5px 18px #234f7a14;
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-surface-sunken: var(--surface-sunken);

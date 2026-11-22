@@ -107,7 +107,7 @@ export default async function StudentDetailPage({ params }: StudentDetailPagePro
       </Link>
 
       {/* Header */}
-      <section className="flex flex-col gap-4 rounded-[24px] border border-blue-100 bg-gradient-to-r from-white to-[#eaf5ff] p-5 shadow-[0_8px_24px_#225a9a0d] sm:flex-row sm:items-center sm:justify-between">
+      <section className="flex flex-col gap-4 rounded-[24px] school-card bg-linear-to-r from-school-panel to-school-panel-tint p-4 sm:p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3.5">
           <span className="grid size-14 place-items-center rounded-full text-[20px] font-semibold" style={{ backgroundColor: "var(--brand-soft)", color: "var(--brand-ink)" }} aria-hidden="true">
             {s.firstName.charAt(0)}

@@ -138,7 +138,7 @@ export default function StudentsBrowser({ page, query, filter, classrooms, class
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm" id="student-roster">
+      <div className="flex flex-col overflow-hidden rounded-2xl school-card" id="student-roster">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-4"><div><h2 className="font-bold text-ink-strong">รายชื่อนักเรียน</h2><p className="mt-1 text-xs text-muted">พบ {page.total.toLocaleString("th-TH")} คนตามเงื่อนไข · {isAdmin ? "ดูข้อมูล แก้ไข หรือจัดห้องได้จากรายการ" : "แก้ไขได้เฉพาะนักเรียนในห้องที่คุณเป็นครูที่ปรึกษา"}</p></div>{(query || filter !== "all" || classroom || gender !== "all" || grade) && <Button variant="outline" size="sm" onClick={() => navigate({ q: "", filter: "all", classroom: "", gender: "all", grade: "", page: 1 })}>ล้างตัวกรองทั้งหมด</Button>}</div>
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div role="tablist" aria-label="กรองตามสถานะ" className="flex flex-wrap items-center gap-1">

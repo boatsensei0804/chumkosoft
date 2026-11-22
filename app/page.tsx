@@ -31,7 +31,7 @@ export default function Home(): React.ReactNode {
   return (
     <div className="min-h-dvh bg-white text-ink">
       <a href="#main-content" className="sr-only z-50 rounded-lg bg-white p-3 focus:not-sr-only focus:fixed focus:left-4 focus:top-4">ข้ามไปเนื้อหาหลัก</a>
-      <header className="border-b border-blue-100 bg-white">
+      <header className="border-b border-school-panel-border bg-school-panel">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-8">
           <Link href="/" aria-label="Chumkosoft หน้าแรก" className="flex items-center gap-2.5">
             <span className="grid size-10 place-items-center rounded-2xl bg-brand text-white"><GraduationCap className="size-6" aria-hidden="true" /></span>
@@ -45,7 +45,7 @@ export default function Home(): React.ReactNode {
         </div>
       </header>
       <main id="main-content">
-        <section aria-labelledby="home-title" className="relative overflow-hidden bg-[#f0f7ff]">
+        <section aria-labelledby="home-title" className="relative overflow-hidden bg-school-panel-tint">
           <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-5 pb-12 pt-12 sm:px-8 sm:py-16 lg:grid-cols-[1.1fr_1fr] lg:gap-12 lg:py-20">
             <div>
               <p className="mb-5 flex items-center gap-2 text-xs font-semibold tracking-wide text-brand-ink"><span className="size-2 rounded-full bg-sky-500" /> CHUMKOSOFT SCHOOL WORKSPACE</p>
@@ -74,7 +74,7 @@ export default function Home(): React.ReactNode {
         <HomeGuide />
         <section id="features" aria-labelledby="features-title" className="mx-auto max-w-6xl scroll-mt-6 px-5 py-14 sm:px-8 sm:py-20">
           <div className="mb-8 max-w-2xl"><p className="text-xs font-semibold text-brand">เข้าใจโรงเรียน เข้าใจครอบครัว</p><h2 id="features-title" className="mt-2 text-2xl font-bold leading-relaxed text-ink-strong sm:text-3xl">เรื่องสำคัญของนักเรียน<br className="sm:hidden" /> อยู่ในที่เดียว</h2><p className="mt-3 text-sm leading-7 text-muted">ลดขั้นตอนที่กระจัดกระจาย ให้ครูมีเวลาดูแล และผู้ปกครองติดตามได้สะดวก</p></div>
-          <div className="grid gap-5 md:grid-cols-3">{features.map(({ icon: Icon, title, description, tags }, i) => <article key={title} className="rounded-2xl border border-blue-100 bg-white p-6"><div className="mb-5 flex items-center justify-between"><span className="grid size-11 place-items-center rounded-xl bg-blue-50 text-brand"><Icon className="size-6" aria-hidden="true" /></span><span aria-hidden="true" className="text-xs font-semibold text-blue-300">0{i + 1}</span></div><h3 className="text-lg font-bold text-ink-strong">{title}</h3><p className="mt-3 text-sm leading-7 text-muted">{description}</p><p className="mt-5 border-t border-blue-100 pt-4 text-xs leading-6 text-brand-ink">{tags}</p></article>)}</div>
+          <div className="grid gap-5 md:grid-cols-3">{features.map(({ icon: Icon, title, description, tags }, i) => <article key={title} className="rounded-2xl school-card p-5 sm:p-6"><div className="mb-5 flex items-center justify-between"><span className="grid size-11 place-items-center rounded-xl bg-blue-50 text-brand"><Icon className="size-6" aria-hidden="true" /></span><span aria-hidden="true" className="text-xs font-semibold text-blue-300">0{i + 1}</span></div><h3 className="text-lg font-bold text-ink-strong">{title}</h3><p className="mt-3 text-sm leading-7 text-muted">{description}</p><p className="mt-5 border-t border-blue-100 pt-4 text-xs leading-6 text-brand-ink">{tags}</p></article>)}</div>
         </section>
         <section id="families" aria-labelledby="families-title" className="scroll-mt-6 border-y border-blue-100 bg-[#f5f9ff]">
           <div className="mx-auto grid max-w-6xl gap-8 px-5 py-14 sm:px-8 sm:py-16 lg:grid-cols-[0.85fr_1.4fr] lg:gap-16">

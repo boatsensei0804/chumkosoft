@@ -72,7 +72,7 @@ export default function ClassroomsBrowser({ classrooms, teachers, canManage }: C
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex flex-col overflow-hidden rounded-[22px] border border-blue-100 bg-white shadow-[0_8px_24px_#225a9a0d] xl:min-h-0 xl:flex-1">
+      <div className="flex flex-col overflow-hidden rounded-[22px] school-card xl:min-h-0 xl:flex-1">
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-[14px] font-bold text-ink-strong">ห้องเรียนทั้งหมด · ปีการศึกษาปัจจุบัน</h2>
           <div className="flex flex-wrap items-center gap-2">

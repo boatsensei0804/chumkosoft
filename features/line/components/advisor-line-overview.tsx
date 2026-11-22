@@ -69,14 +69,14 @@ export default function AdvisorLineOverview({ rows }: { rows: TeacherRow[] }): R
     <p className="text-sm text-muted">สถานะ “เชื่อมแล้ว” หมายถึงครูส่งรหัสในแชท LINE OA และระบบบันทึกสำเร็จ การเพิ่มเพื่อนอย่างเดียวยังไม่ทำให้เชื่อมบัญชี</p>
     <p className="text-sm text-muted">แอดมินเป็นผู้ออกรหัสให้ครู ครูดูรหัสได้ในหน้า LINE ของฉันและส่งรหัสในแชท LINE OA</p>
     {message && <p role="status" className="rounded-lg bg-brand-soft px-4 py-2 text-sm text-ink">{message}</p>}
-    <section className="overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
+    <section className="overflow-hidden rounded-2xl school-card">
       <div className="flex flex-wrap gap-3 border-b border-line p-4">
         <input aria-label="ค้นหาครู" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหาชื่อ รหัส หรือห้องที่ปรึกษา" className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
         <select aria-label="กรองสถานะ LINE" value={filter} onChange={(event) => setFilter(event.target.value as Status | "ALL")} className="rounded-lg border border-line bg-surface px-3 py-2 text-sm">
           <option value="ALL">ทุกสถานะ</option><option value="CONNECTED">เชื่อมแล้ว</option><option value="PENDING">รอส่งรหัส</option><option value="UNLINKED">ยังไม่เชื่อม</option><option value="NO_ACCOUNT">ยังไม่มีบัญชีเว็บที่ใช้งานได้</option>
         </select>
       </div>
-      <div className="max-h-[52dvh] overflow-y-auto md:overflow-x-auto"><table className="w-full text-left text-sm md:min-w-[550px]">
+      <div className="md:max-h-[52dvh] md:overflow-y-auto md:overflow-x-auto"><table className="w-full text-left text-sm md:min-w-[550px]">
         <thead className="sticky top-0 z-10 hidden bg-[#edf5ff] text-brand-ink md:table-header-group"><tr><th className="px-4 py-3 font-semibold">ครูและบุคลากร</th><th className="px-4 py-3 font-semibold">สถานะ LINE</th><th className="px-4 py-3 text-right font-semibold">จัดการ</th></tr></thead>
         <tbody className="block space-y-3 p-3 md:table-row-group md:space-y-0 md:divide-y md:divide-line md:p-0">{visible.map((row) => <tr key={row.id} className="block rounded-xl border border-line p-1 md:table-row md:rounded-none md:border-0 md:p-0">
           <td className="block px-3 py-2 font-semibold text-ink md:table-cell md:px-4 md:py-3">{row.name}<p className="mt-1 text-xs font-normal text-muted">{row.staffCode} · ห้องที่ปรึกษา {row.classrooms.join(", ") || "—"}</p></td>

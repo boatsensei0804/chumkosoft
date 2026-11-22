@@ -11,7 +11,7 @@ interface MobileRecordCardProps {
 /** A readable alternative to sideways-scrolling registry tables on narrow screens. */
 export default function MobileRecordCard({ title, subtitle, badge, fields = [], actions }: MobileRecordCardProps): ReactNode {
   return (
-    <article className="rounded-xl border border-line bg-bg p-4 shadow-sm">
+    <article className="rounded-2xl school-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="break-words text-sm font-bold text-ink-strong">{title}</h3>

@@ -72,12 +72,12 @@ export default function BehaviorBrowser({ data }: { data: Data }): React.ReactNo
       {message && <p role="status" className="rounded-lg bg-brand-soft px-4 py-3 text-sm text-ink">{message}</p>}
       <StatStrip items={[{ label: "นักเรียนในรายการ", value: data.students.length, hint: "คน", tone: "brand" }, { label: "ต่ำกว่า 50 คะแนน", value: data.students.filter((student) => student.score < 50).length, hint: "คน", tone: "danger" }, { label: "ตั้งแต่ 100 คะแนน", value: data.students.filter((student) => student.score >= 100).length, hint: "คน", tone: "success" }]} />
       <div>
-        <section className="overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
+        <section className="overflow-hidden rounded-2xl school-card">
           <div className="flex flex-wrap gap-3 border-b border-line p-4">
             <input aria-label="ค้นหานักเรียน" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหารหัสหรือชื่อนักเรียน" className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
             <select aria-label="กรองห้องเรียน" value={classroom} onChange={(event) => setClassroom(event.target.value)} className="rounded-lg border border-line bg-surface px-3 py-2 text-sm"><option value="">ทุกห้อง</option>{classrooms.map((code) => <option key={code} value={code}>{code}</option>)}</select>
           </div>
-          <div className="max-h-[52dvh] overflow-y-auto divide-y divide-line">{visible.map((student) => <button key={student.id} type="button" onClick={() => router.push(`/dashboard/behavior?student=${encodeURIComponent(student.id)}`)} className={`flex w-full items-center justify-between gap-4 px-4 py-3 text-left hover:bg-surface-2 ${data.selectedStudent?.id === student.id ? "bg-brand-soft" : ""}`}>
+          <div className="md:max-h-[52dvh] md:overflow-y-auto divide-y divide-line">{visible.map((student) => <button key={student.id} type="button" onClick={() => router.push(`/dashboard/behavior?student=${encodeURIComponent(student.id)}`)} className={`flex w-full items-center justify-between gap-4 px-4 py-3 text-left hover:bg-surface-2 ${data.selectedStudent?.id === student.id ? "bg-brand-soft" : ""}`}>
             <span className="min-w-0"><span className="block truncate text-sm font-semibold text-ink">{student.name}</span><span className="text-xs text-muted">{student.code} · {student.classroom}</span></span>
             <span className={`shrink-0 text-lg font-bold tabular ${student.score < 50 ? "text-danger" : "text-brand-ink"}`}>{student.score}</span>
           </button>)}</div>

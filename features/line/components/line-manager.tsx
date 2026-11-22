@@ -211,7 +211,7 @@ export default function LineManager({ page, query, configured, classrooms, class
       {page.rows.length === 0 ? (
         <MascotEmptyState compact pose="family" title="ไม่พบนักเรียน" description="ลองเปลี่ยนห้องเรียน คำค้นหา หรือสถานะการผูก LINE" />
       ) : (
-        <div className={cn("max-h-[52dvh] overflow-y-auto rounded-2xl border border-line bg-card transition-opacity lg:overflow-x-auto", isPending && "opacity-60")}>
+        <div className={cn("rounded-2xl school-card md:max-h-[52dvh] md:overflow-y-auto transition-opacity lg:overflow-x-auto", isPending && "opacity-60")}>
           <table className="w-full border-collapse text-left lg:min-w-[560px]">
             <thead className="sticky top-0 z-10 hidden bg-[#edf5ff] text-brand-ink lg:table-header-group"><tr className="border-b border-line text-[11.5px] font-semibold uppercase tracking-wide"><th className="px-4 py-3">นักเรียน / การเชื่อม LINE</th><th className="w-44 px-4 py-3 text-right">บัญชีและรหัส</th></tr></thead>
             <tbody className="block space-y-3 p-3 lg:table-row-group lg:space-y-0 lg:p-0">

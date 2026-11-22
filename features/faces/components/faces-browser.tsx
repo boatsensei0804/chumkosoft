@@ -52,7 +52,7 @@ export default function FacesBrowser({ students, selected }: FacesBrowserProps):
     <TooltipProvider delayDuration={200}>
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[340px_1fr] lg:items-start">
         {/* Student list */}
-        <div className={cn("flex flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm", selected && "hidden lg:flex")}>
+        <div className={cn("flex flex-col overflow-hidden rounded-2xl school-card", selected && "hidden lg:flex")}>
           <div className="border-b border-line p-3">
             <div className="flex items-center gap-2 rounded-[10px] border border-line bg-surface-2 px-3 py-2">
               <Search className="size-[18px] text-faint" />

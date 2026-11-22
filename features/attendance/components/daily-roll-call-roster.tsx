@@ -70,7 +70,7 @@ function DailyRollCallRosterEditor({ roster, uncheckedOnly }: { roster: DailyCla
   }
 
   return (
-    <section id="daily-roster" className="scroll-mt-4 overflow-hidden rounded-xl border border-line bg-bg">
+    <section id="daily-roster" className="scroll-mt-4 rounded-2xl border border-school-panel-border bg-school-panel shadow-school-panel">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3.5 sm:px-5">
         <div>
           <p className="text-xs text-muted">{dateLabel}</p>
@@ -86,7 +86,7 @@ function DailyRollCallRosterEditor({ roster, uncheckedOnly }: { roster: DailyCla
         </div>
       </header>
 
-      <div className="grid grid-cols-2 divide-x divide-y divide-line bg-surface sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 divide-x divide-y divide-line bg-school-panel-tint sm:grid-cols-3 lg:grid-cols-6">
         <Count label="นักเรียน" count={roster.students.length} />
         <Count label="มา" count={counts.PRESENT} color="text-success" />
         <Count label="มาสาย" count={counts.LATE} color="text-warning" />
@@ -167,9 +167,9 @@ function DailyRollCallRosterEditor({ roster, uncheckedOnly }: { roster: DailyCla
         </table>
       </div>
 
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-surface px-4 py-3 sm:px-5">
+      <footer className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-2 rounded-b-2xl border-t border-school-panel-border bg-school-panel px-4 py-3 shadow-[0_-3px_12px_#234f7a14] sm:px-5 md:static md:shadow-none">
         <p className="text-xs text-muted">ยังไม่เช็ค {counts.unchecked} คน · รายชื่อที่ยังไม่เลือกสถานะจะไม่ถูกบันทึก</p>
-        <Button onClick={save} disabled={isSaving || changedEntries.length === 0}>
+        <Button className="min-h-11" onClick={save} disabled={isSaving || changedEntries.length === 0}>
           <Save className="size-4" /> {isSaving ? "กำลังบันทึก…" : "บันทึกการเช็คชื่อ"}
         </Button>
       </footer>

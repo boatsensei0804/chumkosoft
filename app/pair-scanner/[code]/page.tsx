@@ -24,8 +24,8 @@ export default async function PairScannerPage({ params, searchParams }: PageProp
   const error = query.error;
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-[linear-gradient(145deg,#e8f5ff,#f9fcff_58%,#dfefff)] px-4 py-6 text-ink-strong">
-      <section className="grid w-full max-w-5xl overflow-hidden rounded-[28px] border border-blue-200 bg-white shadow-[0_20px_65px_rgba(26,85,148,0.13)] lg:grid-cols-[0.85fr_1fr]">
+    <main className="grid min-h-dvh place-items-center bg-linear-to-br from-school-panel-tint to-school-panel-wash px-4 py-6 text-ink-strong">
+      <section className="grid w-full max-w-5xl overflow-hidden rounded-[28px] school-card lg:grid-cols-[0.85fr_1fr]">
         <div className="relative hidden min-h-[620px] overflow-hidden bg-[#dff0ff] lg:block">
           <Image src="/mascot/login-scene.webp" alt="กระต่าย Chumkosoft ต้อนรับการเชื่อมเครื่องสแกน" fill sizes="(max-width: 1024px) 0px, 440px" className="object-cover" />
           <div className="absolute inset-x-5 bottom-5 rounded-2xl border border-white/70 bg-white/85 p-4 backdrop-blur-sm"><p className="font-bold text-brand-ink">เชื่อมเครื่องสแกนอย่างปลอดภัย</p><p className="mt-1 text-sm text-muted">ตรวจรหัสบนเครื่องก่อนยืนยันทุกครั้ง</p></div>

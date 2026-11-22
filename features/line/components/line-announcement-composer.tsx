@@ -198,10 +198,10 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
       LINE ปฏิเสธ Channel access token บนเซิร์ฟเวอร์ กรุณาสร้างโทเคนใหม่จาก Messaging API ของ OA ที่ใช้งาน แล้วแก้ <code>LINE_CHANNEL_ACCESS_TOKEN</code> ในไฟล์ <code>.env</code> บนเซิร์ฟเวอร์ จากนั้นสร้างคอนเทนเนอร์แอปใหม่และกด “ลองส่งต่อ” ไม่ต้องสร้างประกาศซ้ำ
     </div>}
 
-    <section className="overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
+    <section className="overflow-hidden rounded-2xl school-card">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4"><h2 className="text-base font-bold text-ink-strong">รายการส่งล่าสุด</h2><div className="flex flex-wrap gap-2"><input aria-label="ค้นหาประกาศล่าสุด" value={historyQuery} onChange={(event) => setHistoryQuery(event.target.value)} placeholder="ค้นหาหัวข้อ" className="min-h-10 rounded-xl border border-line bg-surface px-3 text-sm" /><button type="button" aria-pressed={onlyIncomplete} onClick={() => setOnlyIncomplete(!onlyIncomplete)} className={`min-h-10 rounded-xl border px-3 text-xs font-semibold ${onlyIncomplete ? "border-brand bg-brand-soft text-brand-ink" : "border-line text-muted"}`}>ส่งยังไม่ครบ</button></div></div>
       {history.length === 0 ? <MascotEmptyState compact pose="notify" className="m-4" title="ยังไม่มีประกาศที่ส่งผ่าน LINE" description="เริ่มจากปุ่มเขียนประกาศใหม่ด้านบน" /> :
-        <div className="max-h-[48dvh] divide-y divide-line overflow-y-auto">{visibleHistory.map((item) => {
+        <div className="divide-y divide-line md:max-h-[48dvh] md:overflow-y-auto">{visibleHistory.map((item) => {
           const remaining = item.recipientCount - item.accepted;
           return <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
             <div className="min-w-0">
@@ -231,7 +231,7 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
           <DialogDescription>LINE จะได้รับคำขอส่งข้อความนี้ถึง {selectedCount.toLocaleString("th-TH")} บัญชีที่ไม่ซ้ำ</DialogDescription>
         </DialogHeader>
         <div className="max-h-80 overflow-y-auto rounded-xl bg-surface p-3">
-          <div className="overflow-hidden rounded-xl border border-line bg-card shadow-sm">
+          <div className="overflow-hidden rounded-xl school-card">
             <div className={`px-4 py-3 text-sm font-bold text-white ${kind === "EMERGENCY" ? "bg-danger" : "bg-brand"}`}>{kind === "EMERGENCY" ? "แจ้งเหตุฉุกเฉิน" : "ข่าวสารจากโรงเรียน"}</div>
             <div className="space-y-3 px-4 py-4"><p className="text-base font-bold text-ink-strong">{title.trim()}</p><div className="border-t border-line" /><p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">{body.trim()}</p></div>
             <p className="px-4 pb-3 text-right text-[11px] font-semibold tracking-wide text-muted">CHUMKOSOFT SCHOOL</p>

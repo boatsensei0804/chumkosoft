@@ -36,7 +36,7 @@ export default async function ClassroomDetailPage({ params }: ClassroomDetailPag
       </Link>
 
       {/* Header: the relationship anchor — classroom + homeroom teacher */}
-      <section className="flex flex-col gap-4 rounded-[24px] border border-blue-100 bg-gradient-to-r from-white to-[#eaf5ff] p-5 shadow-[0_8px_24px_#225a9a0d] sm:flex-row sm:items-center sm:justify-between">
+      <section className="flex flex-col gap-4 rounded-[24px] school-card bg-linear-to-r from-school-panel to-school-panel-tint p-4 sm:p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3.5">
           <span className="grid size-12 place-items-center rounded-[12px] bg-brand-soft text-brand-ink">
             <Users className="size-6" />

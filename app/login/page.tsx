@@ -24,10 +24,7 @@ export default async function LoginPage(): Promise<React.ReactNode> {
 
   return (
     <main
-      className="grid min-h-dvh place-items-center px-4 py-6 md:py-3"
-      style={{
-        background: "linear-gradient(180deg, var(--surface) 0%, oklch(0.945 0.024 254) 100%)",
-      }}
+      className="grid min-h-dvh place-items-center bg-linear-to-b from-surface to-school-panel-wash px-4 py-5 md:py-3"
     >
       <div className="w-full max-w-[1040px]">
         <div className="mb-3 flex items-center justify-between">
@@ -36,8 +33,7 @@ export default async function LoginPage(): Promise<React.ReactNode> {
         </div>
 
         <section
-          className="overflow-hidden rounded-[28px]"
-          style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)", boxShadow: "0 8px 30px oklch(0.45 0.15 254 / 0.08)" }}
+          className="overflow-hidden rounded-[28px] border border-school-panel-border bg-school-panel shadow-school-panel"
           aria-labelledby="login-heading"
         >
           {/* Letterhead band — the institutional signature */}

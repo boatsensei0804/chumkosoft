@@ -91,7 +91,7 @@ export default function TeachersBrowser({ page, query, filter, canManageAccounts
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex flex-col overflow-hidden rounded-[22px] border border-blue-100 bg-white shadow-[0_8px_24px_#225a9a0d] xl:min-h-0 xl:flex-1">
+      <div className="flex flex-col overflow-hidden rounded-[22px] school-card xl:min-h-0 xl:flex-1">
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div role="tablist" aria-label="กรองตามประเภท" className="flex flex-wrap items-center gap-1">
             {filters.map((f) => {

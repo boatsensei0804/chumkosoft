@@ -19,17 +19,16 @@ export default function SectionCard({
 }: SectionCardProps): React.ReactNode {
   return (
     <section
-      className={`flex flex-col overflow-hidden rounded-[20px] ${className}`}
-      style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)", boxShadow: "var(--shadow-md)" }}
+      className={`school-card flex flex-col overflow-hidden rounded-[20px] ${className}`}
     >
-      <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-4">
+      <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-4 sm:px-5">
         <div>
           <h2 className="text-[15px] font-bold tracking-tight text-ink-strong">{title}</h2>
           {caption && <p className="mt-0.5 text-[12.5px] text-muted">{caption}</p>}
         </div>
         {action}
       </div>
-      <div className={bodyClassName} style={{ borderTop: "1px solid var(--line)" }}>
+      <div className={`border-t border-school-panel-border ${bodyClassName}`}>
         {children}
       </div>
     </section>

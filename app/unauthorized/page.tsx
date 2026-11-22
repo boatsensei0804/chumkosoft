@@ -16,13 +16,13 @@ export default async function UnauthorizedPage(): Promise<React.ReactNode> {
   const user = await getCurrentUser();
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-[linear-gradient(180deg,var(--surface)_0%,oklch(0.945_0.024_254)_100%)] px-4 py-10">
+    <main className="grid min-h-dvh place-items-center bg-linear-to-b from-surface to-school-panel-wash px-4 py-10">
       <div className="w-full max-w-[440px]">
         <div className="mb-6 flex justify-center">
           <BrandMark />
         </div>
 
-        <section className="overflow-hidden rounded-2xl border border-line bg-card shadow-[0_8px_30px_oklch(0.45_0.15_254_/_0.08)]" aria-labelledby="unauthorized-heading">
+        <section className="overflow-hidden rounded-2xl school-card" aria-labelledby="unauthorized-heading">
           <div className="flex flex-col items-center px-7 pb-7 pt-8 text-center">
             <Mascot pose="access" size={128} decorative />
 
