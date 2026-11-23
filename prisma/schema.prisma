@@ -2,7 +2,7 @@
 //
 // Cross-cutting rules encoded here:
 //   1. Term-scoped: academic entities carry academicYearId / termId.
-//   2. Soft delete everywhere: every model has isDeleted + deletedAt; never hard-delete.
+//   2. Use soft delete for routine removal. Only the admin trash can purge eligible archived records.
 //   3. Timetable conflict prevention (teacher / room / classroom cannot double-book a
 //      period) is enforced in the service layer over non-deleted slots — see the note on
 //      TimetableSlot for why DB unique indexes are not used alongside soft delete.
