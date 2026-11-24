@@ -3,6 +3,7 @@ import { changeAdminAccount, purgeArchivedRecord } from "@/features/settings/ser
 
 const db = vi.hoisted(() => ({
   $executeRaw: vi.fn(), $queryRaw: vi.fn(), user: { findFirst: vi.fn(), count: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
+  classroom: { deleteMany: vi.fn(), findUnique: vi.fn() },
   course: { deleteMany: vi.fn(), findUnique: vi.fn() }, courseOffering: { count: vi.fn(), findMany: vi.fn(), deleteMany: vi.fn() }, timetableSlot: { findMany: vi.fn(), deleteMany: vi.fn() }, auditLog: { create: vi.fn() },
 }));
 vi.mock("@/lib/prisma", () => ({ default: { $transaction: (run: (tx: typeof db) => unknown) => run(db) } }));
@@ -36,6 +37,33 @@ describe("administrator data management", () => {
     ] });
     expect(db.course.deleteMany).toHaveBeenCalledWith({ where: { id: "course", isDeleted: true, offerings: { none: {} } } });
     expect(db.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it("lets archived classrooms be deleted with their advisor links while guarding student records and schedules", async () => {
+    db.$queryRaw.mockResolvedValue([{ id: "classroom" }]);
+    db.classroom.deleteMany.mockImplementation(async ({ where }) => ({ count: where.advisors ? 0 : 1 }));
+    db.classroom.findUnique.mockResolvedValue({ _count: { advisors: 2 } });
+
+    expect((await purgeArchivedRecord("actor", "classroom", "classroom")).ok).toBe(true);
+    expect(db.classroom.deleteMany).toHaveBeenCalledWith({ where: {
+      id: "classroom", isDeleted: true, enrollments: { none: {} }, offerings: { none: {} },
+      timetableSlots: { none: {} }, dailyAttendances: { none: {} }, leaveRequests: { none: {} },
+    } });
+  });
+
+  it("can preview deletion of a classroom with advisor links and archived offerings", async () => {
+    db.$queryRaw.mockResolvedValue([{ id: "classroom" }]);
+    db.classroom.deleteMany.mockResolvedValue({ count: 0 });
+    db.classroom.findUnique.mockImplementation(async ({ select }) => ({
+      _count: { ...(select._count.select.advisors && { advisors: 2 }), offerings: 1 },
+    }));
+    db.courseOffering.count.mockResolvedValue(1);
+    db.courseOffering.findMany.mockResolvedValue([{ id: "offering", isDeleted: true, _count: { classAttendances: 0 } }]);
+    db.timetableSlot.findMany.mockResolvedValue([]);
+
+    const preview = await purgeArchivedRecord("actor", "classroom", "classroom");
+    expect(preview.related).toMatchObject({ offerings: 1, slots: 0 });
+    expect(db.courseOffering.deleteMany).not.toHaveBeenCalled();
   });
 
   it("rejects a revoked administrator before locking or deleting the record", async () => {

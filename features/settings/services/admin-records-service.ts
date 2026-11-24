@@ -88,8 +88,9 @@ async function purgeRow(tx: Prisma.TransactionClient, kind: TrashKind, id: strin
   switch (kind) {
     case "course": return tx.course.deleteMany({ where: { ...where, offerings: { none: {} } } });
     case "room": return tx.room.deleteMany({ where: { ...where, offerings: { none: {} }, timetableSlots: { none: {} } } });
+    // The classroom FK cascades only its advisor assignments.
     case "classroom": return tx.classroom.deleteMany({ where: {
-      ...where, advisors: { none: {} }, enrollments: { none: {} }, offerings: { none: {} }, timetableSlots: { none: {} },
+      ...where, enrollments: { none: {} }, offerings: { none: {} }, timetableSlots: { none: {} },
       dailyAttendances: { none: {} }, leaveRequests: { none: {} },
     } });
     case "offering": return tx.courseOffering.deleteMany({ where: { ...where, timetableSlots: { none: {} }, classAttendances: { none: {} } } });
@@ -111,7 +112,7 @@ async function purgeRow(tx: Prisma.TransactionClient, kind: TrashKind, id: strin
 }
 
 const referenceLabels: Record<string, string> = {
-  offerings: "รายวิชาที่เปิดสอน", timetableSlots: "คาบในตารางสอน", advisors: "ครูที่ปรึกษา",
+  offerings: "รายวิชาที่เปิดสอน", timetableSlots: "คาบในตารางสอน",
   enrollments: "ประวัติการลงทะเบียนเรียน", dailyAttendances: "บันทึกเช็กชื่อประจำห้อง",
   leaveRequests: "คำขอลาและขอมาสาย", classAttendances: "บันทึกเช็กชื่อรายวิชา", user: "บัญชีผู้ใช้",
   schoolEntries: "บันทึกเข้าออกโรงเรียน", behaviorPoints: "รายการคะแนนความประพฤติ", guardians: "ข้อมูลผู้ปกครอง",
@@ -129,7 +130,7 @@ async function referenceCounts(tx: Prisma.TransactionClient, kind: TrashKind, id
     case "course": return (await tx.course.findUnique({ where, select: { _count: { select: { offerings: true } } } }))?._count ?? {};
     case "room": return (await tx.room.findUnique({ where, select: { _count: { select: { offerings: true, timetableSlots: true } } } }))?._count ?? {};
     case "classroom": return (await tx.classroom.findUnique({ where, select: { _count: { select: {
-      advisors: true, enrollments: true, offerings: true, timetableSlots: true, dailyAttendances: true, leaveRequests: true,
+      enrollments: true, offerings: true, timetableSlots: true, dailyAttendances: true, leaveRequests: true,
     } } } }))?._count ?? {};
     case "offering": return (await tx.courseOffering.findUnique({ where, select: { _count: { select: {
       timetableSlots: true, classAttendances: true,
