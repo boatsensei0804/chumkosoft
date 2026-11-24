@@ -1,11 +1,12 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import type { ActionResult } from "@/types/form";
 import { parseArchiveParent } from "../admin-records";
-import type { AdminChange, ArchivedRecord, ArchiveParent, TrashKind, TrashReference } from "../admin-records";
+import type { AdminChange, ArchivedRecord, ArchiveParent, RelatedTrash, TrashKind, TrashReference } from "../admin-records";
 
 const deleted = { isDeleted: true } as const;
 const admin = { role: "ADMIN" as const };
@@ -156,9 +157,9 @@ async function referenceCounts(tx: Prisma.TransactionClient, kind: TrashKind, id
   }
 }
 
-export type PurgeResult = ActionResult & { references?: TrashReference[] };
+export type PurgeResult = ActionResult & { references?: TrashReference[]; related?: RelatedTrash };
 
-async function rejectionDetails(tx: Prisma.TransactionClient, kind: TrashKind, id: string): Promise<PurgeResult> {
+async function referenceDetails(tx: Prisma.TransactionClient, kind: TrashKind, id: string) {
   const counts = await referenceCounts(tx, kind, id);
   const parent = parseArchiveParent(`${kind}:${id}`, "offering") ?? parseArchiveParent(`${kind}:${id}`, "slot");
   const references = await Promise.all(Object.entries(counts).filter(([, count]) => count > 0).map(async ([key, count]): Promise<TrashReference> => {
@@ -171,24 +172,83 @@ async function rejectionDetails(tx: Prisma.TransactionClient, kind: TrashKind, i
     }
     return { label, count };
   }));
-  return references.length
-    ? { ok: false, message: "ยังลบถาวรไม่ได้ เพราะมีรายการต่อไปนี้อ้างอิงอยู่", references }
-    : { ok: false, message: "ไม่พบรายการที่ลบถาวรได้ กรุณาโหลดหน้าใหม่" };
+  return { parent, references };
 }
 
-export async function purgeArchivedRecord(actorId: string, kind: TrashKind, id: string): Promise<PurgeResult> {
-  if (kind === "admin" && id === actorId) return { ok: false, message: "ลบบัญชีตัวเองไม่ได้" };
-  return prisma.$transaction(async (tx) => {
-    if (!await lockAdminAccounts(tx, actorId)) return { ok: false, message: "บัญชีนี้ไม่มีสิทธิ์จัดการระบบแล้ว" };
-    // Hold the parent row against new references until the dependency checks and delete finish.
-    const table = Prisma.raw(`"${tableByKind[kind]}"`);
-    const records = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM ${table} WHERE id = ${id} AND "isDeleted" FOR UPDATE`;
-    if (!records.length) return { ok: false, message: "ไม่พบรายการในถังขยะ" };
-    const result = await purgeRow(tx, kind, id);
-    if (!result.count) return rejectionDetails(tx, kind, id);
-    await tx.auditLog.create({ data: { actorId, action: "trash.purge", targetType: kind, targetId: id } });
-    return { ok: true, message: "ลบถาวรแล้ว" };
+type RelatedPlan = { summary: RelatedTrash; offerings: string[]; slots: string[] };
+
+async function planRelatedPurge(tx: Prisma.TransactionClient, parent: ArchiveParent): Promise<{ plan?: RelatedPlan; reason?: string }> {
+  const offerings = parent.kind === "offering" ? [] : await tx.courseOffering.findMany({
+    where: offeringReference(parent), select: { id: true, isDeleted: true, _count: { select: { classAttendances: true } } },
   });
+  if (offerings.some((offering) => !offering.isDeleted)) return { reason: "ยังมีรายการเปิดสอนอยู่นอกถังขยะ" };
+  if (offerings.some((offering) => offering._count.classAttendances > 0)) {
+    return { reason: "รายการเปิดสอนที่เกี่ยวข้องยังมีประวัติเช็กชื่อรายวิชา จึงลบพร้อมกันไม่ได้" };
+  }
+  const offeringIds = offerings.map(({ id }) => id).sort();
+  const slots = await tx.timetableSlot.findMany({
+    where: { OR: [slotReference(parent), { courseOfferingId: { in: offeringIds } }] },
+    select: { id: true, isDeleted: true },
+  });
+  if (slots.some((slot) => !slot.isDeleted)) return { reason: "ยังมีคาบสอนที่เกี่ยวข้องอยู่นอกถังขยะ" };
+  const slotIds = slots.map(({ id }) => id).sort();
+  if (!offeringIds.length && !slotIds.length) return {};
+  const token = createHash("sha256").update(JSON.stringify([parent.kind, parent.id, offeringIds, slotIds])).digest("hex");
+  return { plan: { summary: { token, offerings: offeringIds.length, slots: slotIds.length }, offerings: offeringIds, slots: slotIds } };
+}
+
+class RelatedRecordsChanged extends Error {}
+
+export async function purgeArchivedRecord(actorId: string, kind: TrashKind, id: string, relatedToken?: string): Promise<PurgeResult> {
+  if (kind === "admin" && id === actorId) return { ok: false, message: "ลบบัญชีตัวเองไม่ได้" };
+  try {
+    return await prisma.$transaction(async (tx) => {
+      if (!await lockAdminAccounts(tx, actorId)) return { ok: false, message: "บัญชีนี้ไม่มีสิทธิ์จัดการระบบแล้ว" };
+      // Hold the parent row against new references until the dependency checks and delete finish.
+      const table = Prisma.raw(`"${tableByKind[kind]}"`);
+      const records = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM ${table} WHERE id = ${id} AND "isDeleted" FOR UPDATE`;
+      if (!records.length) return { ok: false, message: "ไม่พบรายการในถังขยะ" };
+
+      let plan: RelatedPlan | undefined;
+      let result = relatedToken ? null : await purgeRow(tx, kind, id);
+      if (!result?.count) {
+        const { parent, references } = await referenceDetails(tx, kind, id);
+        const eligible = parent && references.length > 0 && references.every((ref) => ref.trashKind && ref.archived === ref.count);
+        const candidate = eligible ? await planRelatedPurge(tx, parent) : {};
+        plan = candidate.plan;
+        if (!plan || plan.summary.token !== relatedToken) {
+          const message = candidate.reason ?? (relatedToken ? "ชุดรายการเปลี่ยนไป กรุณาตรวจสอบก่อนยืนยันอีกครั้ง" : references.length
+            ? "ยังลบถาวรไม่ได้ เพราะมีรายการต่อไปนี้อ้างอิงอยู่" : "ไม่พบรายการที่ลบถาวรได้ กรุณาโหลดหน้าใหม่");
+          return { ok: false, message, references, related: plan?.summary };
+        }
+
+        // Delete only the confirmed, archived IDs, and abort the whole transaction if a reference changed.
+        if (plan.slots.length) {
+          const removed = await tx.timetableSlot.deleteMany({ where: { id: { in: plan.slots }, ...deleted } });
+          if (removed.count !== plan.slots.length) throw new RelatedRecordsChanged();
+        }
+        if (plan.offerings.length) {
+          const removed = await tx.courseOffering.deleteMany({ where: {
+            id: { in: plan.offerings }, ...deleted, classAttendances: { none: {} }, timetableSlots: { none: {} },
+          } });
+          if (removed.count !== plan.offerings.length) throw new RelatedRecordsChanged();
+        }
+        result = await purgeRow(tx, kind, id);
+        if (!result.count) throw new RelatedRecordsChanged();
+      }
+
+      await tx.auditLog.create({ data: {
+        actorId, action: plan ? "trash.purge.related" : "trash.purge", targetType: kind, targetId: id,
+        ...(plan && { detail: `ลบรายการเปิดสอน ${plan.offerings.length} รายการ และคาบสอน ${plan.slots.length} คาบ` }),
+      } });
+      return { ok: true, message: plan ? "ลบถาวรพร้อมรายการที่เกี่ยวข้องในถังขยะแล้ว" : "ลบถาวรแล้ว" };
+    });
+  } catch (error) {
+    if (error instanceof RelatedRecordsChanged) {
+      return { ok: false, message: "ข้อมูลอ้างอิงเปลี่ยนระหว่างการลบ ระบบยกเลิกทั้งชุดแล้ว กรุณาตรวจสอบอีกครั้ง" };
+    }
+    throw error;
+  }
 }
 
 export async function changeAdminAccount(actorId: string, id: string, change: AdminChange): Promise<ActionResult> {

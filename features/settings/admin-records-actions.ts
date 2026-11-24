@@ -17,11 +17,14 @@ function revalidateRecords() {
   revalidatePath("/dashboard", "layout");
 }
 
-export async function purgeRecordAction(kind: string, id: string): Promise<PurgeResult> {
+export async function purgeRecordAction(kind: string, id: string, relatedToken?: string): Promise<PurgeResult> {
   return runAction(async () => {
     const actor = await requireRoles(["ADMIN"]);
     if (!isTrashKind(kind) || !idSchema.safeParse(id).success) return { ok: false, message: "รายการไม่ถูกต้อง" };
-    const result = await purgeArchivedRecord(actor.id, kind, id);
+    if (relatedToken !== undefined && (typeof relatedToken !== "string" || !/^[a-f0-9]{64}$/u.test(relatedToken))) {
+      return { ok: false, message: "ชุดรายการไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง" };
+    }
+    const result = await purgeArchivedRecord(actor.id, kind, id, relatedToken);
     if (result.ok) revalidateRecords();
     return result;
   });

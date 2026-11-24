@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { idleAction, type ActionResult } from "@/types/form";
-import type { AdminChange, TrashKind, TrashReference } from "../admin-records";
+import type { AdminChange, TrashKind } from "../admin-records";
 import type { PurgeResult } from "../services/admin-records-service";
 import { changeAdminAction, purgeRecordAction, saveAdminAction } from "../admin-records-actions";
 
@@ -20,35 +20,41 @@ const captions: Record<AdminChange, string> = {
 };
 
 export function RecordActionButton({ operation, id, item }: { operation: RecordOperation; id: string; item: string }): React.ReactNode {
-  const [open, setOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState<"single" | "related" | null>(null);
   const [pending, startTransition] = useTransition();
-  const [references, setReferences] = useState<TrashReference[]>([]);
+  const [failure, setFailure] = useState<PurgeResult | null>(null);
+  const references = failure?.references ?? [];
+  const related = failure?.related;
   const purge = "purge" in operation;
   const destructive = purge || ("change" in operation && operation.change === "archive");
   const label = purge ? "ลบถาวร" : captions[operation.change];
-  const message = purge
+  const includingRelated = confirmation === "related" && related;
+  const confirmLabel = includingRelated ? "ลบถาวรพร้อมรายการที่เกี่ยวข้อง" : label;
+  const message = includingRelated
+    ? `ลบ “${item}” พร้อมรายการเปิดสอน ${includingRelated.offerings} รายการและคาบสอน ${includingRelated.slots} คาบในถังขยะ ทั้งชุดจะกู้คืนไม่ได้`
+    : purge
     ? `ลบ “${item}” ออกจากระบบถาวร รายการที่ลบแล้วจะกู้คืนไม่ได้`
     : `${label}บัญชี ${item}${operation.change === "restore" ? " บัญชีจะยังปิดใช้งานหลังการกู้คืน" : ""}`;
 
   function confirm(): void {
     startTransition(async () => {
       const result: PurgeResult = "purge" in operation
-        ? await purgeRecordAction(operation.purge, id)
+        ? await purgeRecordAction(operation.purge, id, includingRelated ? includingRelated.token : undefined)
         : await changeAdminAction(id, operation.change);
-      setReferences(result.references ?? []);
+      setFailure(result.ok ? null : result);
       if (result.ok) toast.success(result.message);
       else if (!result.references?.length) toast.error(result.message ?? "ดำเนินการไม่สำเร็จ");
-      setOpen(false);
+      setConfirmation(null);
     });
   }
 
   return <>
-    <Button variant={destructive ? "destructive" : "outline"} className="min-h-10" onClick={() => setOpen(true)}>{label}</Button>
-    <ConfirmDialog open={open} title={label} message={message} pending={pending} destructive={destructive}
-      confirmLabel={label} onClose={() => setOpen(false)} onConfirm={confirm} />
+    <Button variant={destructive ? "destructive" : "outline"} className="min-h-10" onClick={() => setConfirmation("single")}>{label}</Button>
+    <ConfirmDialog open={confirmation !== null} title={confirmLabel} message={message} pending={pending} destructive={destructive}
+      confirmLabel={confirmLabel} onClose={() => setConfirmation(null)} onConfirm={confirm} />
     {purge && references.length > 0 && (
       <div role="alert" className="w-full rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-        <p className="font-semibold">ยังลบถาวรไม่ได้ เพราะมีข้อมูลอ้างอิง</p>
+        <p className="font-semibold">{failure?.message}</p>
         <ul className="mt-1 space-y-1">
           {references.map(({ label, count, archived, trashKind }) => (
             <li key={label}>
@@ -63,6 +69,8 @@ export function RecordActionButton({ operation, id, item }: { operation: RecordO
             </li>
           ))}
         </ul>
+        {related && <Button size="sm" variant="destructive" className="mt-3 h-auto min-h-10 whitespace-normal"
+          onClick={() => setConfirmation("related")}>ลบพร้อมรายการที่เกี่ยวข้องในถังขยะ</Button>}
       </div>
     )}
   </>;

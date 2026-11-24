@@ -3,7 +3,7 @@ import { changeAdminAccount, purgeArchivedRecord } from "@/features/settings/ser
 
 const db = vi.hoisted(() => ({
   $executeRaw: vi.fn(), $queryRaw: vi.fn(), user: { findFirst: vi.fn(), count: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
-  course: { deleteMany: vi.fn(), findUnique: vi.fn() }, courseOffering: { count: vi.fn() }, auditLog: { create: vi.fn() },
+  course: { deleteMany: vi.fn(), findUnique: vi.fn() }, courseOffering: { count: vi.fn(), findMany: vi.fn(), deleteMany: vi.fn() }, timetableSlot: { findMany: vi.fn(), deleteMany: vi.fn() }, auditLog: { create: vi.fn() },
 }));
 vi.mock("@/lib/prisma", () => ({ default: { $transaction: (run: (tx: typeof db) => unknown) => run(db) } }));
 
@@ -61,5 +61,50 @@ describe("administrator data management", () => {
     expect(db.auditLog.create).toHaveBeenCalledWith({
       data: { actorId: "actor", action: "trash.purge", targetType: "course", targetId: "course" },
     });
+  });
+
+  it("previews archived children and deletes exactly the approved set bottom-up", async () => {
+    db.$queryRaw.mockResolvedValue([{ id: "course" }]);
+    db.course.deleteMany.mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ count: 1 });
+    db.course.findUnique.mockResolvedValue({ _count: { offerings: 1 } });
+    db.courseOffering.count.mockResolvedValue(1);
+    db.courseOffering.findMany.mockResolvedValue([{ id: "offering", isDeleted: true, _count: { classAttendances: 0 } }]);
+    db.timetableSlot.findMany.mockResolvedValue([{ id: "archived-slot", isDeleted: true }]);
+    db.timetableSlot.deleteMany.mockResolvedValue({ count: 1 });
+    db.courseOffering.deleteMany.mockResolvedValue({ count: 1 });
+    const preview = await purgeArchivedRecord("actor", "course", "course");
+    expect(preview).toMatchObject({ ok: false, related: { offerings: 1, slots: 1 } });
+    expect(db.timetableSlot.deleteMany).not.toHaveBeenCalled();
+    expect((await purgeArchivedRecord("actor", "course", "course", preview.related?.token)).ok).toBe(true);
+    expect(db.timetableSlot.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ["archived-slot"] }, isDeleted: true } });
+    expect(db.courseOffering.deleteMany).toHaveBeenCalledWith({ where: {
+      id: { in: ["offering"] }, isDeleted: true, classAttendances: { none: {} }, timetableSlots: { none: {} },
+    } });
+  });
+
+  it("withholds the related delete when a child offering has attendance history", async () => {
+    db.$queryRaw.mockResolvedValue([{ id: "course" }]);
+    db.course.deleteMany.mockResolvedValue({ count: 0 });
+    db.course.findUnique.mockResolvedValue({ _count: { offerings: 1 } });
+    db.courseOffering.count.mockResolvedValue(1);
+    db.courseOffering.findMany.mockResolvedValue([{ id: "offering", isDeleted: true, _count: { classAttendances: 1 } }]);
+    const result = await purgeArchivedRecord("actor", "course", "course");
+    expect(result.related).toBeUndefined();
+    expect(result.message).toMatch(/เช็กชื่อ/);
+    expect(db.courseOffering.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("requires a new confirmation if an archived ID changed but the totals did not", async () => {
+    db.$queryRaw.mockResolvedValue([{ id: "course" }]);
+    db.course.deleteMany.mockResolvedValue({ count: 0 });
+    db.course.findUnique.mockResolvedValue({ _count: { offerings: 1 } });
+    db.courseOffering.count.mockResolvedValue(1);
+    db.courseOffering.findMany.mockResolvedValue([{ id: "offering", isDeleted: true, _count: { classAttendances: 0 } }]);
+    db.timetableSlot.findMany.mockResolvedValueOnce([{ id: "first", isDeleted: true }]).mockResolvedValueOnce([{ id: "second", isDeleted: true }]);
+    const preview = await purgeArchivedRecord("actor", "course", "course");
+    const changed = await purgeArchivedRecord("actor", "course", "course", preview.related?.token);
+    expect(changed).toMatchObject({ ok: false, related: { offerings: 1, slots: 1 } });
+    expect(changed.related?.token).not.toBe(preview.related?.token);
+    expect(db.timetableSlot.deleteMany).not.toHaveBeenCalled();
   });
 });

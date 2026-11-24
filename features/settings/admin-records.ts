@@ -19,6 +19,7 @@ export function isTrashKind(value: unknown): value is TrashKind {
 }
 
 export type ArchiveParent = { kind: "course" | "room" | "classroom" | "offering" | "staff"; id: string };
+export type RelatedTrash = { token: string; offerings: number; slots: number };
 export type TrashReference = { label: string; count: number; archived?: number; trashKind?: "offering" | "slot" };
 
 export function parseArchiveParent(value: unknown, childKind: TrashKind): ArchiveParent | undefined {
