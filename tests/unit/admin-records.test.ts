@@ -3,7 +3,7 @@ import { changeAdminAccount, purgeArchivedRecord } from "@/features/settings/ser
 
 const db = vi.hoisted(() => ({
   $executeRaw: vi.fn(), $queryRaw: vi.fn(), user: { findFirst: vi.fn(), count: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
-  course: { deleteMany: vi.fn() }, auditLog: { create: vi.fn() },
+  course: { deleteMany: vi.fn(), findUnique: vi.fn() }, courseOffering: { count: vi.fn() }, auditLog: { create: vi.fn() },
 }));
 vi.mock("@/lib/prisma", () => ({ default: { $transaction: (run: (tx: typeof db) => unknown) => run(db) } }));
 
@@ -28,7 +28,12 @@ describe("administrator data management", () => {
   it("requires an archived record in the hard-delete predicate and preserves references", async () => {
     db.$queryRaw.mockResolvedValue([{ id: "course" }]);
     db.course.deleteMany.mockResolvedValue({ count: 0 });
-    expect((await purgeArchivedRecord("actor", "course", "course")).ok).toBe(false);
+    db.course.findUnique.mockResolvedValue({ _count: { offerings: 3 } });
+    db.courseOffering.count.mockResolvedValue(2);
+    const result = await purgeArchivedRecord("actor", "course", "course");
+    expect(result).toMatchObject({ ok: false, references: [
+      { label: "รายวิชาที่เปิดสอน", count: 3, archived: 2, trashKind: "offering" },
+    ] });
     expect(db.course.deleteMany).toHaveBeenCalledWith({ where: { id: "course", isDeleted: true, offerings: { none: {} } } });
     expect(db.auditLog.create).not.toHaveBeenCalled();
   });

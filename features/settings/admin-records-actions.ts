@@ -6,7 +6,7 @@ import { runAction } from "@/lib/action-error";
 import { requireRoles } from "@/lib/dal";
 import type { ActionResult } from "@/types/form";
 import { isTrashKind } from "./admin-records";
-import { changeAdminAccount, purgeArchivedRecord, saveAdminAccount } from "./services/admin-records-service";
+import { changeAdminAccount, purgeArchivedRecord, saveAdminAccount, type PurgeResult } from "./services/admin-records-service";
 
 const idSchema = z.string().trim().min(1).max(100);
 const changes = z.enum(["enable", "disable", "archive", "restore"]);
@@ -17,7 +17,7 @@ function revalidateRecords() {
   revalidatePath("/dashboard", "layout");
 }
 
-export async function purgeRecordAction(kind: string, id: string): Promise<ActionResult> {
+export async function purgeRecordAction(kind: string, id: string): Promise<PurgeResult> {
   return runAction(async () => {
     const actor = await requireRoles(["ADMIN"]);
     if (!isTrashKind(kind) || !idSchema.safeParse(id).success) return { ok: false, message: "รายการไม่ถูกต้อง" };

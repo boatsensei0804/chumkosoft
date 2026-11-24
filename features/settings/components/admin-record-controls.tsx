@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
@@ -8,7 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { idleAction, type ActionResult } from "@/types/form";
-import type { AdminChange, TrashKind } from "../admin-records";
+import type { AdminChange, TrashKind, TrashReference } from "../admin-records";
+import type { PurgeResult } from "../services/admin-records-service";
 import { changeAdminAction, purgeRecordAction, saveAdminAction } from "../admin-records-actions";
 
 type RecordOperation = { change: AdminChange } | { purge: TrashKind };
@@ -20,6 +22,7 @@ const captions: Record<AdminChange, string> = {
 export function RecordActionButton({ operation, id, item }: { operation: RecordOperation; id: string; item: string }): React.ReactNode {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [references, setReferences] = useState<TrashReference[]>([]);
   const purge = "purge" in operation;
   const destructive = purge || ("change" in operation && operation.change === "archive");
   const label = purge ? "ลบถาวร" : captions[operation.change];
@@ -29,11 +32,12 @@ export function RecordActionButton({ operation, id, item }: { operation: RecordO
 
   function confirm(): void {
     startTransition(async () => {
-      const result = "purge" in operation
+      const result: PurgeResult = "purge" in operation
         ? await purgeRecordAction(operation.purge, id)
         : await changeAdminAction(id, operation.change);
+      setReferences(result.references ?? []);
       if (result.ok) toast.success(result.message);
-      else toast.error(result.message ?? "ดำเนินการไม่สำเร็จ");
+      else if (!result.references?.length) toast.error(result.message ?? "ดำเนินการไม่สำเร็จ");
       setOpen(false);
     });
   }
@@ -42,6 +46,25 @@ export function RecordActionButton({ operation, id, item }: { operation: RecordO
     <Button variant={destructive ? "destructive" : "outline"} className="min-h-10" onClick={() => setOpen(true)}>{label}</Button>
     <ConfirmDialog open={open} title={label} message={message} pending={pending} destructive={destructive}
       confirmLabel={label} onClose={() => setOpen(false)} onConfirm={confirm} />
+    {purge && references.length > 0 && (
+      <div role="alert" className="w-full rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+        <p className="font-semibold">ยังลบถาวรไม่ได้ เพราะมีข้อมูลอ้างอิง</p>
+        <ul className="mt-1 space-y-1">
+          {references.map(({ label, count, archived, trashKind }) => (
+            <li key={label}>
+              {label} {count.toLocaleString("th-TH")} รายการ
+              {archived !== undefined && <> · ยังอยู่นอกถังขยะ {(count - archived).toLocaleString("th-TH")} รายการ</>}
+              {trashKind && (archived ?? 0) > 0 && (
+                <Link className="ml-2 inline-block font-semibold underline underline-offset-2"
+                  href={`/dashboard/settings/records?view=trash&kind=${trashKind}&parent=${encodeURIComponent(`${operation.purge}:${id}`)}`}>
+                  ดูในถังขยะ {archived?.toLocaleString("th-TH")} รายการ
+                </Link>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
   </>;
 }
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import PageHeader from "@/features/dashboard/components/page-header";
-import { isTrashKind, trashKinds } from "@/features/settings/admin-records";
+import { isTrashKind, parseArchiveParent, trashKinds } from "@/features/settings/admin-records";
 import { AdminAccountDialog, RecordActionButton } from "@/features/settings/components/admin-record-controls";
 import { listAdminAccounts, listArchivedRecords, trashPageSize } from "@/features/settings/services/admin-records-service";
 import { requireRoles } from "@/lib/dal";
@@ -14,15 +14,17 @@ const path = "/dashboard/settings/records";
 const formatDate = new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" });
 
 export default async function AdminRecordsPage({ searchParams }: {
-  searchParams: Promise<{ view?: string; kind?: string; page?: string }>;
+  searchParams: Promise<{ view?: string; kind?: string; page?: string; parent?: string }>;
 }): Promise<React.ReactNode> {
   const actor = await requireRoles(["ADMIN"]);
   const params = await searchParams;
   const trash = params.view === "trash";
   const kind = isTrashKind(params.kind) ? params.kind : "course";
   const page = Math.min(100000, parsePage(params.page));
-  const [accounts, archived] = trash ? [[], await listArchivedRecords(kind, page)] : [await listAdminAccounts(), []];
-  const trashUrl = `${path}?view=trash&kind=${kind}`;
+  const parent = parseArchiveParent(params.parent, kind);
+  const [accounts, archived] = trash ? [[], await listArchivedRecords(kind, page, parent)] : [await listAdminAccounts(), []];
+  const unfilteredTrashUrl = `${path}?view=trash&kind=${kind}`;
+  const trashUrl = parent ? `${unfilteredTrashUrl}&parent=${encodeURIComponent(`${parent.kind}:${parent.id}`)}` : unfilteredTrashUrl;
 
   return <>
     <PageHeader title="บัญชีแอดมินและถังขยะ" subtitle="จัดการบัญชีผู้ดูแล และตรวจรายการที่ถูกลบไว้"
@@ -42,6 +44,10 @@ export default async function AdminRecordsPage({ searchParams }: {
             </Button>
           ))}
         </nav>
+        {parent && <div className="my-3 flex flex-wrap items-center gap-3 text-sm">
+          <p className="text-muted">กำลังแสดงเฉพาะรายการที่อ้างอิงกับ{trashKinds[parent.kind]}</p>
+          <Link href={unfilteredTrashUrl} className="font-medium text-brand-ink underline">ดูทั้งหมด</Link>
+        </div>}
         <ul className="divide-y divide-line">
           {archived.slice(0, trashPageSize).map((item) => (
             <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
