@@ -31,7 +31,9 @@ export function RecordActionButton({ operation, id, item }: { operation: RecordO
   const includingRelated = confirmation === "related" && related;
   const confirmLabel = includingRelated ? "ลบถาวรพร้อมรายการที่เกี่ยวข้อง" : label;
   const message = includingRelated
-    ? `ลบ “${item}” พร้อมรายการเปิดสอน ${includingRelated.offerings} รายการและคาบสอน ${includingRelated.slots} คาบในถังขยะ ทั้งชุดจะกู้คืนไม่ได้`
+    ? "enrollments" in includingRelated
+      ? `ลบ “${item}” พร้อมประวัติลงทะเบียนเรียนของนักเรียนคนนี้ ${includingRelated.enrollments} รายการ ทั้งชุดจะกู้คืนไม่ได้`
+      : `ลบ “${item}” พร้อมรายการเปิดสอน ${includingRelated.offerings} รายการและคาบสอน ${includingRelated.slots} คาบในถังขยะ ทั้งชุดจะกู้คืนไม่ได้`
     : purge
     ? `ลบ “${item}” ออกจากระบบถาวร รายการที่ลบแล้วจะกู้คืนไม่ได้`
     : `${label}บัญชี ${item}${operation.change === "restore" ? " บัญชีจะยังปิดใช้งานหลังการกู้คืน" : ""}`;
@@ -70,7 +72,9 @@ export function RecordActionButton({ operation, id, item }: { operation: RecordO
           ))}
         </ul>
         {related && <Button size="sm" variant="destructive" className="mt-3 h-auto min-h-10 whitespace-normal"
-          onClick={() => setConfirmation("related")}>ลบพร้อมรายการที่เกี่ยวข้องในถังขยะ</Button>}
+          onClick={() => setConfirmation("related")}>
+          {"enrollments" in related ? "ลบพร้อมประวัติลงทะเบียนเรียน" : "ลบพร้อมรายการที่เกี่ยวข้องในถังขยะ"}
+        </Button>}
       </div>
     )}
   </>;

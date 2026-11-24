@@ -3,6 +3,8 @@ import { changeAdminAccount, purgeArchivedRecord } from "@/features/settings/ser
 
 const db = vi.hoisted(() => ({
   $executeRaw: vi.fn(), $queryRaw: vi.fn(), user: { findFirst: vi.fn(), count: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
+  student: { deleteMany: vi.fn(), findUnique: vi.fn() },
+  enrollment: { findMany: vi.fn(), deleteMany: vi.fn() },
   classroom: { deleteMany: vi.fn(), findUnique: vi.fn() },
   course: { deleteMany: vi.fn(), findUnique: vi.fn() }, courseOffering: { count: vi.fn(), findMany: vi.fn(), deleteMany: vi.fn() }, timetableSlot: { findMany: vi.fn(), deleteMany: vi.fn() }, auditLog: { create: vi.fn() },
 }));
@@ -89,6 +91,48 @@ describe("administrator data management", () => {
     expect(db.auditLog.create).toHaveBeenCalledWith({
       data: { actorId: "actor", action: "trash.purge", targetType: "course", targetId: "course" },
     });
+  });
+
+  it("requires confirmation before deleting an archived student's own enrollment records", async () => {
+    db.$queryRaw.mockResolvedValue([{ id: "student" }]);
+    db.student.deleteMany.mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ count: 1 });
+    db.student.findUnique.mockResolvedValue({ _count: { enrollments: 2 } });
+    db.enrollment.findMany.mockResolvedValue([{ id: "first" }, { id: "second" }]);
+    db.enrollment.deleteMany.mockResolvedValue({ count: 2 });
+
+    const preview = await purgeArchivedRecord("actor", "student", "student");
+    expect(preview).toMatchObject({ ok: false, related: { enrollments: 2 } });
+    expect(db.enrollment.deleteMany).not.toHaveBeenCalled();
+
+    const result = await purgeArchivedRecord("actor", "student", "student", preview.related?.token);
+    expect(result.ok).toBe(true);
+    expect(db.enrollment.deleteMany).toHaveBeenCalledWith({
+      where: { studentId: "student", id: { in: ["first", "second"] } },
+    });
+  });
+
+  it("keeps enrollments when a student's attendance or account must be preserved", async () => {
+    db.$queryRaw.mockResolvedValue([{ id: "student" }]);
+    db.student.deleteMany.mockResolvedValue({ count: 0 });
+    db.student.findUnique.mockResolvedValue({ user: { id: "login" }, _count: { enrollments: 1, dailyAttendances: 1 } });
+
+    const result = await purgeArchivedRecord("actor", "student", "student");
+    expect(result).toMatchObject({ ok: false });
+    expect(result.related).toBeUndefined();
+    expect(db.enrollment.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("requires a new confirmation if the student's enrollments change", async () => {
+    db.$queryRaw.mockResolvedValue([{ id: "student" }]);
+    db.student.deleteMany.mockResolvedValue({ count: 0 });
+    db.student.findUnique.mockResolvedValue({ _count: { enrollments: 1 } });
+    db.enrollment.findMany.mockResolvedValueOnce([{ id: "old" }]).mockResolvedValueOnce([{ id: "replacement" }]);
+
+    const preview = await purgeArchivedRecord("actor", "student", "student");
+    const result = await purgeArchivedRecord("actor", "student", "student", preview.related?.token);
+    expect(result).toMatchObject({ ok: false, related: { enrollments: 1 } });
+    expect(result.related?.token).not.toBe(preview.related?.token);
+    expect(db.enrollment.deleteMany).not.toHaveBeenCalled();
   });
 
   it("previews archived children and deletes exactly the approved set bottom-up", async () => {

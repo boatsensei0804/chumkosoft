@@ -163,7 +163,8 @@ export type PurgeResult = ActionResult & { references?: TrashReference[]; relate
 async function referenceDetails(tx: Prisma.TransactionClient, kind: TrashKind, id: string) {
   const counts = await referenceCounts(tx, kind, id);
   const parent = parseArchiveParent(`${kind}:${id}`, "offering") ?? parseArchiveParent(`${kind}:${id}`, "slot");
-  const references = await Promise.all(Object.entries(counts).filter(([, count]) => count > 0).map(async ([key, count]): Promise<TrashReference> => {
+  const entries = Object.entries(counts).filter(([, count]) => count > 0);
+  const references = await Promise.all(entries.map(async ([key, count]): Promise<TrashReference> => {
     const label = referenceLabels[key];
     if (parent && key === "offerings") {
       return { label, count, archived: await tx.courseOffering.count({ where: { ...deleted, ...offeringReference(parent) } }), trashKind: "offering" };
@@ -173,10 +174,31 @@ async function referenceDetails(tx: Prisma.TransactionClient, kind: TrashKind, i
     }
     return { label, count };
   }));
-  return { parent, references };
+  return { parent, references, enrollmentOnly: entries.length === 1 && entries[0][0] === "enrollments" };
 }
 
-type RelatedPlan = { summary: RelatedTrash; offerings: string[]; slots: string[] };
+type TimetablePurgePlan = {
+  summary: Extract<RelatedTrash, { offerings: number }>;
+  offerings: string[];
+  slots: string[];
+};
+type StudentPurgePlan = {
+  summary: Extract<RelatedTrash, { enrollments: number }>;
+  enrollments: string[];
+};
+type RelatedPlan = TimetablePurgePlan | StudentPurgePlan;
+
+async function planStudentPurge(tx: Prisma.TransactionClient, studentId: string): Promise<StudentPurgePlan | undefined> {
+  const rows = await tx.enrollment.findMany({
+    where: { studentId },
+    select: { id: true },
+    orderBy: { id: "asc" },
+  });
+  const enrollments = rows.map(({ id }) => id);
+  if (!enrollments.length) return undefined;
+  const token = createHash("sha256").update(JSON.stringify(["student", studentId, enrollments])).digest("hex");
+  return { summary: { token, enrollments: enrollments.length }, enrollments };
+}
 
 async function planRelatedPurge(tx: Prisma.TransactionClient, parent: ArchiveParent): Promise<{ plan?: RelatedPlan; reason?: string }> {
   const offerings = parent.kind === "offering" ? [] : await tx.courseOffering.findMany({
@@ -210,39 +232,48 @@ export async function purgeArchivedRecord(actorId: string, kind: TrashKind, id: 
       const records = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM ${table} WHERE id = ${id} AND "isDeleted" FOR UPDATE`;
       if (!records.length) return { ok: false, message: "ไม่พบรายการในถังขยะ" };
 
-      let plan: RelatedPlan | undefined;
+      let detail: string | undefined;
       let result = relatedToken ? null : await purgeRow(tx, kind, id);
       if (!result?.count) {
-        const { parent, references } = await referenceDetails(tx, kind, id);
+        const { parent, references, enrollmentOnly } = await referenceDetails(tx, kind, id);
         const eligible = parent && references.length > 0 && references.every((ref) => ref.trashKind && ref.archived === ref.count);
-        const candidate = eligible ? await planRelatedPurge(tx, parent) : {};
-        plan = candidate.plan;
+        const candidate: { plan?: RelatedPlan; reason?: string } = eligible
+          ? await planRelatedPurge(tx, parent)
+          : kind === "student" && enrollmentOnly ? { plan: await planStudentPurge(tx, id) } : {};
+        const { plan } = candidate;
         if (!plan || plan.summary.token !== relatedToken) {
           const message = candidate.reason ?? (relatedToken ? "ชุดรายการเปลี่ยนไป กรุณาตรวจสอบก่อนยืนยันอีกครั้ง" : references.length
             ? "ยังลบถาวรไม่ได้ เพราะมีรายการต่อไปนี้อ้างอิงอยู่" : "ไม่พบรายการที่ลบถาวรได้ กรุณาโหลดหน้าใหม่");
           return { ok: false, message, references, related: plan?.summary };
         }
 
-        // Delete only the confirmed, archived IDs, and abort the whole transaction if a reference changed.
-        if (plan.slots.length) {
-          const removed = await tx.timetableSlot.deleteMany({ where: { id: { in: plan.slots }, ...deleted } });
-          if (removed.count !== plan.slots.length) throw new RelatedRecordsChanged();
-        }
-        if (plan.offerings.length) {
-          const removed = await tx.courseOffering.deleteMany({ where: {
-            id: { in: plan.offerings }, ...deleted, classAttendances: { none: {} }, timetableSlots: { none: {} },
-          } });
-          if (removed.count !== plan.offerings.length) throw new RelatedRecordsChanged();
+        // Limit the deletion to confirmed IDs and roll back if a dependency changed.
+        if ("enrollments" in plan) {
+          const removed = await tx.enrollment.deleteMany({ where: { studentId: id, id: { in: plan.enrollments } } });
+          if (removed.count !== plan.enrollments.length) throw new RelatedRecordsChanged();
+          detail = `ลบรายการลงทะเบียนเรียน ${plan.enrollments.length} รายการ`;
+        } else {
+          if (plan.slots.length) {
+            const removed = await tx.timetableSlot.deleteMany({ where: { id: { in: plan.slots }, ...deleted } });
+            if (removed.count !== plan.slots.length) throw new RelatedRecordsChanged();
+          }
+          if (plan.offerings.length) {
+            const removed = await tx.courseOffering.deleteMany({ where: {
+              id: { in: plan.offerings }, ...deleted, classAttendances: { none: {} }, timetableSlots: { none: {} },
+            } });
+            if (removed.count !== plan.offerings.length) throw new RelatedRecordsChanged();
+          }
+          detail = `ลบรายการเปิดสอน ${plan.offerings.length} รายการ และคาบสอน ${plan.slots.length} คาบ`;
         }
         result = await purgeRow(tx, kind, id);
         if (!result.count) throw new RelatedRecordsChanged();
       }
 
       await tx.auditLog.create({ data: {
-        actorId, action: plan ? "trash.purge.related" : "trash.purge", targetType: kind, targetId: id,
-        ...(plan && { detail: `ลบรายการเปิดสอน ${plan.offerings.length} รายการ และคาบสอน ${plan.slots.length} คาบ` }),
+        actorId, action: detail ? "trash.purge.related" : "trash.purge", targetType: kind, targetId: id,
+        ...(detail && { detail }),
       } });
-      return { ok: true, message: plan ? "ลบถาวรพร้อมรายการที่เกี่ยวข้องในถังขยะแล้ว" : "ลบถาวรแล้ว" };
+      return { ok: true, message: detail ? "ลบถาวรพร้อมรายการที่เกี่ยวข้องแล้ว" : "ลบถาวรแล้ว" };
     });
   } catch (error) {
     if (error instanceof RelatedRecordsChanged) {
