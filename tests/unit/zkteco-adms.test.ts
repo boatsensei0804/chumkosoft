@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GET, POST } from "@/app/api/internal/zkteco-adms/[command]/route";
+import { GET as scannerGet, POST as scannerPost } from "@/app/iclock/[command]/route";
 
 const { device, batch, mappings, updateDevice } = vi.hoisted(() => ({ device: vi.fn(), batch: vi.fn(), mappings: vi.fn(), updateDevice: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
@@ -118,6 +119,41 @@ describe("ZKTeco ADMS receiver", () => {
     expect(batch).not.toHaveBeenCalled();
     batch.mockResolvedValue({ accepted: [], rejected: [{ reason: "Rejected by attendance rules" }] });
     expect((await POST(request(query, "001\t2026-11-27 08:01:59\t0\t15"), context)).status).toBe(422);
+  });
+
+  it("accepts a Tunnel heartbeat and writes attendance through the server API without a Worker", async () => {
+    configure();
+    vi.stubEnv("ZKTECO_ADMS_TUNNEL_HOST", "scanner-0123456789abcdef0123456789abcdef.internal");
+    vi.stubEnv("ZKTECO_ADMS_ALLOWED_IPS", "198.51.100.42");
+    const headers = { Host: "scanner-0123456789abcdef0123456789abcdef.internal", "CF-Connecting-IP": "198.51.100.42" };
+    const heartbeat = await scannerGet(new Request("http://localhost/iclock/getrequest.aspx?SN=MB10TEST", { headers }), {
+      params: Promise.resolve({ command: "getrequest.aspx" }),
+    });
+    expect(await heartbeat.text()).toBe("OK");
+    const body = "001\t2026-11-27 08:01:59\t0\t15";
+    const result = await scannerPost(new Request("http://localhost/iclock/cdata?SN=MB10TEST&table=ATTLOG", {
+      method: "POST", body, headers,
+    }), context);
+    expect(result.status).toBe(200);
+    expect(await result.text()).toBe("OK: 1");
+    expect(batch.mock.calls[0][1][0].studentCode).toBe("STUDENT-001");
+  });
+
+  it("blocks requests that lack the Tunnel host or allowed IP before looking up any device", async () => {
+    configure();
+    const tunnel = "scanner-0123456789abcdef0123456789abcdef.internal";
+    vi.stubEnv("ZKTECO_ADMS_TUNNEL_HOST", tunnel);
+    vi.stubEnv("ZKTECO_ADMS_ALLOWED_IPS", "198.51.100.42");
+    const headers: HeadersInit[] = [
+      { Host: "scanner.chumkosoft.com", "X-Forwarded-Host": tunnel, "CF-Connecting-IP": "198.51.100.42" },
+      { Host: tunnel, "CF-Connecting-IP": "198.51.100.43", "X-Forwarded-For": "198.51.100.42" },
+      { Host: tunnel, "X-Forwarded-For": "198.51.100.42" },
+    ];
+    for (const spoofed of headers) {
+      const result = await scannerGet(new Request("http://localhost/iclock/cdata?SN=MB10TEST", { headers: spoofed }), context);
+      expect(result.status).toBe(403);
+    }
+    expect(device).not.toHaveBeenCalled();
   });
 
   it("does not accept face templates or oversized attendance requests", async () => {
