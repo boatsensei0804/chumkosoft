@@ -901,6 +901,13 @@ model ScanSetting {
   createdAt     DateTime @default(now())
 }
 
+// A missing row keeps the bootstrap IP list until an administrator saves one.
+model ZktecoNetworkSetting {
+  id         String   @id @default("singleton")
+  allowedIps String[]
+  revision   Int      @default(1)
+}
+
 // Global switch for quota-consuming outbound LINE messages. Replies stay available.
 model LineDeliverySetting {
   id              Int      @id @default(1)

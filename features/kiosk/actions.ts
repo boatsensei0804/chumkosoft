@@ -6,6 +6,7 @@ import { scanSettingSchema, kioskCreateSchema, kioskUpdateSchema, kioskPasswordS
 import * as service from "@/features/kiosk/services/kiosk-service";
 import { fieldErrorsFromZod } from "@/utils/zod";
 import { runAction } from "@/lib/action-error";
+import { parseAdmsIpList, saveAdmsNetworks } from "@/features/faces/services/zkteco-networks";
 import type { ActionResult } from "@/types/form";
 
 const KIOSK_PATH = "/dashboard/kiosk";
@@ -29,6 +30,26 @@ export async function saveScanSettingAction(_prev: ActionResult, formData: FormD
     const result = await service.saveScanSettingRecord(parsed.data);
     if (result.ok) revalidatePath(KIOSK_PATH);
     return result;
+  });
+}
+
+export async function saveAdmsNetworkAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    await requireRoles(["ADMIN"]);
+    const revisionValue = toText(formData.get("revision"));
+    const revision = Number(revisionValue);
+    const input = formData.get("allowedIps");
+    if (!/^\d+$/u.test(revisionValue) || !Number.isSafeInteger(revision) || typeof input !== "string") {
+      return { ok: false, message: "กรุณาโหลดหน้าใหม่แล้วบันทึกอีกครั้ง" };
+    }
+
+    const allowedIps = parseAdmsIpList(input);
+    if (!allowedIps) return { ok: false, message: "กรอก Public IPv4 หรือ IPv6 ที่ถูกต้องทีละ IP" };
+    if (!await saveAdmsNetworks(allowedIps, revision)) {
+      return { ok: false, message: "รายการเครือข่ายเปลี่ยนแล้ว กรุณาโหลดหน้าใหม่ก่อนบันทึก" };
+    }
+    revalidatePath(KIOSK_PATH);
+    return { ok: true, message: "บันทึกเครือข่ายที่อนุญาตแล้ว" };
   });
 }
 

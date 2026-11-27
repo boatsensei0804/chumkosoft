@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { GET, POST } from "@/app/api/internal/zkteco-adms/[command]/route";
 import { GET as scannerGet, POST as scannerPost } from "@/app/iclock/[command]/route";
 
-const { device, batch, mappings, students, updateDevice } = vi.hoisted(() => ({ device: vi.fn(), batch: vi.fn(), mappings: vi.fn(), students: vi.fn(), updateDevice: vi.fn() }));
+const { device, batch, mappings, students, updateDevice, networks } = vi.hoisted(() => ({ device: vi.fn(), batch: vi.fn(), mappings: vi.fn(), students: vi.fn(), updateDevice: vi.fn(), networks: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
-  default: { scannerDevice: { findFirst: device, updateMany: updateDevice }, scannerPinMapping: { findMany: mappings }, student: { findMany: students } },
+  default: { scannerDevice: { findFirst: device, updateMany: updateDevice }, scannerPinMapping: { findMany: mappings }, student: { findMany: students }, zktecoNetworkSetting: { findUnique: networks } },
 }));
 vi.mock("@/lib/rate-limit", () => ({ rateLimit: async () => ({ ok: true }) }));
 vi.mock("@/features/faces/services/scanner-sync", async (importOriginal) => ({
@@ -22,6 +22,7 @@ function configure() {
   vi.stubEnv("ZKTECO_ADMS_PIN_MAP", '{"001":"STUDENT-001"}');
   mappings.mockResolvedValue([]);
   students.mockResolvedValue([]);
+  networks.mockResolvedValue(null);
   device.mockImplementation(async ({ where }) => where.OR.some((condition: { admsSerial?: string }) => condition.admsSerial === "MB10TEST")
     ? { id: deviceId, admsEnabled: true }
     : null);
@@ -163,6 +164,37 @@ describe("ZKTeco ADMS receiver", () => {
     expect(batch.mock.calls[0][1][0].studentCode).toBe("STUDENT-001");
   });
 
+  it("uses web-managed IPs immediately and stops accepting IPs removed from the list", async () => {
+    configure();
+    const tunnel = "scanner-0123456789abcdef0123456789abcdef.internal";
+    vi.stubEnv("ZKTECO_ADMS_TUNNEL_HOST", tunnel);
+    vi.stubEnv("ZKTECO_ADMS_ALLOWED_IPS", "198.51.100.42");
+    const heartbeat = (ip: string) => scannerGet(new Request("http://localhost/iclock/cdata?SN=MB10TEST", {
+      headers: { Host: tunnel, "CF-Connecting-IP": ip },
+    }), context);
+    expect((await heartbeat("198.51.100.42")).status).toBe(200);
+    networks.mockResolvedValue({ allowedIps: ["198.51.100.43", "2001:db8::10"], revision: 1 });
+    expect(await (await heartbeat("198.51.100.42")).text()).toBe("School network not allowed");
+    expect((await heartbeat("198.51.100.43")).status).toBe(200);
+    expect((await heartbeat("2001:0db8:0:0:0:0:0:0010")).status).toBe(200);
+    networks.mockResolvedValue({ allowedIps: [], revision: 2 });
+    expect((await heartbeat("198.51.100.42")).status).toBe(403);
+    expect((await heartbeat("198.51.100.43")).status).toBe(403);
+  });
+
+  it("fails closed when database network settings cannot be read", async () => {
+    configure();
+    const tunnel = "scanner-0123456789abcdef0123456789abcdef.internal";
+    vi.stubEnv("ZKTECO_ADMS_TUNNEL_HOST", tunnel);
+    vi.stubEnv("ZKTECO_ADMS_ALLOWED_IPS", "198.51.100.42");
+    networks.mockRejectedValue(new Error("database unavailable"));
+    const response = await scannerGet(new Request("http://localhost/iclock/cdata?SN=MB10TEST", {
+      headers: { Host: tunnel, "CF-Connecting-IP": "198.51.100.42" },
+    }), context);
+    expect(response.status).toBe(503);
+    expect(device).not.toHaveBeenCalled();
+  });
+
   it("blocks requests that lack the Tunnel host or allowed IP before looking up any device", async () => {
     configure();
     const tunnel = "scanner-0123456789abcdef0123456789abcdef.internal";
@@ -177,6 +209,7 @@ describe("ZKTeco ADMS receiver", () => {
       const result = await scannerGet(new Request("http://localhost/iclock/cdata?SN=MB10TEST", { headers: spoofed }), context);
       expect(result.status).toBe(403);
     }
+    expect(networks).toHaveBeenCalledTimes(1);
     expect(device).not.toHaveBeenCalled();
   });
 

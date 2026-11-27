@@ -1,11 +1,11 @@
 import "server-only";
 
 import { createHash, timingSafeEqual } from "node:crypto";
-import { isIP } from "node:net";
 import type { z } from "zod";
 import prisma from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
 import { admsKioskAccount, legacyAdmsDevice } from "@/features/faces/services/zkteco-devices";
+import { getAdmsNetworks, normalizeAdmsIp, parseAdmsIpList } from "@/features/faces/services/zkteco-networks";
 import { legacyScannerPinMap } from "@/features/faces/services/zkteco-pin-mapping";
 import { scannerPinSchema } from "@/features/faces/zkteco-pin-mapping";
 import { processScannerBatch, scannerBatchSchema } from "@/features/faces/services/scanner-sync";
@@ -21,7 +21,7 @@ function reply(body: string, status = 200): Response {
   });
 }
 
-function authorize(request: Request, transport: AdmsTransport): Response | undefined {
+async function authorize(request: Request, transport: AdmsTransport): Promise<Response | undefined> {
   if (transport === "gateway") {
     const secret = process.env.ZKTECO_ADMS_SECRET;
     if (!secret || secret.length < 32) return reply("ADMS not configured", 503);
@@ -32,8 +32,7 @@ function authorize(request: Request, transport: AdmsTransport): Response | undef
   }
 
   const host = process.env.ZKTECO_ADMS_TUNNEL_HOST;
-  const addresses = (process.env.ZKTECO_ADMS_ALLOWED_IPS ?? "").split(",").map((ip) => ip.trim().toLowerCase()).filter(Boolean);
-  if (!host || !/^scanner-[0-9a-f]{32}\.internal$/u.test(host) || !addresses.length || addresses.some((ip) => !isIP(ip))) {
+  if (!host || !/^scanner-[0-9a-f]{32}\.internal$/u.test(host)) {
     return reply("ADMS Tunnel not configured", 503);
   }
 
@@ -41,12 +40,21 @@ function authorize(request: Request, transport: AdmsTransport): Response | undef
   const expected = Buffer.from(host);
   const supplied = Buffer.from(request.headers.get("host") ?? "");
   if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) return reply("Forbidden ingress", 403);
-  const ip = request.headers.get("cf-connecting-ip");
-  if (!ip || !addresses.includes(ip.toLowerCase())) return reply("School network not allowed", 403);
+  const ip = normalizeAdmsIp(request.headers.get("cf-connecting-ip") ?? "");
+  if (!ip) return reply("School network not allowed", 403);
+
+  try {
+    const { allowedIps, revision } = await getAdmsNetworks();
+    const addresses = revision === 0 ? parseAdmsIpList(allowedIps.join(",")) : allowedIps;
+    if (!addresses || (revision === 0 && addresses.length === 0)) return reply("ADMS Tunnel not configured", 503);
+    if (!addresses.includes(ip)) return reply("School network not allowed", 403);
+  } catch {
+    return reply("ADMS network settings unavailable", 503);
+  }
 }
 
 async function configuredDevice(request: Request, params: URLSearchParams, transport: AdmsTransport) {
-  const unauthorized = authorize(request, transport);
+  const unauthorized = await authorize(request, transport);
   if (unauthorized) return unauthorized;
   const serial = params.get("SN");
   if (!serial || !/^[a-z0-9-]{1,64}$/iu.test(serial)) return reply("Unknown device", 403);
