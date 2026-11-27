@@ -241,6 +241,25 @@ describe("ZKTeco ADMS receiver", () => {
     expect((await heartbeat("198.51.100.43")).status).toBe(403);
   });
 
+  it("acknowledges a registered device's configuration without recording attendance", async () => {
+    configure();
+    const tunnel = "scanner-0123456789abcdef0123456789abcdef.internal";
+    vi.stubEnv("ZKTECO_ADMS_TUNNEL_HOST", tunnel);
+    vi.stubEnv("ZKTECO_ADMS_ALLOWED_IPS", "198.51.100.42");
+    const options = (serial: string, ip: string) => scannerPost(new Request(
+      `http://localhost/iclock/cdata?SN=${serial}&table=options`,
+      { method: "POST", body: "FingerFunOn=1,FaceFunOn=1", headers: { Host: tunnel, "CF-Connecting-IP": ip } },
+    ), context);
+
+    expect((await options("MB10TEST", "198.51.100.43")).status).toBe(403);
+    expect((await options("OTHER", "198.51.100.42")).status).toBe(403);
+    const response = await options("MB10TEST", "198.51.100.42");
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("OK");
+    expect(updateDevice).not.toHaveBeenCalled();
+    expect(batch).not.toHaveBeenCalled();
+  });
+
   it("fails closed when database network settings cannot be read", async () => {
     configure();
     const tunnel = "scanner-0123456789abcdef0123456789abcdef.internal";

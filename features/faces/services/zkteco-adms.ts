@@ -156,7 +156,10 @@ export async function receiveAdms(request: Request, command: string, transport: 
   const query = new URL(request.url).searchParams;
   const device = await configuredDevice(request, query, transport);
   if (device instanceof Response) return device;
-  if (query.get("table") !== "ATTLOG") return reply("Only attendance logs are supported", 415);
+  const table = query.get("table");
+  // Devices report their capabilities separately from attendance records.
+  if (table === "options") return reply("OK");
+  if (table !== "ATTLOG") return reply("Only attendance logs are supported", 415);
   if (!(await rateLimit(`zkteco-adms:${device.id}`, 15, 60)).ok) return reply("Too many requests", 429);
 
   const deviceId = device.id;
