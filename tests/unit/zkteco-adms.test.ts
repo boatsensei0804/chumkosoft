@@ -1,0 +1,85 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { GET, POST } from "@/app/api/internal/zkteco-adms/[command]/route";
+
+const { device, batch } = vi.hoisted(() => ({ device: vi.fn(), batch: vi.fn() }));
+vi.mock("@/lib/prisma", () => ({
+  default: { scannerDevice: { findFirst: device, updateMany: vi.fn() } },
+}));
+vi.mock("@/lib/rate-limit", () => ({ rateLimit: async () => ({ ok: true }) }));
+vi.mock("@/features/faces/services/scanner-sync", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/features/faces/services/scanner-sync")>(), processScannerBatch: batch,
+}));
+
+const secret = "a-test-secret-with-at-least-32-characters";
+const deviceId = "1fcadb26-361f-4c77-9dde-759cb13d861f";
+const context = { params: Promise.resolve({ command: "cdata" }) };
+
+function configure() {
+  vi.stubEnv("ZKTECO_ADMS_SECRET", secret);
+  vi.stubEnv("ZKTECO_ADMS_SERIAL", "MB10TEST");
+  vi.stubEnv("ZKTECO_ADMS_DEVICE_ID", deviceId);
+  vi.stubEnv("ZKTECO_ADMS_PIN_MAP", '{"001":"STUDENT-001"}');
+  device.mockResolvedValue({ id: deviceId });
+  batch.mockImplementation(async (_id, events: { eventId: string }[]) => ({
+    accepted: events.map(({ eventId }) => eventId), rejected: [],
+  }));
+}
+
+function request(query: string, body?: string, authorization = secret) {
+  return new Request(`http://localhost/api/internal/zkteco-adms/cdata?${query}`, {
+    method: body === undefined ? "GET" : "POST",
+    headers: { authorization: `Bearer ${authorization}` },
+    body,
+  });
+}
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.resetAllMocks();
+});
+
+describe("ZKTeco ADMS receiver", () => {
+  it("rejects a missing credential and a different device serial", async () => {
+    configure();
+    expect((await GET(request("SN=MB10TEST&options=all", undefined, "wrong"), context)).status).toBe(401);
+    expect((await GET(request("SN=OTHER&options=all"), context)).status).toBe(403);
+    expect(device).not.toHaveBeenCalled();
+  });
+
+  it("requests attendance logs only during setup", async () => {
+    configure();
+    const result = await GET(request("SN=MB10TEST&options=all"), context);
+    expect(result.status).toBe(200);
+    expect(await result.text()).toContain("TransFlag=TransData AttLog\r\n");
+  });
+
+  it("maps a face check-in and produces the same event ID on a device retry", async () => {
+    configure();
+    const body = "001\t2026-11-27 08:01:59\t0\t15\t0\r\n001\t2026-11-27 09:01:59\t0\t1\t0";
+    const query = "SN=MB10TEST&table=ATTLOG";
+    expect(await (await POST(request(query, body), context)).text()).toBe("OK: 2");
+    await POST(request(query, body), context);
+    expect(batch.mock.calls[0]).toEqual(batch.mock.calls[1]);
+    expect(batch.mock.calls[0]).toEqual([deviceId, [{
+      eventId: expect.any(String), studentCode: "STUDENT-001", capturedAt: "2026-11-27T08:01:59+07:00",
+      localDate: "2026-11-27",
+    }]]);
+  });
+
+  it("does not acknowledge an unmapped PIN, malformed timestamp, or failed downstream processing", async () => {
+    configure();
+    const query = "SN=MB10TEST&table=ATTLOG";
+    expect((await POST(request(query, "009\t2026-11-27 08:01:59\t0\t15"), context)).status).toBe(422);
+    expect((await POST(request(query, "001\t2026-02-30 08:01:59\t0\t15"), context)).status).toBe(422);
+    expect(batch).not.toHaveBeenCalled();
+    batch.mockResolvedValue({ accepted: [], rejected: [{ reason: "Rejected by attendance rules" }] });
+    expect((await POST(request(query, "001\t2026-11-27 08:01:59\t0\t15"), context)).status).toBe(422);
+  });
+
+  it("does not accept face templates or oversized attendance requests", async () => {
+    configure();
+    expect((await POST(request("SN=MB10TEST&table=BIODATA", "unused"), context)).status).toBe(415);
+    expect((await POST(request("SN=MB10TEST&table=ATTLOG", "a".repeat(70_000)), context)).status).toBe(413);
+    expect(batch).not.toHaveBeenCalled();
+  });
+});
