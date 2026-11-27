@@ -35,7 +35,7 @@ export default async function ScannerDevicesPage() {
       <div className="mx-auto max-w-6xl">
         <PageHeader title="จัดการอุปกรณ์สแกน" subtitle="ดูสถานะและตั้งค่าเครื่องสแกนของโรงเรียน" actions={user.role === "ADMIN" ? <>
           <Button asChild variant="outline"><Link href="/dashboard/kiosk">จัดการบัญชีจุดสแกน</Link></Button>
-          <Button asChild><Link href="/scanner-devices/zkteco">จัดการเครื่อง ZKTeco</Link></Button>
+          <Button asChild><Link href="/dashboard/kiosk#zkteco">จัดการเครื่อง ZKTeco</Link></Button>
         </> : undefined} />
         <StatStrip items={[
           { label: "เครื่องทั้งหมด", value: devices.length, hint: "เครื่อง", tone: "brand" },

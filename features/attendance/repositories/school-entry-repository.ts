@@ -56,6 +56,26 @@ export async function findEntries(termId: string, date: Date) {
   });
 }
 
+export async function findRecentFaceCheckIns(studentId: string, advisorStaffId: string | null) {
+  return prisma.schoolEntry.findMany({
+    where: {
+      studentId,
+      checkInAt: { not: null },
+      method: "FACE",
+      isDeleted: false,
+      term: {
+        isDeleted: false,
+        ...(advisorStaffId ? {
+          enrollments: { some: { studentId, isDeleted: false, classroom: { isDeleted: false, advisors: { some: { staffId: advisorStaffId } } } } },
+        } : {}),
+      },
+    },
+    orderBy: { date: "desc" },
+    take: 5,
+    select: { id: true, date: true, checkInAt: true, isLate: true },
+  });
+}
+
 /** School gate records for a calendar month. */
 export async function findEntriesInRange(termId: string, start: Date, endExclusive: Date) {
   return prisma.schoolEntry.findMany({

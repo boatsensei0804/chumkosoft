@@ -26,7 +26,7 @@ export default async function PinMappingsPage({ searchParams }: { searchParams: 
     <PortalHeader user={user} />
     <main className="mx-auto max-w-5xl px-4 py-6 sm:px-8">
       <PageHeader title="จับคู่รหัสเครื่องสแกน" subtitle={device?.name ?? "ZKTeco MB10-VL"}
-        actions={<Button asChild variant="outline"><Link href="/scanner-devices/zkteco">กลับไปเครื่องสแกน ZKTeco</Link></Button>} />
+        actions={<Button asChild variant="outline"><Link href="/dashboard/kiosk#zkteco">กลับไปเครื่องสแกน ZKTeco</Link></Button>} />
       {device
         ? <PinMappingForms deviceId={device.id} rows={rows.sort((a, b) => a.pin.localeCompare(b.pin))} />
         : <p className="rounded-xl border border-line bg-card p-5">ยังไม่พบเครื่อง ZKTeco ที่พร้อมใช้งาน ให้ผู้ดูแลเซิร์ฟเวอร์ตรวจการเชื่อมต่อของเครื่องก่อนค่ะ</p>}

@@ -74,6 +74,26 @@ function logEventId(deviceId: string, pin: string, capturedAt: string): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
+async function findStudentCodesByPin(pins: string[]) {
+  const candidates = pins.flatMap((pin) => {
+    const codes = [pin];
+    for (let position = 1; position < pin.length; position++) {
+      codes.push(`${pin.slice(0, position)}-${pin.slice(position)}`);
+    }
+    return codes;
+  });
+  const students = candidates.length ? await prisma.student.findMany({
+    where: { isDeleted: false, studentCode: { in: candidates } },
+    select: { studentCode: true },
+  }) : [];
+  const codesByPin = new Map<string, string | null>();
+  for (const { studentCode } of students) {
+    const pin = studentCode.replace("-", "");
+    codesByPin.set(pin, codesByPin.has(pin) ? null : studentCode);
+  }
+  return codesByPin;
+}
+
 async function readAttendanceBody(request: Request): Promise<string | Response> {
   const reader = request.body?.getReader();
   if (!reader) return reply("Missing attendance body", 400);
@@ -130,7 +150,7 @@ export async function receiveAdms(request: Request, command: string, transport: 
   const scans: { pin: string; localTime: string }[] = [];
   for (const line of lines) {
     const [rawPin, timestamp, status, verification] = line.split("\t");
-    const pin = rawPin.replace(/^PIN=/u, "");
+    const pin = rawPin.replace(/^PIN=/u, "").trim();
     if (!scannerPinSchema.safeParse(pin).success || !timestampPattern.test(timestamp ?? "") || !/^\d+$/u.test(status ?? "") ||
         !/^\d+$/u.test(verification ?? "")) return reply("Invalid ATTLOG row", 422);
     const localTime = timestamp.replace(" ", "T");
@@ -150,14 +170,16 @@ export async function receiveAdms(request: Request, command: string, transport: 
     }) : [];
     const mappingByPin = new Map(mappings.map((mapping) => [mapping.pin, mapping]));
     const legacy = legacyScannerPinMap(device.id);
+    const studentCodesByPin = await findStudentCodesByPin(pins.filter((pin) => !mappingByPin.has(pin) && !legacy[pin]));
     const studentIds = new Map<string, string>();
     const events: z.infer<typeof scannerBatchSchema>["events"] = [];
     for (const { pin, localTime } of scans) {
       const mapping = mappingByPin.get(pin);
       const capturedAt = `${localTime}+07:00`;
       const eventId = logEventId(device.id, pin, capturedAt);
-      const studentCode = mapping ? mapping.student?.studentCode : legacy[pin];
+      const studentCode = mapping ? mapping.student?.studentCode : legacy[pin] ?? studentCodesByPin.get(pin);
       if (mapping && new Date(capturedAt) < mapping.linkedAt) continue;
+      if (studentCode === null) return reply("Ambiguous attendance PIN", 422);
       if (!studentCode || mapping?.student?.isDeleted) return reply("Unmapped attendance PIN", 422);
       if (mapping?.student) studentIds.set(eventId, mapping.student.id);
       events.push({ eventId, studentCode, capturedAt, localDate: localTime.slice(0, 10) });

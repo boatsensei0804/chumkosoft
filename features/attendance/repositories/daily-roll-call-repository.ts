@@ -71,7 +71,7 @@ export async function findRecordsInRange(termId: string, start: Date, endExclusi
 export async function findGateEntries(termId: string, date: Date) {
   return prisma.schoolEntry.findMany({
     where: { termId, date, checkInAt: { not: null }, isDeleted: false },
-    select: { studentId: true, date: true, isLate: true },
+    select: { studentId: true, checkInAt: true, method: true, isLate: true },
   });
 }
 

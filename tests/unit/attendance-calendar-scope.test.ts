@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const repo = vi.hoisted(() => ({ getActiveTerm: vi.fn(), findClassrooms: vi.fn(), findEnrolledRoster: vi.fn(), findRecordsInRange: vi.fn(), findGateEntriesInRange: vi.fn() }));
+const repo = vi.hoisted(() => ({ getActiveTerm: vi.fn(), findClassrooms: vi.fn(), findEnrolledRoster: vi.fn(), findRecordsInRange: vi.fn(), findGateEntriesInRange: vi.fn(), findEnrolledStudents: vi.fn(), findRecords: vi.fn(), findGateEntries: vi.fn() }));
 vi.mock("@/features/attendance/repositories/daily-roll-call-repository", () => repo);
 vi.mock("@/lib/prisma", () => ({ default: {} }));
-import { getDailyRollCallCalendar } from "@/features/attendance/services/daily-roll-call-service";
+import { getDailyClassRoster, getDailyRollCallCalendar } from "@/features/attendance/services/daily-roll-call-service";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -44,5 +44,27 @@ describe("selected classroom calendar", () => {
     repo.findGateEntriesInRange.mockResolvedValue([{ studentId: "child", date: new Date("2026-11-16T00:00:00Z"), isLate: false }]);
     const days = await getDailyRollCallCalendar("2026-11", "advisor", "room-b");
     expect(days?.find(day => day.date === "2026-11-16")).toMatchObject({ total: 1, checked: 1, unchecked: 0, late: 0 });
+  });
+});
+
+describe("homeroom roster scanner arrival", () => {
+  it("shows the Bangkok face scan time alongside the saved or inferred status", async () => {
+    repo.findEnrolledStudents.mockResolvedValue([
+      { id: "child", studentCode: "68-0421", firstName: "Test", lastName: "Student" },
+      { id: "other", studentCode: "68-0422", firstName: "Other", lastName: "Student" },
+    ]);
+    repo.findGateEntries.mockResolvedValue([
+      { studentId: "child", method: "FACE", checkInAt: new Date("2026-11-16T01:15:00Z"), isLate: true },
+      { studentId: "other", method: "MANUAL", checkInAt: new Date("2026-11-16T01:20:00Z"), isLate: true },
+    ]);
+    repo.findRecords.mockResolvedValue([]);
+    const inferred = await getDailyClassRoster("2026-11-16", "room-b", "advisor");
+    expect(inferred?.students).toMatchObject([
+      { studentId: "child", status: "LATE", faceCheckInAt: "08:15" },
+      { studentId: "other", status: "LATE", faceCheckInAt: null },
+    ]);
+    repo.findRecords.mockResolvedValue([{ classroomId: "room-b", studentId: "child", status: "SICK_LEAVE" }]);
+    const saved = await getDailyClassRoster("2026-11-16", "room-b", "advisor");
+    expect(saved?.students[0]).toMatchObject({ status: "SICK_LEAVE", faceCheckInAt: "08:15" });
   });
 });

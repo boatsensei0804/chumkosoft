@@ -6,6 +6,10 @@ import { ChevronLeft, MessageSquare } from "lucide-react";
 import SectionCard from "@/features/dashboard/components/section-card";
 import StatusChip from "@/features/dashboard/components/status-chip";
 import Mascot from "@/components/ui/mascot";
+import { findRecentFaceCheckIns } from "@/features/attendance/repositories/school-entry-repository";
+import { STAFF_ROLES } from "@/features/auth/roles";
+import { requireRoles } from "@/lib/dal";
+import { formatBangkokTime, formatThaiDate as formatThaiShortDate } from "@/utils/thai-date";
 import { getStudentDetail } from "@/services/student-service";
 
 export const metadata: Metadata = {
@@ -66,9 +70,10 @@ interface StudentDetailPageProps {
 }
 
 export default async function StudentDetailPage({ params }: StudentDetailPageProps): Promise<React.ReactNode> {
-  const { id } = await params;
+  const [{ id }, user] = await Promise.all([params, requireRoles(STAFF_ROLES)]);
   const s = await getStudentDetail(id);
   if (!s) notFound();
+  const faceCheckIns = await findRecentFaceCheckIns(id, user.role === "ADMIN" ? null : user.staffId ?? "__no_staff__");
 
   const fullName = [s.prefix, `${s.firstName} ${s.lastName}`].filter(Boolean).join(" ");
   const age = ageFrom(s.birthDate);
@@ -121,6 +126,22 @@ export default async function StudentDetailPage({ params }: StudentDetailPagePro
         </div>
         <div className="flex items-center gap-3"><StatusChip status={s.status} /><Mascot pose="students" size={76} decorative className="hidden lg:block" /></div>
       </section>
+
+      <SectionCard title="ประวัติสแกนเข้าโรงเรียน" bodyClassName="p-0">
+        {faceCheckIns.length > 0 ? (
+          <ul className="divide-y divide-line">
+            {faceCheckIns.map((entry) => (
+              <li key={entry.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-3 px-4 py-3 text-sm sm:px-5">
+                <time dateTime={entry.date.toISOString().slice(0, 10)} className="font-medium text-ink-strong">{formatThaiShortDate(entry.date)}</time>
+                <span className="tabular">{entry.checkInAt && formatBangkokTime(entry.checkInAt)} น.</span>
+                <span className={entry.isLate ? "text-[oklch(0.5_0.12_55)]" : "text-[oklch(0.42_0.1_152)]"}>{entry.isLate ? "มาสาย" : "ตรงเวลา"}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="px-4 py-4 text-sm text-muted sm:px-5">ยังไม่มีบันทึกสแกนใบหน้าให้แสดง</p>
+        )}
+      </SectionCard>
 
       <RecordSections labels={["ข้อมูลตัวตน", "การเกิด การศึกษา และสุขภาพ", "ที่อยู่และการเดินทาง", "สถานภาพครอบครัว", "กลุ่มพิเศษ (DMC)", "บิดา มารดา และผู้ปกครอง"]}>
         <SectionCard title="ข้อมูลตัวตน" bodyClassName="p-5">

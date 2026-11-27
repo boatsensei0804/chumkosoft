@@ -74,6 +74,7 @@ export interface DailyRollCallStudent {
   code: string;
   name: string;
   status: DailyRollCallStatusKey | null;
+  faceCheckInAt: string | null;
 }
 
 export interface DailyClassRoster {

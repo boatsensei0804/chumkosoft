@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { GET, POST } from "@/app/api/internal/zkteco-adms/[command]/route";
 import { GET as scannerGet, POST as scannerPost } from "@/app/iclock/[command]/route";
 
-const { device, batch, mappings, updateDevice } = vi.hoisted(() => ({ device: vi.fn(), batch: vi.fn(), mappings: vi.fn(), updateDevice: vi.fn() }));
+const { device, batch, mappings, students, updateDevice } = vi.hoisted(() => ({ device: vi.fn(), batch: vi.fn(), mappings: vi.fn(), students: vi.fn(), updateDevice: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
-  default: { scannerDevice: { findFirst: device, updateMany: updateDevice }, scannerPinMapping: { findMany: mappings } },
+  default: { scannerDevice: { findFirst: device, updateMany: updateDevice }, scannerPinMapping: { findMany: mappings }, student: { findMany: students } },
 }));
 vi.mock("@/lib/rate-limit", () => ({ rateLimit: async () => ({ ok: true }) }));
 vi.mock("@/features/faces/services/scanner-sync", async (importOriginal) => ({
@@ -21,6 +21,7 @@ function configure() {
   vi.stubEnv("ZKTECO_ADMS_DEVICE_ID", deviceId);
   vi.stubEnv("ZKTECO_ADMS_PIN_MAP", '{"001":"STUDENT-001"}');
   mappings.mockResolvedValue([]);
+  students.mockResolvedValue([]);
   device.mockImplementation(async ({ where }) => where.OR.some((condition: { admsSerial?: string }) => condition.admsSerial === "MB10TEST")
     ? { id: deviceId, admsEnabled: true }
     : null);
@@ -91,6 +92,28 @@ describe("ZKTeco ADMS receiver", () => {
     }], new Map()]);
   });
 
+  it("resolves unmapped numeric IDs against student codes with or without a dash", async () => {
+    configure();
+    students.mockResolvedValue([{ studentCode: "68-0421" }, { studentCode: "00422" }]);
+    const query = "SN=MB10TEST&table=ATTLOG";
+    const body = "680421\t2026-11-27 08:01:59\t0\t15\n00422\t2026-11-27 08:02:00\t0\t15";
+    expect(await (await POST(request(query, body), context)).text()).toBe("OK: 2");
+    expect(students).toHaveBeenCalledWith({
+      where: { isDeleted: false, studentCode: { in: expect.arrayContaining(["68-0421", "00422"]) } },
+      select: { studentCode: true },
+    });
+    expect(batch.mock.calls[0][1].map((event: { studentCode: string }) => event.studentCode)).toEqual(["68-0421", "00422"]);
+  });
+
+  it("rejects an unmapped numeric ID when multiple student codes resolve to it", async () => {
+    configure();
+    students.mockResolvedValue([{ studentCode: "68-0421" }, { studentCode: "680421" }]);
+    const result = await POST(request("SN=MB10TEST&table=ATTLOG", "680421\t2026-11-27 08:01:59\t0\t15"), context);
+    expect(result.status).toBe(422);
+    expect(await result.text()).toBe("Ambiguous attendance PIN");
+    expect(batch).not.toHaveBeenCalled();
+  });
+
   it("uses the website mapping by student ID and skips records older than the binding", async () => {
     configure();
     vi.stubEnv("ZKTECO_ADMS_PIN_MAP", "");
@@ -104,10 +127,11 @@ describe("ZKTeco ADMS receiver", () => {
     expect(studentIds.get(events[0].eventId)).toBe("student-id");
   });
 
-  it("does not fall back to an old environment mapping after a PIN was unlinked", async () => {
+  it("does not fall back to a student code or an old environment mapping after a PIN was unlinked", async () => {
     configure();
     mappings.mockResolvedValue([{ pin: "001", student: null, linkedAt: new Date("2026-11-27T01:00:00Z") }]);
     expect((await POST(request("SN=MB10TEST&table=ATTLOG", "001\t2026-11-27 08:01:59\t0\t15"), context)).status).toBe(422);
+    expect(students).not.toHaveBeenCalled();
     expect(batch).not.toHaveBeenCalled();
   });
 

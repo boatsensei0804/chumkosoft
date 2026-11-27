@@ -4,6 +4,7 @@ import * as repo from "@/features/attendance/repositories/school-entry-repositor
 import { getScanSetting } from "@/features/kiosk/repositories/kiosk-repository";
 import type { AttendanceCalendarDay, ClassroomOption, SchoolEntryRoster, SchoolEntryState, SchoolEntryStudent } from "@/features/attendance/types";
 import type { ActionResult } from "@/types/form";
+import { formatBangkokTime } from "@/utils/thai-date";
 
 /** Parses "yyyy-mm-dd" to a stable UTC-midnight Date. */
 function parseCalendarDate(iso: string): Date | null {
@@ -12,16 +13,6 @@ function parseCalendarDate(iso: string): Date | null {
   const [, y, m, d] = match;
   const date = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)));
   return date.toISOString().slice(0, 10) === iso ? date : null;
-}
-
-function bangkokTime(date: Date | null): string | null {
-  if (!date) return null;
-  return new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Bangkok",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(date);
 }
 
 function formatName(s: { prefix: string | null; firstName: string; lastName: string }): string {
@@ -110,8 +101,8 @@ export async function getSchoolEntryRoster(dateISO: string, classroomId: string,
 
   const roster: SchoolEntryStudent[] = students.map((s) => {
     const entry = byStudent.get(s.id);
-    const checkInAt = bangkokTime(entry?.checkInAt ?? null);
-    const checkOutAt = bangkokTime(entry?.checkOutAt ?? null);
+    const checkInAt = entry?.checkInAt ? formatBangkokTime(entry.checkInAt) : null;
+    const checkOutAt = entry?.checkOutAt ? formatBangkokTime(entry.checkOutAt) : null;
     const state: SchoolEntryState = checkOutAt ? "OUT" : checkInAt ? "IN" : "ABSENT";
     return {
       studentId: s.id,
@@ -145,7 +136,7 @@ export async function checkInStudent(studentId: string, dateISO: string, advisor
   // Same late criterion as the face-scan gate: check-in time-of-day ≥ late cutoff.
   const now = new Date();
   const setting = await getScanSetting();
-  const isLate = (bangkokTime(now) ?? "") >= setting.lateAfterTime;
+  const isLate = formatBangkokTime(now) >= setting.lateAfterTime;
   const todayBangkok = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
   await repo.upsertCheckIn(ctx.termId, studentId, ctx.date, now, isLate, actorUserId, dateISO === todayBangkok);
   return { ok: true, message: isLate ? "บันทึกเวลาเข้า (มาสาย) เรียบร้อย" : "บันทึกเวลาเข้าเรียบร้อย" };

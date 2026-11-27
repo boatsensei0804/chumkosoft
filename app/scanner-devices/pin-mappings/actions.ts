@@ -56,7 +56,10 @@ export async function manageScannerPinMappings(_state: ActionResult, form: FormD
         return { ok: false, message: "ไม่พบคำสั่งจัดการคู่รหัส" };
     }
 
-    if (result.ok) revalidatePath("/scanner-devices/pin-mappings");
+    if (result.ok) {
+      revalidatePath("/scanner-devices/pin-mappings");
+      revalidatePath("/dashboard/kiosk");
+    }
     return result;
   });
 }

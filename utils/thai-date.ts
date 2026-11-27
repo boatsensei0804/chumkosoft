@@ -6,6 +6,14 @@ function buddhistFormatter(opts: Intl.DateTimeFormatOptions): Intl.DateTimeForma
 
 const shortDate = buddhistFormatter({ day: "numeric", month: "short", year: "numeric" });
 const longDate = buddhistFormatter({ day: "numeric", month: "long", year: "numeric" });
+const bangkokTime = new Intl.DateTimeFormat("en-GB", {
+  timeZone: BANGKOK_TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+});
+
+export function formatBangkokTime(date: Date): string {
+  return bangkokTime.format(date);
+}
+
 const weekdayLong = new Intl.DateTimeFormat("th-TH", { timeZone: BANGKOK_TZ, weekday: "long" });
 
 /** Format a date as a Thai Buddhist-era short date, e.g. "4 ก.ค. 2568". */

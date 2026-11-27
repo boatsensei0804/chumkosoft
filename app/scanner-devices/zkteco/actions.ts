@@ -26,7 +26,7 @@ export async function manageAdmsDevice(_state: ActionResult, form: FormData): Pr
       return { ok: false, message: "ไม่พบคำสั่งจัดการเครื่องสแกน" };
     }
     if (result.ok) {
-      revalidatePath("/scanner-devices/zkteco");
+      revalidatePath("/dashboard/kiosk");
       revalidatePath("/scanner-devices");
     }
     return result;

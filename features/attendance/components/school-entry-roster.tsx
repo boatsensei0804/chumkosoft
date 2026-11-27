@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, LogOut, Users } from "lucide-react";
+import { Check, LogOut, RefreshCw, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -21,17 +22,22 @@ const METHOD_LABELS = { FACE: "สแกนใบหน้า", MANUAL: "เจ�
 export default function SchoolEntryRoster({ roster }: { roster: Roster }): React.ReactNode {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [faceOnly, setFaceOnly] = useState(false);
+  const [isRefreshing, startRefresh] = useTransition();
+  const keyword = query.trim().toLowerCase();
   const visible = roster.students.filter((student) =>
-    `${student.name} ${student.code} ${student.classroomCode}`.toLowerCase().includes(query.trim().toLowerCase()),
+    (!faceOnly || student.checkInMethod === "FACE") &&
+    `${student.name} ${student.code} ${student.classroomCode}`.toLowerCase().includes(keyword),
   );
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startAction] = useTransition();
 
   const counts = useMemo(() => {
-    const acc = { present: 0, absent: 0 };
+    const acc = { present: 0, absent: 0, face: 0 };
     for (const s of roster.students) {
       if (s.state === "ABSENT") acc.absent += 1;
       else acc.present += 1;
+      if (s.checkInMethod === "FACE") acc.face += 1;
     }
     return acc;
   }, [roster.students]);
@@ -71,19 +77,31 @@ export default function SchoolEntryRoster({ roster }: { roster: Roster }): React
         <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-sunken px-2.5 py-1 font-semibold text-muted">
           ยังไม่พบรายการเข้า <span className="tabular">{counts.absent}</span>
         </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-2.5 py-1 font-semibold text-brand-ink">
+          สแกนใบหน้า <span className="tabular">{counts.face}</span>
+        </span>
       </div>
 
-      <label className="flex flex-col gap-1 text-sm font-medium text-ink-strong">
-        ค้นหาผลเข้า–ออกโรงเรียน
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ชื่อ รหัสนักเรียน หรือห้อง" className="min-h-11 w-full rounded-xl border border-line bg-card px-3 sm:max-w-sm" />
-      </label>
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+        <label className="flex w-full flex-col gap-1 text-sm font-medium text-ink-strong sm:max-w-sm">
+          ค้นหาผลเข้า–ออกโรงเรียน
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ชื่อ รหัสนักเรียน หรือห้อง" className="min-h-11 w-full rounded-xl border border-line bg-card px-3" />
+        </label>
+        <label className="flex min-h-11 items-center gap-2 text-sm">
+          <input type="checkbox" checked={faceOnly} onChange={(event) => setFaceOnly(event.target.checked)} />
+          เฉพาะสแกนใบหน้า
+        </label>
+        <Button type="button" variant="outline" className="min-h-11 sm:ml-auto" disabled={isRefreshing || pendingId !== null} onClick={() => startRefresh(() => router.refresh())}>
+          <RefreshCw className="size-4" /> {isRefreshing ? "กำลังอัปเดต…" : "อัปเดตผลสแกน"}
+        </Button>
+      </div>
       <div className="overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
         <ul className="flex flex-col">
           {visible.map((s) => (
             <EntryRow key={s.studentId} student={s} pending={pendingId === s.studentId} onCheckIn={() => run(s.studentId, checkInAction)} onCheckOut={() => run(s.studentId, checkOutAction)} />
           ))}
         </ul>
-        {!visible.length && <p className="p-4 text-sm text-muted">ไม่พบรายชื่อที่ตรงกับคำค้น</p>}
+        {!visible.length && <p className="p-4 text-sm text-muted">ไม่พบรายการที่ตรงกับตัวกรอง</p>}
       </div>
     </div>
   );
@@ -108,7 +126,9 @@ function EntryRow({
           <AvatarFallback className="bg-brand-soft text-[13px] font-semibold text-brand-ink">{student.name.charAt(0)}</AvatarFallback>
         </Avatar>
         <div className="min-w-0">
-          <p className="truncate text-[14px] font-semibold text-ink-strong">{student.name}</p>
+          <Link href={`/dashboard/students/${student.studentId}`} className="block w-fit text-[14px] font-semibold text-brand-ink hover:underline">
+            {student.name}
+          </Link>
           <p className="tabular text-[12px] text-muted">
             รหัส {student.code} · {student.classroomCode}
           </p>

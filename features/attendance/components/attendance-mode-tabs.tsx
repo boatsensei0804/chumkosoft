@@ -9,7 +9,7 @@ type Mode = "class" | "school" | "homeroom";
 const TABS: { key: Mode; label: string; description: string; icon: LucideIcon }[] = [
   { key: "class", label: "รายวิชา", description: "เช็คชื่อในคาบเรียนที่สอน", icon: ClipboardCheck },
   { key: "homeroom", label: "ประจำห้อง", description: "ภาพรวมและรายชื่อในห้องที่ปรึกษา", icon: CalendarCheck },
-  { key: "school", label: "เข้า–ออกโรงเรียน", description: "ตรวจเวลาที่บันทึกจากแอปสแกน", icon: UserCheck },
+  { key: "school", label: "เข้า–ออกโรงเรียน", description: "ตรวจเวลาเข้า–ออกและรายการสแกนใบหน้า", icon: UserCheck },
 ];
 
 export default function AttendanceModeTabs({ mode }: { mode: Mode }): React.ReactNode {

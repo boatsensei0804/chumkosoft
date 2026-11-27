@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import * as repo from "@/features/attendance/repositories/daily-roll-call-repository";
 import type { AttendanceCalendarDay, DailyClassRoster, DailyClassSummary, DailyRollCallStatusKey } from "@/features/attendance/types";
 import type { ActionResult } from "@/types/form";
+import { formatBangkokTime } from "@/utils/thai-date";
 
 function parseDate(iso: string): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
@@ -146,22 +147,21 @@ export async function getDailyClassRoster(
     repo.findGateEntries(term.id, date),
   ]);
   const statusByStudent = new Map(records.map((record) => [record.studentId, record.status as DailyRollCallStatusKey]));
-  const enrolledIds = new Set(students.map((student) => student.id));
-  for (const entry of gateEntries) {
-    if (enrolledIds.has(entry.studentId) && !statusByStudent.has(entry.studentId)) {
-      statusByStudent.set(entry.studentId, entry.isLate ? "LATE" : "PRESENT");
-    }
-  }
+  const entryByStudent = new Map(gateEntries.map((entry) => [entry.studentId, entry]));
   return {
     date: dateISO,
     classroomId,
     classroomCode: classroom.code,
-    students: students.map((student) => ({
-      studentId: student.id,
-      code: student.studentCode,
-      name: formatName(student),
-      status: statusByStudent.get(student.id) ?? null,
-    })),
+    students: students.map((student) => {
+      const entry = entryByStudent.get(student.id);
+      return {
+        studentId: student.id,
+        code: student.studentCode,
+        name: formatName(student),
+        status: statusByStudent.get(student.id) ?? (entry ? (entry.isLate ? "LATE" : "PRESENT") : null),
+        faceCheckInAt: entry?.method === "FACE" && entry.checkInAt ? formatBangkokTime(entry.checkInAt) : null,
+      };
+    }),
   };
 }
 

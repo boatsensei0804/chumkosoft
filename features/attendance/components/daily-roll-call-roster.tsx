@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Save } from "lucide-react";
+import { ArrowLeft, Check, RefreshCw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { saveDailyRollCallAction } from "@/features/attendance/daily-roll-call-actions";
 import {
@@ -38,6 +38,7 @@ function DailyRollCallRosterEditor({ roster, initialFilter }: { roster: DailyCla
     Object.fromEntries(roster.students.map((student) => [student.studentId, student.status])),
   );
   const [isSaving, startSaving] = useTransition();
+  const [isRefreshing, startRefresh] = useTransition();
   const [filter, setFilter] = useState(initialFilter);
   // Use saved statuses so a row stays visible while the teacher edits it.
   const visibleStudents = roster.students.filter((student) =>
@@ -89,7 +90,10 @@ function DailyRollCallRosterEditor({ roster, initialFilter }: { roster: DailyCla
           <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/attendance?mode=homeroom&date=${roster.date}`)}>
             <ArrowLeft className="size-4" /> ภาพรวมห้อง
           </Button>
-          <Button variant="ghost" size="sm" disabled={isSaving || uncheckedIds.length === 0} onClick={markUncheckedPresent}>
+          <Button variant="outline" size="sm" disabled={isRefreshing || isSaving || changedEntries.length > 0} onClick={() => startRefresh(() => router.refresh())}>
+            <RefreshCw className="size-4" /> {isRefreshing ? "กำลังอัปเดต…" : "อัปเดตผลสแกน"}
+          </Button>
+          <Button variant="ghost" size="sm" disabled={isSaving || isRefreshing || uncheckedIds.length === 0} onClick={markUncheckedPresent}>
             <Check className="size-4" /> ระบุว่ามาเรียนให้ {uncheckedIds.length} คนที่ยังไม่เช็ก
           </Button>
         </div>
@@ -120,9 +124,11 @@ function DailyRollCallRosterEditor({ roster, initialFilter }: { roster: DailyCla
         {visibleStudents.map((student, index) => {
           const selected = statuses[student.studentId];
           return <article key={student.studentId} className="rounded-xl border border-line bg-bg p-3">
-            <div className="flex items-start justify-between gap-2"><div><p className="text-sm font-semibold text-ink-strong">{index + 1}. {student.name}</p><p className="text-xs text-muted">รหัส {student.code}</p></div><span className="text-xs font-semibold text-brand-ink">{selected ? DAILY_ROLL_CALL_LABELS[selected] : "ยังไม่เช็ค"}</span></div>
+            <div className="flex items-start justify-between gap-2"><div><p className="text-sm font-semibold text-ink-strong">{index + 1}. {student.name}</p><p className="text-xs text-muted">รหัส {student.code}</p>
+              {student.faceCheckInAt && <p className="tabular text-xs text-brand-ink">สแกนใบหน้า {student.faceCheckInAt} น.</p>}
+            </div><span className="text-xs font-semibold text-brand-ink">{selected ? DAILY_ROLL_CALL_LABELS[selected] : "ยังไม่เช็ค"}</span></div>
             <div role="group" aria-label={`เลือกสถานะ ${student.name}`} className="mt-3 grid grid-cols-2 gap-1.5">
-              {DAILY_ROLL_CALL_STATUSES.map((status) => <button key={status} type="button" aria-pressed={selected === status} disabled={isSaving} onClick={() => setStatuses((previous) => ({ ...previous, [student.studentId]: status }))} className={cn("min-h-10 rounded-lg px-2 text-xs font-semibold transition-colors disabled:opacity-50", selected === status ? STATUS_STYLE[status].active : STATUS_STYLE[status].idle)}>{DAILY_ROLL_CALL_LABELS[status]}</button>)}
+              {DAILY_ROLL_CALL_STATUSES.map((status) => <button key={status} type="button" aria-pressed={selected === status} disabled={isSaving || isRefreshing} onClick={() => setStatuses((previous) => ({ ...previous, [student.studentId]: status }))} className={cn("min-h-10 rounded-lg px-2 text-xs font-semibold transition-colors disabled:opacity-50", selected === status ? STATUS_STYLE[status].active : STATUS_STYLE[status].idle)}>{DAILY_ROLL_CALL_LABELS[status]}</button>)}
             </div>
           </article>;
         })}
@@ -146,6 +152,7 @@ function DailyRollCallRosterEditor({ roster, initialFilter }: { roster: DailyCla
                   <td className="px-4 py-3">
                     <p className="font-medium text-ink-strong">{student.name}</p>
                     <p className="mt-0.5 tabular text-xs text-muted">รหัส {student.code}</p>
+                    {student.faceCheckInAt && <p className="mt-0.5 tabular text-xs text-brand-ink">สแกนใบหน้า {student.faceCheckInAt} น.</p>}
                   </td>
                   <td className="px-4 py-3">
                     <div role="group" aria-label={`เลือกสถานะ ${student.name}`} className="flex flex-wrap gap-1.5">
@@ -156,7 +163,7 @@ function DailyRollCallRosterEditor({ roster, initialFilter }: { roster: DailyCla
                             key={status}
                             type="button"
                             aria-pressed={active}
-                            disabled={isSaving}
+                            disabled={isSaving || isRefreshing}
                             onClick={() => setStatuses((previous) => ({ ...previous, [student.studentId]: status }))}
                             className={cn(
                               "rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50",
@@ -185,7 +192,7 @@ function DailyRollCallRosterEditor({ roster, initialFilter }: { roster: DailyCla
 
       <footer className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-2 rounded-b-2xl border-t border-school-panel-border bg-school-panel px-4 py-3 shadow-[0_-3px_12px_#234f7a14] sm:px-5 md:static md:shadow-none">
         <p className="text-xs text-muted">ยังไม่เช็ค {counts.unchecked} คน · รายชื่อที่ยังไม่เลือกสถานะจะไม่ถูกบันทึก</p>
-        <Button className="min-h-11" onClick={save} disabled={isSaving || changedEntries.length === 0}>
+        <Button className="min-h-11" onClick={save} disabled={isSaving || isRefreshing || changedEntries.length === 0}>
           <Save className="size-4" /> {isSaving ? "กำลังบันทึก…" : "บันทึกการเช็คชื่อ"}
         </Button>
       </footer>

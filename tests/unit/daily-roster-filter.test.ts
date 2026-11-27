@@ -12,9 +12,9 @@ const roster: DailyClassRoster = {
   classroomId: "room-1",
   classroomCode: "ป.6/1",
   students: [
-    { studentId: "1", code: "101", name: "นักเรียนมาสาย", status: "LATE" },
-    { studentId: "2", code: "102", name: "นักเรียนยังไม่เช็ก", status: null },
-    { studentId: "3", code: "103", name: "นักเรียนลาป่วย", status: "SICK_LEAVE" },
+    { studentId: "1", code: "101", name: "นักเรียนมาสาย", status: "LATE", faceCheckInAt: "08:15" },
+    { studentId: "2", code: "102", name: "นักเรียนยังไม่เช็ก", status: null, faceCheckInAt: null },
+    { studentId: "3", code: "103", name: "นักเรียนลาป่วย", status: "SICK_LEAVE", faceCheckInAt: null },
   ],
 };
 
@@ -23,6 +23,7 @@ describe("homeroom roster opened from a status card", () => {
     const props = { roster, initialFilter: "LATE" as const };
     const html = renderToStaticMarkup(createElement(DailyRollCallRoster, props));
     expect(html).toContain("นักเรียนมาสาย");
+    expect(html).toContain("สแกนใบหน้า 08:15 น.");
     expect(html).not.toContain("นักเรียนยังไม่เช็ก");
     expect(html).not.toContain("นักเรียนลาป่วย");
   });

@@ -2,7 +2,7 @@ import DailySchoolOverview from "@/features/dashboard/components/daily-school-ov
 import { getDailyRollCallOverview } from "@/features/attendance/services/daily-roll-call-service";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CalendarX2 } from "lucide-react";
+import { ArrowRight, CalendarX2, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import WelcomeBand from "@/features/dashboard/components/welcome-band";
 import SummaryFigures from "@/features/dashboard/components/summary-figures";
@@ -69,6 +69,14 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
             <span className="flex-1">คำขอลา / ขอมาสายรอพิจารณา {pendingLeave.toLocaleString("th-TH")} รายการ</span>
             <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
           </Link>
+        )}
+        {user.role === "ADMIN" && (
+          <Button asChild variant="outline" className="min-h-11 self-start">
+            <Link href="/dashboard/kiosk#zkteco">
+              <ScanLine aria-hidden="true" />
+              จุดสแกนใบหน้า
+            </Link>
+          </Button>
         )}
         <DailySchoolOverview rooms={rooms ?? []} date={date} scoped={user.role !== "ADMIN"} />
         <details className="group rounded-[20px] border border-school-panel-border bg-school-panel px-4 py-3 shadow-school-panel">
