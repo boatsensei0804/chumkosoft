@@ -32,7 +32,7 @@ export type ScannerEventOutcome =
   | { eventId: string; accepted: true; result: "checked_in" | "already" }
   | { eventId: string; accepted: false; reason: string };
 
-async function processOne(deviceId: string, event: ScannerEvent): Promise<ScannerEventOutcome> {
+async function processOne(deviceId: string, event: ScannerEvent, studentId?: string): Promise<ScannerEventOutcome> {
   const capturedAt = new Date(event.capturedAt);
   const now = new Date();
   if (!Number.isFinite(capturedAt.getTime()) || dateFormatter.format(capturedAt) !== event.localDate) {
@@ -46,7 +46,7 @@ async function processOne(deviceId: string, event: ScannerEvent): Promise<Scanne
     where: { eventId: event.eventId }, select: { deviceId: true, studentId: true, result: true },
   });
   const student = await prisma.student.findFirst({
-    where: { studentCode: event.studentCode, isDeleted: false },
+    where: { ...(studentId ? { id: studentId } : { studentCode: event.studentCode }), isDeleted: false },
     select: { id: true, prefix: true, firstName: true, lastName: true, faceConsent: true },
   });
   if (!student) return { eventId: event.eventId, accepted: false, reason: "ไม่พบนักเรียนในระบบ" };
@@ -137,9 +137,9 @@ async function processOne(deviceId: string, event: ScannerEvent): Promise<Scanne
   throw new Error("scanner sync retry exhausted");
 }
 
-export async function processScannerBatch(deviceId: string, events: ScannerEvent[]) {
+export async function processScannerBatch(deviceId: string, events: ScannerEvent[], studentIds?: ReadonlyMap<string, string>) {
   const outcomes: ScannerEventOutcome[] = [];
-  for (const event of events) outcomes.push(await processOne(deviceId, event));
+  for (const event of events) outcomes.push(await processOne(deviceId, event, studentIds?.get(event.eventId)));
   return {
     accepted: outcomes.filter((row): row is Extract<ScannerEventOutcome, { accepted: true }> => row.accepted)
       .map((row) => row.eventId),

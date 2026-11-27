@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import PageHeader from "@/features/dashboard/components/page-header";
 import PortalHeader from "@/features/portal/components/portal-header";
 import StatStrip from "@/components/ui/stat-strip";
@@ -8,6 +9,7 @@ import ScannerDevicesAutoRefresh from "./auto-refresh";
 import type { Metadata } from "next";
 import prisma from "@/lib/prisma";
 import { requireRoles } from "@/lib/dal";
+import { legacyAdmsDevice } from "@/features/faces/services/zkteco-devices";
 import { getScanSetting } from "@/features/kiosk/repositories/kiosk-repository";
 import { saveScannerDevice, saveScannerTime, setScannerDisplayOverride } from "./actions";
 
@@ -16,9 +18,10 @@ export const dynamic = "force-dynamic";
 
 export default async function ScannerDevicesPage() {
   const user = await requireRoles(["ADMIN", "KIOSK"]);
+  const legacyAdmsId = legacyAdmsDevice()?.id;
   const [devices, scanTime, clock] = await Promise.all([
     prisma.scannerDevice.findMany({
-      where: user.role === "KIOSK" ? { kioskUserId: user.id } : {},
+      where: { admsSerial: null, ...(legacyAdmsId && { id: { not: legacyAdmsId } }), ...(user.role === "KIOSK" && { kioskUserId: user.id }) },
       include: { kioskUser: { select: { email: true } } },
       orderBy: { createdAt: "desc" },
     }),
@@ -30,7 +33,10 @@ export default async function ScannerDevicesPage() {
   return (
     <div className="min-h-dvh bg-sky-50 text-slate-900"><PortalHeader user={user} /><ScannerDevicesAutoRefresh /><main className="px-4 py-6 sm:px-8">
       <div className="mx-auto max-w-6xl">
-        <PageHeader title="จัดการอุปกรณ์สแกน" subtitle="เว็บสำหรับดูสถานะและตั้งค่าเครื่อง ส่วนการสแกนเช็คชื่อทำผ่านแอปที่ติดตั้งในเครื่อง" actions={user.role === "ADMIN" ? <Link href="/dashboard/kiosk" className="rounded-xl border border-line bg-white px-4 py-2 text-sm font-semibold text-brand-ink">จัดการบัญชีจุดสแกน</Link> : undefined} />
+        <PageHeader title="จัดการอุปกรณ์สแกน" subtitle="ดูสถานะและตั้งค่าเครื่องสแกนของโรงเรียน" actions={user.role === "ADMIN" ? <>
+          <Button asChild variant="outline"><Link href="/dashboard/kiosk">จัดการบัญชีจุดสแกน</Link></Button>
+          <Button asChild><Link href="/scanner-devices/zkteco">จัดการเครื่อง ZKTeco</Link></Button>
+        </> : undefined} />
         <StatStrip items={[
           { label: "เครื่องทั้งหมด", value: devices.length, hint: "เครื่อง", tone: "brand" },
           { label: "ออนไลน์", value: devices.filter((device) => device.lastSeenAt && now - device.lastSeenAt.getTime() < 90_000).length, hint: "เครื่อง", tone: "success" },

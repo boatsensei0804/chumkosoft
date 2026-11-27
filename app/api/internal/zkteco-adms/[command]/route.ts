@@ -1,15 +1,16 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { z } from "zod";
+import type { z } from "zod";
 import prisma from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
+import { admsKioskAccount, legacyAdmsDevice } from "@/features/faces/services/zkteco-devices";
+import { legacyScannerPinMap } from "@/features/faces/services/zkteco-pin-mapping";
+import { scannerPinSchema } from "@/features/faces/zkteco-pin-mapping";
 import { processScannerBatch, scannerBatchSchema } from "@/features/faces/services/scanner-sync";
 
-type Context = RouteContext<"/api/internal/zkteco-adms/[command]">;
+type Context = { params: Promise<{ command: string }> };
 const maxBytes = 64 * 1024;
 const batchSize = 20;
-const pinPattern = /^\d{1,9}$/u;
 const timestampPattern = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/u;
-const pinMapSchema = z.record(z.string().regex(pinPattern), z.string().trim().min(1).max(80));
 
 function reply(body: string, status = 200): Response {
   return new Response(body, {
@@ -19,22 +20,27 @@ function reply(body: string, status = 200): Response {
 
 async function configuredDevice(request: Request, params: URLSearchParams) {
   const secret = process.env.ZKTECO_ADMS_SECRET;
-  const serial = process.env.ZKTECO_ADMS_SERIAL;
-  const deviceId = z.uuid().safeParse(process.env.ZKTECO_ADMS_DEVICE_ID);
-  if (!secret || secret.length < 32 || !serial || !/^[a-z0-9-]{1,64}$/iu.test(serial) || !deviceId.success) {
-    return reply("ADMS not configured", 503);
-  }
+  if (!secret || secret.length < 32) return reply("ADMS not configured", 503);
 
   const expected = Buffer.from(`Bearer ${secret}`);
   const supplied = Buffer.from(request.headers.get("authorization") ?? "");
   if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) return reply("Unauthorized", 401);
-  if (params.get("SN") !== serial) return reply("Unknown device", 403);
+  const serial = params.get("SN");
+  if (!serial || !/^[a-z0-9-]{1,64}$/iu.test(serial)) return reply("Unknown device", 403);
 
+  const normalizedSerial = serial.toUpperCase();
+  const legacy = legacyAdmsDevice();
   const device = await prisma.scannerDevice.findFirst({
-    where: { id: deviceId.data, kioskUser: { role: "KIOSK", isActive: true, isDeleted: false } },
-    select: { id: true },
+    where: {
+      OR: [
+        { admsSerial: normalizedSerial },
+        ...(legacy?.serial === normalizedSerial ? [{ id: legacy.id, admsSerial: null }] : []),
+      ],
+      kioskUser: admsKioskAccount,
+    },
+    select: { id: true, admsEnabled: true },
   });
-  return device ? { ...device, serial } : reply("Scanner device unavailable", 503);
+  return device?.admsEnabled ? { id: device.id, serial } : reply("Unknown or disabled device", 403);
 }
 
 function logEventId(deviceId: string, pin: string, capturedAt: string): string {
@@ -75,6 +81,9 @@ export async function GET(request: Request, { params }: Context): Promise<Respon
   const query = new URL(request.url).searchParams;
   const device = await configuredDevice(request, query);
   if (device instanceof Response) return device;
+  await prisma.scannerDevice.updateMany({
+    where: { id: device.id }, data: { admsLastSeenAt: new Date() },
+  });
   if (command === "getrequest" || query.get("options") !== "all") return reply("OK");
 
   return reply([
@@ -93,22 +102,15 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
   if (query.get("table") !== "ATTLOG") return reply("Only attendance logs are supported", 415);
   if (!(await rateLimit(`zkteco-adms:${device.id}`, 15, 60)).ok) return reply("Too many requests", 429);
 
-  let pinMap: Record<string, string>;
-  try {
-    pinMap = pinMapSchema.parse(JSON.parse(process.env.ZKTECO_ADMS_PIN_MAP ?? ""));
-  } catch {
-    return reply("PIN mapping not configured", 503);
-  }
-
   const body = await readAttendanceBody(request);
   if (body instanceof Response) return body;
   const lines = body.split(/\r?\n/u).filter((line) => line.trim());
   if (!lines.length) return reply("Missing attendance logs", 422);
-  const events: z.infer<typeof scannerBatchSchema>["events"] = [];
+  const scans: { pin: string; localTime: string }[] = [];
   for (const line of lines) {
     const [rawPin, timestamp, status, verification] = line.split("\t");
     const pin = rawPin.replace(/^PIN=/u, "");
-    if (!pinPattern.test(pin) || !timestampPattern.test(timestamp ?? "") || !/^\d+$/u.test(status ?? "") ||
+    if (!scannerPinSchema.safeParse(pin).success || !timestampPattern.test(timestamp ?? "") || !/^\d+$/u.test(status ?? "") ||
         !/^\d+$/u.test(verification ?? "")) return reply("Invalid ATTLOG row", 422);
     const localTime = timestamp.replace(" ", "T");
     const calendar = new Date(`${localTime}Z`);
@@ -116,20 +118,36 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
       return reply("Invalid ATTLOG timestamp", 422);
     }
     if (status !== "0" || verification !== "15") continue;
-    const studentCode = pinMap[pin];
-    if (!studentCode) return reply("Unmapped attendance PIN", 422);
-    const capturedAt = `${localTime}+07:00`;
-    events.push({ eventId: logEventId(device.id, pin, capturedAt), studentCode, capturedAt, localDate: localTime.slice(0, 10) });
+    scans.push({ pin, localTime });
   }
 
   try {
+    const pins = [...new Set(scans.map(({ pin }) => pin))];
+    const mappings = pins.length ? await prisma.scannerPinMapping.findMany({
+      where: { deviceId: device.id, pin: { in: pins } },
+      select: { pin: true, linkedAt: true, student: { select: { id: true, studentCode: true, isDeleted: true } } },
+    }) : [];
+    const mappingByPin = new Map(mappings.map((mapping) => [mapping.pin, mapping]));
+    const legacy = legacyScannerPinMap(device.id);
+    const studentIds = new Map<string, string>();
+    const events: z.infer<typeof scannerBatchSchema>["events"] = [];
+    for (const { pin, localTime } of scans) {
+      const mapping = mappingByPin.get(pin);
+      const capturedAt = `${localTime}+07:00`;
+      const eventId = logEventId(device.id, pin, capturedAt);
+      const studentCode = mapping ? mapping.student?.studentCode : legacy[pin];
+      if (mapping && new Date(capturedAt) < mapping.linkedAt) continue;
+      if (!studentCode || mapping?.student?.isDeleted) return reply("Unmapped attendance PIN", 422);
+      if (mapping?.student) studentIds.set(eventId, mapping.student.id);
+      events.push({ eventId, studentCode, capturedAt, localDate: localTime.slice(0, 10) });
+    }
     for (let offset = 0; offset < events.length; offset += batchSize) {
-      const result = await processScannerBatch(device.id, events.slice(offset, offset + batchSize));
+      const result = await processScannerBatch(device.id, events.slice(offset, offset + batchSize), studentIds);
       if (result.rejected.length) return reply("Attendance record rejected by Chumkosoft", 422);
     }
     const now = new Date();
     await prisma.scannerDevice.updateMany({
-      where: { id: device.id }, data: { lastSeenAt: now, ...(events.length > 0 && { lastSyncAt: now }) },
+      where: { id: device.id }, data: { admsLastSeenAt: now, ...(events.length > 0 && { admsLastSyncAt: now }) },
     });
     return reply(`OK: ${lines.length}`);
   } catch {

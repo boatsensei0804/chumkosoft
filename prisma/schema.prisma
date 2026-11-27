@@ -357,6 +357,7 @@ model Student {
   guardians        Guardian[]
   lineAccounts     StudentLineAccount[]
   faceTemplates    FaceTemplate[]
+  scannerPinMappings ScannerPinMapping[]
   user             User?
 
   isDeleted Boolean   @default(false)
@@ -820,12 +821,31 @@ model ScannerDevice {
   displayOffTime           String   @default("18:00")
   displayOverride          String   @default("AUTO")
   modelVersion             String?
+  admsSerial               String?  @unique
+  admsLocation             String?
+  admsEnabled              Boolean  @default(true)
+  admsLastSeenAt           DateTime?
+  admsLastSyncAt           DateTime?
   syncEvents               ScannerSyncEvent[]
+  pinMappings              ScannerPinMapping[]
   emergencyIncidents       EmergencyIncident[]
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 
   @@index([kioskUserId])
+}
+
+// A row with no student suppresses the legacy mapping for this PIN.
+model ScannerPinMapping {
+  deviceId  String        @db.Uuid
+  device    ScannerDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  pin       String
+  studentId String?
+  student   Student?      @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  linkedAt  DateTime      @default(now())
+
+  @@id([deviceId, pin])
+  @@index([studentId])
 }
 
 model ScannerSyncEvent {
