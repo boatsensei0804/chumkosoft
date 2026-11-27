@@ -29,8 +29,8 @@ export default async function TimetablePage({ searchParams }: TimetablePageProps
   return (
     <>
       <PageHeader
-        title="จัดตารางสอน"
-        subtitle="ดูภาพรวมคาบเรียนแยกตามห้องและวัน เปิดตารางรายห้องหรือรายครู แล้วสลับไปจัดหรือแก้คาบสอนได้จากหน้าเดียว"
+        title={user.role === "ADMIN" ? "จัดตารางสอน" : "ตารางสอน"}
+        subtitle={user.role === "ADMIN" ? "ดูและจัดคาบตามห้องเรียนหรือครูผู้สอน" : "ดูตารางสอนรายสัปดาห์และตารางของแต่ละห้อง"}
       />
       <TimetableWorkspace
         initialView={user.role === "ADMIN" && view === "edit" ? "edit" : "overview"}

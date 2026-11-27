@@ -28,7 +28,7 @@ export default async function AdminRecordsPage({ searchParams }: {
 
   return <>
     <PageHeader title="บัญชีแอดมินและถังขยะ" subtitle="จัดการบัญชีผู้ดูแล และตรวจรายการที่ถูกลบไว้"
-      actions={<Button asChild variant="outline"><Link href="/dashboard/settings">กลับการตั้งค่า</Link></Button>} />
+      actions={<Button asChild variant="outline"><Link href="/dashboard/settings?section=administration">กลับการตั้งค่า</Link></Button>} />
     <nav aria-label="บัญชีและถังขยะ" className="mb-4 flex flex-wrap gap-2">
       <Button asChild variant={trash ? "outline" : "default"}><Link href={path} aria-current={trash ? undefined : "page"}>บัญชีแอดมิน</Link></Button>
       <Button asChild variant={trash ? "default" : "outline"}><Link href={trashUrl} aria-current={trash ? "page" : undefined}>ถังขยะ</Link></Button>
@@ -36,7 +36,7 @@ export default async function AdminRecordsPage({ searchParams }: {
     {trash ? (
       <section className="rounded-2xl border border-line bg-card p-4 sm:p-5">
         <h2 className="text-base font-bold text-ink-strong">รายการในถังขยะ</h2>
-        <p className="mt-1 text-sm text-muted">ลบถาวรได้เฉพาะรายการที่ถูกลบไว้และไม่มีข้อมูลอ้างอิง</p>
+        <p className="mt-1 text-sm text-muted">ระบบจะแสดงข้อมูลอ้างอิงที่ต้องตรวจสอบก่อนลบถาวร</p>
         <nav aria-label="ประเภทข้อมูลที่ถูกลบ" className="my-4 flex flex-wrap gap-2">
           {Object.entries(trashKinds).map(([key, label]) => (
             <Button asChild key={key} variant={key === kind ? "secondary" : "outline"}>

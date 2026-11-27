@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { navGroups } from "../nav";
+import { getCurrentNavItem, getNavGroups } from "../nav";
 import { Menu, Search, CalendarDays, LogOut, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -25,14 +25,14 @@ interface TopBarProps {
 
 export default function TopBar({ user, onOpenNav, today, onOpenPalette }: TopBarProps): React.ReactNode {
   const pathname = usePathname();
-  const current = navGroups.flatMap((group) => group.items).filter((item) => pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`))).sort((a, b) => b.href.length - a.href.length)[0];
+  const current = getCurrentNavItem(getNavGroups(user.role), pathname);
   return (
     <header className="sticky top-0 z-[var(--z-sticky)] flex h-16 items-center gap-3 border-b border-school-panel-border bg-school-panel/95 px-4 backdrop-blur-xl xl:px-7">
       <Button variant="ghost" size="icon" onClick={onOpenNav} aria-label="เปิดเมนู" className="xl:hidden">
         <Menu className="size-5" />
       </Button>
 
-      <div className="hidden shrink-0 border-r border-line pr-5 lg:block"><p className="text-[10px] font-bold tracking-[0.16em] text-brand">CHUMKOSOFT</p><p className="mt-0.5 text-sm font-semibold text-ink-strong">{current?.label ?? "พื้นที่ทำงาน"}</p></div>
+      <div className="hidden shrink-0 border-r border-line pr-5 lg:block"><p className="text-sm font-semibold text-ink-strong">{current?.label ?? "พื้นที่ทำงาน"}</p></div>
 
       {/* Opens the ⌘K command palette — a real destination search, not a text field. */}
       <button

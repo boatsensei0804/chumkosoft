@@ -8,6 +8,7 @@ import { getAdmsNetworks } from "@/features/faces/services/zkteco-networks";
 import ScanSettingForm from "@/features/kiosk/components/scan-setting-form";
 import KioskManager from "@/features/kiosk/components/kiosk-manager";
 import { admsKioskAccount, legacyAdmsDevice, listAdmsDevices } from "@/features/faces/services/zkteco-devices";
+import { admsUploadResultSchema } from "@/features/faces/zkteco-upload-result";
 import ZktecoRegistry from "@/app/scanner-devices/zkteco/registry";
 import prisma from "@/lib/prisma";
 import { requireRoles } from "@/lib/dal";
@@ -41,6 +42,8 @@ export default async function KioskPage(): Promise<React.ReactNode> {
     kioskActive: kioskUser.role === "KIOSK" && kioskUser.isActive && !kioskUser.isDeleted,
     lastSeen: device.admsLastSeenAt,
     lastSync: device.admsLastSyncAt,
+    lastUpload: device.admsLastUploadAt,
+    lastUploadResult: admsUploadResultSchema.safeParse(device.admsLastUploadResult).data ?? null,
     mappingCount: device._count.pinMappings,
   }));
 
@@ -50,6 +53,8 @@ export default async function KioskPage(): Promise<React.ReactNode> {
         title="จุดสแกนใบหน้า"
         subtitle="ดูสถานะเครื่องสแกน ตั้งเวลาเข้าโรงเรียน และจัดการบัญชีจุดสแกน"
         actions={<>
+          <Button asChild variant="outline"><Link href="/dashboard/attendance?mode=school">ดูบันทึกเข้า–ออก</Link></Button>
+          <Button asChild variant="outline"><Link href="/dashboard/faces">ข้อมูลใบหน้านักเรียน</Link></Button>
           <Button asChild variant="outline"><a href="#zkteco-networks">เครือข่ายที่อนุญาต</a></Button>
           <Button asChild variant="outline">
             <Link href="/scanner-devices">

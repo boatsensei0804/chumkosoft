@@ -1,41 +1,56 @@
 import {
-  LayoutDashboard,
-  GraduationCap,
-  Users,
-  School,
-  BookOpen,
-  MapPin,
-  CalendarDays,
-  ClipboardCheck,
-  ScanFace,
-  UserCheck,
-  MessageSquare,
-  Megaphone,
-  Link2,
-  CalendarX2,
   Award,
+  BookOpen,
+  CalendarDays,
+  CalendarX2,
+  ClipboardCheck,
+  Database,
+  GraduationCap,
+  LayoutDashboard,
+  Link2,
+  MapPin,
+  Megaphone,
+  MessageSquare,
+  ScanFace,
   ScanLine,
-  Siren,
+  School,
   Settings,
+  Siren,
+  UserCheck,
+  Users,
+  UsersRound,
+  type LucideIcon,
 } from "lucide-react";
+import type { Role } from "@prisma/client";
 import type { NavItem } from "./types";
 
-/**
- * Sidebar navigation, grouped to keep any one section within working-memory
- * limits (≤5 items). Groups without a label render their items without a header
- * (the overview lives alone at the top). Role-restricted items carry `roles`.
- */
-export interface NavGroup {
+interface NavGroup {
   label?: string;
+  icon?: LucideIcon;
+  openByDefault?: boolean;
   items: NavItem[];
 }
 
-export const navGroups: NavGroup[] = [
+const navGroups: NavGroup[] = [
   {
     items: [{ key: "overview", label: "ภาพรวม", href: "/dashboard", icon: LayoutDashboard, available: true }],
   },
   {
-    label: "ทะเบียนข้อมูล",
+    label: "งานประจำวัน",
+    icon: CalendarDays,
+    openByDefault: true,
+    items: [
+      { key: "attendance", label: "เช็คชื่อ", href: "/dashboard/attendance", icon: ClipboardCheck, available: true },
+      { key: "timetable", label: "จัดตารางสอน", href: "/dashboard/timetable", icon: CalendarDays, available: true, roles: ["ADMIN"] },
+      { key: "timetable-teacher", label: "ตารางสอนของฉัน", href: "/dashboard/timetable", icon: CalendarDays, available: true, roles: ["TEACHER"] },
+      { key: "leave-requests", label: "คำขอลา / ขอมาสาย", href: "/dashboard/leave-requests", icon: CalendarX2, available: true },
+      { key: "behavior", label: "คะแนนความประพฤติ", href: "/dashboard/behavior", icon: Award, available: true },
+      { key: "emergencies", label: "แจ้งเหตุฉุกเฉิน", href: "/dashboard/emergencies", icon: Siren, available: true },
+    ],
+  },
+  {
+    label: "ทะเบียนโรงเรียน",
+    icon: Database,
     items: [
       { key: "students", label: "นักเรียน", href: "/dashboard/students", icon: GraduationCap, available: true },
       { key: "teachers", label: "ครูและบุคลากร", href: "/dashboard/teachers", icon: Users, available: true },
@@ -45,20 +60,17 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "ตารางและเช็คชื่อ",
+    label: "ระบบสแกนใบหน้า",
+    icon: ScanFace,
     items: [
-      { key: "timetable", label: "จัดตารางสอน", href: "/dashboard/timetable", icon: CalendarDays, available: true, roles: ["ADMIN"] },
-      { key: "timetable-teacher", label: "ตารางสอน", href: "/dashboard/timetable", icon: CalendarDays, available: true, roles: ["TEACHER"] },
-      { key: "attendance", label: "เช็คชื่อ", href: "/dashboard/attendance", icon: ClipboardCheck, available: true },
-      { key: "leave-requests", label: "คำขอลา / ขอมาสาย", href: "/dashboard/leave-requests", icon: CalendarX2, available: true },
-      { key: "behavior", label: "คะแนนความประพฤติ", href: "/dashboard/behavior", icon: Award, available: true },
+      { key: "kiosk", label: "จุดสแกนใบหน้า", href: "/dashboard/kiosk", icon: ScanLine, available: true, roles: ["ADMIN"] },
+      { key: "faces", label: "ข้อมูลใบหน้านักเรียน", href: "/dashboard/faces", icon: ScanFace, available: true, roles: ["ADMIN"] },
     ],
   },
   {
-    label: "สแกนและสื่อสาร",
+    label: "ผู้ปกครองและการสื่อสาร",
+    icon: MessageSquare,
     items: [
-      { key: "faces", label: "ชุดข้อมูลใบหน้า", href: "/dashboard/faces", icon: ScanFace, available: true, roles: ["ADMIN"] },
-      { key: "emergencies", label: "แจ้งเหตุฉุกเฉิน", href: "/dashboard/emergencies", icon: Siren, available: true, roles: ["ADMIN", "TEACHER"] },
       { key: "guardians", label: "ผู้ปกครอง", href: "/dashboard/guardians", icon: UserCheck, available: true },
       { key: "line", label: "LINE / แจ้งเตือน", href: "/dashboard/line", icon: MessageSquare, available: true, roles: ["ADMIN"] },
       { key: "my-line", label: "LINE ของฉัน", href: "/dashboard/my-line", icon: Link2, available: true, roles: ["TEACHER"] },
@@ -66,10 +78,23 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "ระบบ",
+    label: "ดูแลระบบ",
+    icon: Settings,
     items: [
-      { key: "kiosk", label: "จุดสแกนใบหน้า", href: "/dashboard/kiosk", icon: ScanLine, available: true, roles: ["ADMIN"] },
       { key: "settings", label: "ตั้งค่าระบบ", href: "/dashboard/settings", icon: Settings, available: true, roles: ["ADMIN"] },
+      { key: "records", label: "บัญชีแอดมินและถังขยะ", href: "/dashboard/settings/records", icon: UsersRound, available: true, roles: ["ADMIN"] },
     ],
   },
 ];
+
+export function getNavGroups(role: Role) {
+  return navGroups
+    .map((group) => ({ ...group, items: group.items.filter((item) => !item.roles || item.roles.includes(role)) }))
+    .filter((group) => group.items.length > 0);
+}
+
+export function getCurrentNavItem(groups: NavGroup[], pathname: string): NavItem | undefined {
+  return groups.flatMap((group) => group.items)
+    .filter((item) => item.available && (pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"))))
+    .sort((left, right) => right.href.length - left.href.length)[0];
+}

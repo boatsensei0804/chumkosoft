@@ -12,6 +12,7 @@ export async function POST(request: Request): Promise<Response> {
     const result = await sendAdvisorDigests();
     return Response.json(result, { status: result.failed ? 503 : 200 });
   } catch {
+    console.error("[Advisor LINE digest] Could not process daily summaries");
     return new Response("Digest unavailable", { status: 503 });
   }
 }

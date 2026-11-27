@@ -1,29 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { NavItem } from "../types";
 
 interface SidebarNavProps {
   items: NavItem[];
+  activeKey?: string;
   onNavigate?: () => void;
 }
 
-function isActive(pathname: string, href: string): boolean {
-  if (href === "/dashboard") return pathname === "/dashboard";
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-export default function SidebarNav({ items, onNavigate }: SidebarNavProps): React.ReactNode {
-  const pathname = usePathname();
-
+export default function SidebarNav({ items, activeKey, onNavigate }: SidebarNavProps): React.ReactNode {
   return (
     <TooltipProvider delayDuration={200}>
       <ul className="flex flex-col gap-0.5">
         {items.map((item) => {
-          const active = item.available && isActive(pathname, item.href);
+          const active = item.available && item.key === activeKey;
           const Icon = item.icon;
 
           if (!item.available) {
@@ -53,12 +46,12 @@ export default function SidebarNav({ items, onNavigate }: SidebarNavProps): Reac
                 onClick={onNavigate}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "group relative flex min-h-11 items-center gap-2.5 rounded-xl px-2.5 py-2 text-[14px] font-semibold transition-all",
-                  active ? "bg-gradient-to-r from-[#075fc4] to-[#138be9] text-white shadow-[0_5px_12px_#1b67b936]" : "text-[#153b69] hover:bg-white hover:shadow-[0_2px_8px_#1b67b912]",
+                  "group relative flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-semibold transition-colors",
+                  active ? "bg-brand-soft text-brand-ink" : "text-ink hover:bg-school-panel",
                 )}
               >
-                {active && <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-white/70" aria-hidden="true" />}
-                <Icon className={cn("size-5", active ? "text-white" : "text-[#086fce]")} />
+                {active && <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-brand" aria-hidden="true" />}
+                <Icon className={cn("size-5", active ? "text-brand-ink" : "text-muted")} />
                 <span className="flex-1">{item.label}</span>
                 {typeof item.badge === "number" && (
                   <span

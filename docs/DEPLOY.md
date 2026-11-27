@@ -114,31 +114,28 @@ teachers and admins can add or deduct points with a reason. The ledger is
 separate for each term. Existing historical late check-ins are not backfilled.
 
 An admin sets the delivery time in **System settings → LINE advisor summary**
-in half-hour increments (Bangkok time). The GitHub workflow
-`advisor-line-digest.yml` checks every 30 minutes using the production
-self-hosted runner; the app sends once per advisor on weekdays at or after the
-configured time. Generate one random secret (for example with
-`openssl rand -hex 32`), put the same value in `ADVISOR_LINE_DIGEST_SECRET`
-in the server's `.env` and in the repository's GitHub Actions secret of the
-same name. Recreate the app container so it reads the new environment value.
-Keep the secret out of Git and chat. The endpoint returns 401 until configured;
-Redis records which teachers have already received that day's summary.
+in half-hour increments (Bangkok time). In the production Compose stack, the
+`advisor-digest` service checks the app each minute over the Docker network.
+The app sends once per advisor on weekdays at or after the configured time.
 
-If the **Advisor LINE digest** workflow stops with
-`ADVISOR_LINE_DIGEST_SECRET is not configured`, the repository secret is
-missing. Add it at **GitHub → Settings → Secrets and variables → Actions →
-New repository secret**. Use the exact same random value as the production
-server's `.env` entry, then recreate only the app container so Compose reloads
-the environment:
+`scripts/gen-prod-env.sh` supplies `ADVISOR_LINE_DIGEST_SECRET` for fresh
+installations. On an existing server, keep the value already in `.env`. If it
+is missing, generate a random value with `openssl rand -hex 32`, set it in
+`.env`, and rebuild the production stack with the standard Compose command.
+The app and scheduler both read the secret from this file.
+
+Check the scheduler container for delivery counts and connection errors.
+HTTP 401 indicates that the scheduler and app do not have a matching secret.
 
 ```sh
 cd ~/chumkosoft
-sudo docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.rustfs.yml --profile tunnel up -d --no-deps --force-recreate app
+sudo docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.rustfs.yml --profile tunnel logs --tail 50 advisor-digest
 ```
 
-Running the workflow again may send real LINE summaries to connected teachers
-if the configured delivery time has passed. Never put the secret in a GitHub
-variable, workflow file, shell history, or issue comment.
+The **Advisor LINE digest** GitHub workflow remains available for manual runs
+if the same value is also saved as the repository's GitHub Actions secret
+`ADVISOR_LINE_DIGEST_SECRET`. Running it may send real LINE summaries to
+connected teachers if the configured time has passed.
 
 ### School-wide LINE announcements
 

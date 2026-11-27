@@ -8,11 +8,19 @@ import { admsKioskAccount, legacyAdmsDevice } from "@/features/faces/services/zk
 import { getAdmsNetworks, normalizeAdmsIp, parseAdmsIpList } from "@/features/faces/services/zkteco-networks";
 import { legacyScannerPinMap } from "@/features/faces/services/zkteco-pin-mapping";
 import { scannerPinSchema } from "@/features/faces/zkteco-pin-mapping";
+import type { AdmsUploadResult } from "@/features/faces/zkteco-upload-result";
 import { processScannerBatch, scannerBatchSchema } from "@/features/faces/services/scanner-sync";
 
 type AdmsTransport = "gateway" | "tunnel";
 const maxBytes = 64 * 1024;
 const batchSize = 20;
+const uploadErrors = {
+  invalid_row: "Invalid ATTLOG row",
+  invalid_timestamp: "Invalid ATTLOG timestamp",
+  ambiguous_pin: "Ambiguous attendance PIN",
+  unmapped_pin: "Unmapped attendance PIN",
+  attendance_rule: "Attendance record rejected by Chumkosoft",
+} as const;
 const timestampPattern = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/u;
 
 function reply(body: string, status = 200): Response {
@@ -151,26 +159,56 @@ export async function receiveAdms(request: Request, command: string, transport: 
   if (query.get("table") !== "ATTLOG") return reply("Only attendance logs are supported", 415);
   if (!(await rateLimit(`zkteco-adms:${device.id}`, 15, 60)).ok) return reply("Too many requests", 429);
 
-  const body = await readAttendanceBody(request);
-  if (body instanceof Response) return body;
-  const lines = body.split(/\r?\n/u).filter((line) => line.trim());
-  if (!lines.length) return reply("Missing attendance logs", 422);
-  const scans: { pin: string; localTime: string }[] = [];
-  for (const line of lines) {
-    const [rawPin, timestamp, status, verification] = line.split("\t");
-    const pin = rawPin.replace(/^PIN=/u, "").trim();
-    if (!scannerPinSchema.safeParse(pin).success || !timestampPattern.test(timestamp ?? "") || !/^\d+$/u.test(status ?? "") ||
-        !/^\d+$/u.test(verification ?? "")) return reply("Invalid ATTLOG row", 422);
-    const localTime = timestamp.replace(" ", "T");
-    const calendar = new Date(`${localTime}Z`);
-    if (!Number.isFinite(calendar.getTime()) || calendar.toISOString().slice(0, 19) !== localTime) {
-      return reply("Invalid ATTLOG timestamp", 422);
-    }
-    if (status !== "0" || verification !== "15") continue;
-    scans.push({ pin, localTime });
+  const deviceId = device.id;
+  let synced = false;
+  async function finishUpload(response: Response, result: AdmsUploadResult): Promise<Response> {
+    const now = new Date();
+    await prisma.scannerDevice.updateMany({
+      where: { id: deviceId },
+      data: {
+        admsLastSeenAt: now,
+        admsLastUploadAt: now,
+        admsLastUploadResult: result,
+        ...(synced && { admsLastSyncAt: now }),
+      },
+    });
+    return response;
   }
 
   try {
+    const body = await readAttendanceBody(request);
+    if (body instanceof Response) return await finishUpload(body, { outcome: "invalid_body" });
+    const lines = body.split(/\r?\n/u).filter((line) => line.trim());
+    if (!lines.length) return await finishUpload(reply("Missing attendance logs", 422), { outcome: "invalid_body" });
+
+    let failure: keyof typeof uploadErrors | undefined;
+    let skipped: AdmsUploadResult | undefined;
+    const scans: { pin: string; localTime: string }[] = [];
+    for (const line of lines) {
+      const [rawPin, timestamp, status, verification] = line.split("\t");
+      const pin = rawPin.replace(/^PIN=/u, "").trim();
+      if (!scannerPinSchema.safeParse(pin).success || !timestampPattern.test(timestamp ?? "") || !/^\d+$/u.test(status ?? "") ||
+          !/^\d+$/u.test(verification ?? "")) {
+        failure ??= "invalid_row";
+        continue;
+      }
+      const localTime = timestamp.replace(" ", "T");
+      const calendar = new Date(`${localTime}Z`);
+      if (!Number.isFinite(calendar.getTime()) || calendar.toISOString().slice(0, 19) !== localTime) {
+        failure ??= "invalid_timestamp";
+        continue;
+      }
+      // PUSH SDK Appendix 7 reserves 15 for face and 0 for ambiguous automatic identification.
+      if (status !== "0" || verification !== "15") {
+        skipped ??= {
+          outcome: "status_or_verification",
+          status: status.length <= 3 ? Number(status) : null,
+          verification: verification.length <= 3 ? Number(verification) : null,
+        };
+        continue;
+      }
+      scans.push({ pin, localTime });
+    }
     const pins = [...new Set(scans.map(({ pin }) => pin))];
     const mappings = pins.length ? await prisma.scannerPinMapping.findMany({
       where: { deviceId: device.id, pin: { in: pins } },
@@ -186,22 +224,27 @@ export async function receiveAdms(request: Request, command: string, transport: 
       const capturedAt = `${localTime}+07:00`;
       const eventId = logEventId(device.id, pin, capturedAt);
       const studentCode = mapping ? mapping.student?.studentCode : legacy[pin] ?? studentCodesByPin.get(pin);
-      if (mapping && new Date(capturedAt) < mapping.linkedAt) continue;
-      if (studentCode === null) return reply("Ambiguous attendance PIN", 422);
-      if (!studentCode || mapping?.student?.isDeleted) return reply("Unmapped attendance PIN", 422);
+      if (mapping && new Date(capturedAt) < mapping.linkedAt) {
+        skipped ??= { outcome: "before_mapping" };
+        continue;
+      }
+      if (!studentCode || mapping?.student?.isDeleted) {
+        failure ??= studentCode === null ? "ambiguous_pin" : "unmapped_pin";
+        continue;
+      }
       if (mapping?.student) studentIds.set(eventId, mapping.student.id);
       events.push({ eventId, studentCode, capturedAt, localDate: localTime.slice(0, 10) });
     }
     for (let offset = 0; offset < events.length; offset += batchSize) {
       const result = await processScannerBatch(device.id, events.slice(offset, offset + batchSize), studentIds);
-      if (result.rejected.length) return reply("Attendance record rejected by Chumkosoft", 422);
+      if (result.accepted.length) synced = true;
+      if (result.rejected.length) failure ??= "attendance_rule";
     }
-    const now = new Date();
-    await prisma.scannerDevice.updateMany({
-      where: { id: device.id }, data: { admsLastSeenAt: now, ...(events.length > 0 && { admsLastSyncAt: now }) },
-    });
-    return reply(`OK: ${lines.length}`);
+    if (failure) return await finishUpload(reply(uploadErrors[failure], 422), { outcome: failure });
+    const result: AdmsUploadResult = synced ? { outcome: "synced" } : (skipped ?? { outcome: "invalid_body" });
+    return await finishUpload(reply(`OK: ${lines.length}`), result);
   } catch {
-    return reply("Attendance service unavailable", 503);
+    const response = reply("Attendance service unavailable", 503);
+    return finishUpload(response, { outcome: "unavailable" }).catch(() => response);
   }
 }

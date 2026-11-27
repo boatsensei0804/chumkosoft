@@ -53,5 +53,20 @@ services:
     ports: !override
       - "127.0.0.1:3000:3000"
 
+  advisor-digest:
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM node:24-alpine
+        COPY scripts/advisor-line-digest.mjs /advisor-line-digest.mjs
+        USER node
+        CMD ["node", "/advisor-line-digest.mjs"]
+    logging: *prod-logging
+    restart: unless-stopped
+    environment:
+      ADVISOR_LINE_DIGEST_SECRET: ${ADVISOR_LINE_DIGEST_SECRET:-}
+    depends_on:
+      - app
+
   cloudflared:
     logging: *prod-logging

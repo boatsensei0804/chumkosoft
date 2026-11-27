@@ -826,6 +826,8 @@ model ScannerDevice {
   admsEnabled              Boolean  @default(true)
   admsLastSeenAt           DateTime?
   admsLastSyncAt           DateTime?
+  admsLastUploadAt         DateTime?
+  admsLastUploadResult     Json?
   syncEvents               ScannerSyncEvent[]
   pinMappings              ScannerPinMapping[]
   emergencyIncidents       EmergencyIncident[]

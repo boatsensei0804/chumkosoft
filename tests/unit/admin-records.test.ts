@@ -5,6 +5,7 @@ const db = vi.hoisted(() => ({
   $executeRaw: vi.fn(), $queryRaw: vi.fn(), user: { findFirst: vi.fn(), count: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
   student: { deleteMany: vi.fn(), findUnique: vi.fn() },
   enrollment: { findMany: vi.fn(), deleteMany: vi.fn() },
+  guardian: { findMany: vi.fn(), deleteMany: vi.fn() },
   classroom: { deleteMany: vi.fn(), findUnique: vi.fn() },
   course: { deleteMany: vi.fn(), findUnique: vi.fn() }, courseOffering: { count: vi.fn(), findMany: vi.fn(), deleteMany: vi.fn() }, timetableSlot: { findMany: vi.fn(), deleteMany: vi.fn() }, auditLog: { create: vi.fn() },
 }));
@@ -119,6 +120,40 @@ describe("administrator data management", () => {
     const result = await purgeArchivedRecord("actor", "student", "student");
     expect(result).toMatchObject({ ok: false });
     expect(result.related).toBeUndefined();
+    expect(db.enrollment.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("requires confirmation before removing a student's archived, unlinked guardian rows", async () => {
+    db.$queryRaw.mockResolvedValue([{ id: "student" }]);
+    db.student.deleteMany.mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ count: 1 });
+    db.student.findUnique.mockResolvedValue({ _count: { enrollments: 1, guardians: 1 } });
+    db.enrollment.findMany.mockResolvedValue([{ id: "enrollment" }]);
+    db.guardian.findMany.mockResolvedValue([{ id: "guardian" }]);
+    db.enrollment.deleteMany.mockResolvedValue({ count: 1 });
+    db.guardian.deleteMany.mockResolvedValue({ count: 1 });
+
+    const preview = await purgeArchivedRecord("actor", "student", "student");
+    expect(preview).toMatchObject({ ok: false, related: { enrollments: 1, guardians: 1 } });
+    expect(db.guardian.deleteMany).not.toHaveBeenCalled();
+
+    const result = await purgeArchivedRecord("actor", "student", "student", preview.related?.token);
+    expect(result.ok).toBe(true);
+    expect(db.guardian.deleteMany).toHaveBeenCalledWith({ where: {
+      studentId: "student", isDeleted: true, userId: null, lineUserId: null, lineLinkCode: null,
+      id: { in: ["guardian"] },
+    } });
+  });
+
+  it("blocks the student purge when a guardian remains active or linked", async () => {
+    db.$queryRaw.mockResolvedValue([{ id: "student" }]);
+    db.student.deleteMany.mockResolvedValue({ count: 0 });
+    db.student.findUnique.mockResolvedValue({ _count: { guardians: 2 } });
+    db.guardian.findMany.mockResolvedValue([{ id: "archived-guardian" }]);
+
+    const result = await purgeArchivedRecord("actor", "student", "student");
+    expect(result).toMatchObject({ ok: false, references: [{ count: 2 }] });
+    expect(result.related).toBeUndefined();
+    expect(db.guardian.deleteMany).not.toHaveBeenCalled();
     expect(db.enrollment.deleteMany).not.toHaveBeenCalled();
   });
 

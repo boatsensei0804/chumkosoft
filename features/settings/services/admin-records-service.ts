@@ -15,6 +15,11 @@ const order = [{ deletedAt: "desc" as const }, { id: "desc" as const }];
 const row = { id: true, deletedAt: true } as const;
 const name = (person: { firstName: string; lastName: string }) => `${person.firstName} ${person.lastName}`;
 
+function originalCode(code: string, id: string) {
+  const suffix = `::deleted::${id}`;
+  return code.endsWith(suffix) ? code.slice(0, -suffix.length) : code;
+}
+
 export function listAdminAccounts() {
   return prisma.user.findMany({
     where: { ...admin, isDeleted: false },
@@ -49,7 +54,7 @@ export async function listArchivedRecords(kind: TrashKind, page: number, parent?
   const query = { where: deleted, orderBy: order, skip: (page - 1) * trashPageSize, take: trashPageSize + 1 };
   switch (kind) {
     case "course": return (await prisma.course.findMany({ ...query, select: { ...row, code: true, name: true } }))
-      .map(({ code, name, ...record }) => ({ ...record, label: `${code} · ${name}` }));
+      .map(({ code, name, ...record }) => ({ ...record, label: `${originalCode(code, record.id)} · ${name}` }));
     case "room": return (await prisma.room.findMany({ ...query, select: { ...row, code: true, name: true } }))
       .map(({ code, name, ...record }) => ({ ...record, label: [code, name].filter(Boolean).join(" · ") }));
     case "classroom": return (await prisma.classroom.findMany({
@@ -64,9 +69,9 @@ export async function listArchivedRecords(kind: TrashKind, page: number, parent?
       ...record, label: `${courseOffering.course.code} · ${classroom.code} · ${slotDays[dayOfWeek]} ${period.label} · ${term.name}`,
     }));
     case "student": return (await prisma.student.findMany({ ...query, select: { ...row, studentCode: true, firstName: true, lastName: true } }))
-      .map(({ id, deletedAt, ...person }) => ({ id, deletedAt, label: `${person.studentCode} · ${name(person)}` }));
+      .map(({ id, deletedAt, ...person }) => ({ id, deletedAt, label: `${originalCode(person.studentCode, id)} · ${name(person)}` }));
     case "staff": return (await prisma.staff.findMany({ ...query, select: { ...row, staffCode: true, firstName: true, lastName: true } }))
-      .map(({ id, deletedAt, ...person }) => ({ id, deletedAt, label: `${person.staffCode} · ${name(person)}` }));
+      .map(({ id, deletedAt, ...person }) => ({ id, deletedAt, label: `${originalCode(person.staffCode, id)} · ${name(person)}` }));
     case "admin": return (await prisma.user.findMany({ ...query, where: { ...deleted, ...admin }, select: { ...row, email: true } }))
       .map(({ email, ...record }) => ({ ...record, label: email }));
   }
@@ -174,7 +179,7 @@ async function referenceDetails(tx: Prisma.TransactionClient, kind: TrashKind, i
     }
     return { label, count };
   }));
-  return { parent, references, enrollmentOnly: entries.length === 1 && entries[0][0] === "enrollments" };
+  return { parent, references, counts };
 }
 
 type TimetablePurgePlan = {
@@ -185,19 +190,28 @@ type TimetablePurgePlan = {
 type StudentPurgePlan = {
   summary: Extract<RelatedTrash, { enrollments: number }>;
   enrollments: string[];
+  guardians: string[];
 };
 type RelatedPlan = TimetablePurgePlan | StudentPurgePlan;
 
-async function planStudentPurge(tx: Prisma.TransactionClient, studentId: string): Promise<StudentPurgePlan | undefined> {
-  const rows = await tx.enrollment.findMany({
-    where: { studentId },
-    select: { id: true },
-    orderBy: { id: "asc" },
-  });
-  const enrollments = rows.map(({ id }) => id);
-  if (!enrollments.length) return undefined;
-  const token = createHash("sha256").update(JSON.stringify(["student", studentId, enrollments])).digest("hex");
-  return { summary: { token, enrollments: enrollments.length }, enrollments };
+const archivedUnlinkedGuardian = { ...deleted, userId: null, lineUserId: null, lineLinkCode: null } as const;
+
+async function planStudentPurge(tx: Prisma.TransactionClient, studentId: string, counts: Record<string, number>): Promise<{ plan?: StudentPurgePlan; reason?: string }> {
+  if (Object.entries(counts).some(([key, count]) => count > 0 && key !== "enrollments" && key !== "guardians")) return {};
+
+  const selectIds = { select: { id: true }, orderBy: { id: "asc" } } as const;
+  const guardians = counts.guardians ? (await tx.guardian.findMany({
+    ...selectIds, where: { studentId, ...archivedUnlinkedGuardian },
+  })).map(({ id }) => id) : [];
+  if (guardians.length !== (counts.guardians ?? 0)) {
+    return { reason: "ยังมีข้อมูลผู้ปกครองที่ใช้งานอยู่หรือเชื่อมบัญชีอยู่" };
+  }
+  const enrollments = counts.enrollments ? (await tx.enrollment.findMany({
+    ...selectIds, where: { studentId },
+  })).map(({ id }) => id) : [];
+  if (!enrollments.length && !guardians.length) return {};
+  const token = createHash("sha256").update(JSON.stringify(["student", studentId, enrollments, guardians])).digest("hex");
+  return { plan: { summary: { token, enrollments: enrollments.length, guardians: guardians.length }, enrollments, guardians } };
 }
 
 async function planRelatedPurge(tx: Prisma.TransactionClient, parent: ArchiveParent): Promise<{ plan?: RelatedPlan; reason?: string }> {
@@ -235,23 +249,32 @@ export async function purgeArchivedRecord(actorId: string, kind: TrashKind, id: 
       let detail: string | undefined;
       let result = relatedToken ? null : await purgeRow(tx, kind, id);
       if (!result?.count) {
-        const { parent, references, enrollmentOnly } = await referenceDetails(tx, kind, id);
+        const { parent, references, counts } = await referenceDetails(tx, kind, id);
         const eligible = parent && references.length > 0 && references.every((ref) => ref.trashKind && ref.archived === ref.count);
         const candidate: { plan?: RelatedPlan; reason?: string } = eligible
           ? await planRelatedPurge(tx, parent)
-          : kind === "student" && enrollmentOnly ? { plan: await planStudentPurge(tx, id) } : {};
+          : kind === "student" ? await planStudentPurge(tx, id, counts) : {};
         const { plan } = candidate;
         if (!plan || plan.summary.token !== relatedToken) {
-          const message = candidate.reason ?? (relatedToken ? "ชุดรายการเปลี่ยนไป กรุณาตรวจสอบก่อนยืนยันอีกครั้ง" : references.length
+          const message = candidate.reason ?? (relatedToken ? "ชุดรายการเปลี่ยนไป กรุณาตรวจสอบก่อนยืนยันอีกครั้ง" : plan
+            ? "ตรวจสอบรายการที่เกี่ยวข้องและยืนยันอีกครั้งเพื่อลบพร้อมกัน" : references.length
             ? "ยังลบถาวรไม่ได้ เพราะมีรายการต่อไปนี้อ้างอิงอยู่" : "ไม่พบรายการที่ลบถาวรได้ กรุณาโหลดหน้าใหม่");
           return { ok: false, message, references, related: plan?.summary };
         }
 
         // Limit the deletion to confirmed IDs and roll back if a dependency changed.
         if ("enrollments" in plan) {
-          const removed = await tx.enrollment.deleteMany({ where: { studentId: id, id: { in: plan.enrollments } } });
-          if (removed.count !== plan.enrollments.length) throw new RelatedRecordsChanged();
-          detail = `ลบรายการลงทะเบียนเรียน ${plan.enrollments.length} รายการ`;
+          if (plan.enrollments.length) {
+            const removed = await tx.enrollment.deleteMany({ where: { studentId: id, id: { in: plan.enrollments } } });
+            if (removed.count !== plan.enrollments.length) throw new RelatedRecordsChanged();
+          }
+          if (plan.guardians.length) {
+            const removed = await tx.guardian.deleteMany({ where: {
+              studentId: id, ...archivedUnlinkedGuardian, id: { in: plan.guardians },
+            } });
+            if (removed.count !== plan.guardians.length) throw new RelatedRecordsChanged();
+          }
+          detail = `ลบรายการลงทะเบียนเรียน ${plan.enrollments.length} รายการ และข้อมูลผู้ปกครอง ${plan.guardians.length} รายการ`;
         } else {
           if (plan.slots.length) {
             const removed = await tx.timetableSlot.deleteMany({ where: { id: { in: plan.slots }, ...deleted } });

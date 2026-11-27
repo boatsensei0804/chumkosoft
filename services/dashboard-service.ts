@@ -4,8 +4,8 @@ import {
   listAnnouncementRows,
   findEnrolmentDatesSince,
 } from "@/repositories/dashboard-repository";
-import { findSlotsForDay } from "@/repositories/timetable-repository";
-import { formatThaiDate } from "@/utils/thai-date";
+import { findTeacherSlotsForDay } from "@/repositories/timetable-repository";
+import { formatBangkokTime, formatThaiDate } from "@/utils/thai-date";
 import type { Announcement, AnnouncementKind, EnrolmentPoint, Figure, ScheduleItem } from "@/features/dashboard/types";
 import type { DayOfWeek } from "@prisma/client";
 
@@ -54,17 +54,13 @@ const WEEKDAY_ENUM: Record<string, DayOfWeek | undefined> = {
   Fri: "FRI",
 };
 
-function bangkok(opts: Intl.DateTimeFormatOptions, locale = "en-US"): string {
-  return new Intl.DateTimeFormat(locale, { timeZone: "Asia/Bangkok", ...opts }).format(new Date());
+function bangkok(date: Date, opts: Intl.DateTimeFormatOptions, locale = "en-US"): string {
+  return new Intl.DateTimeFormat(locale, { timeZone: "Asia/Bangkok", ...opts }).format(date);
 }
 
 function toMinutes(hhmm: string): number {
   const [h, m] = hhmm.split(":").map(Number);
   return h * 60 + m;
-}
-
-function formatTeacher(t: { prefix: string | null; firstName: string; lastName: string }): string {
-  return [t.prefix, `${t.firstName} ${t.lastName}`].filter(Boolean).join(" ");
 }
 
 function formatRoom(r: { code: string; name: string | null; building: string | null }): string {
@@ -75,7 +71,6 @@ function formatRoom(r: { code: string; name: string | null; building: string | n
 export interface TodaySchedule {
   isSchoolDay: boolean;
   weekdayLabel: string;
-  classroomCode: string | null;
   items: ScheduleItem[];
 }
 
@@ -88,26 +83,24 @@ export async function getActiveTermLabel(): Promise<string> {
   return `ปีการศึกษา ${ctx.buddhistYear} · ภาคเรียนที่ ${ctx.termNumber}`;
 }
 
-export async function getTodaySchedule(): Promise<TodaySchedule> {
-  const weekdayLabel = bangkok({ weekday: "long" }, "th-TH");
-  const day = WEEKDAY_ENUM[bangkok({ weekday: "short" })];
-  if (!day) return { isSchoolDay: false, weekdayLabel, classroomCode: null, items: [] };
+export async function getTodaySchedule(staffId: string | null, now = new Date()): Promise<TodaySchedule> {
+  const weekdayLabel = bangkok(now, { weekday: "long" }, "th-TH");
+  const day = WEEKDAY_ENUM[bangkok(now, { weekday: "short" })];
+  if (!day || !staffId) return { isSchoolDay: Boolean(day), weekdayLabel, items: [] };
 
-  const { classroomCode, slots } = await findSlotsForDay(day);
-  const nowMin = toMinutes(bangkok({ hour: "2-digit", minute: "2-digit", hour12: false }, "en-GB"));
-
-  const items: ScheduleItem[] = slots.map((s) => ({
-    id: s.id,
-    start: s.period.startTime,
-    end: s.period.endTime,
-    subject: s.courseOffering.course.name,
-    classroom: classroomCode ?? "",
-    teacher: formatTeacher(s.courseOffering.teacher),
-    room: formatRoom(s.courseOffering.room),
-    now: toMinutes(s.period.startTime) <= nowMin && nowMin < toMinutes(s.period.endTime),
+  const slots = await findTeacherSlotsForDay(staffId, day);
+  const nowMin = toMinutes(formatBangkokTime(now));
+  const items = slots.map((slot): ScheduleItem => ({
+    id: slot.id,
+    offeringId: slot.courseOfferingId,
+    start: slot.period.startTime,
+    end: slot.period.endTime,
+    subject: slot.courseOffering.course.name,
+    classroom: slot.classroom.code,
+    room: formatRoom(slot.room),
+    now: toMinutes(slot.period.startTime) <= nowMin && nowMin < toMinutes(slot.period.endTime),
   }));
-
-  return { isSchoolDay: true, weekdayLabel, classroomCode, items };
+  return { isSchoolDay: true, weekdayLabel, items };
 }
 
 /** Overview headline figures, computed from live data. deltaPct is 0 until there is

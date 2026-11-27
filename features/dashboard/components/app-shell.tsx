@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import SidebarContent from "./sidebar-content";
 import TopBar from "./top-bar";
 import CommandPalette from "./command-palette";
-import { navGroups } from "../nav";
+import { getNavGroups } from "../nav";
 import type { CurrentUser } from "@/lib/dal";
 
 interface AppShellProps {
@@ -20,7 +20,7 @@ export default function AppShell({ children, user, today }: AppShellProps): Reac
 
   // Every destination the current role can reach, flattened for the ⌘K palette.
   const commandItems = useMemo(
-    () => navGroups.flatMap((g) => g.items).filter((i) => i.available && (!i.roles || i.roles.includes(user.role))),
+    () => getNavGroups(user.role).flatMap((group) => group.items).filter((item) => item.available),
     [user.role],
   );
 

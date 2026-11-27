@@ -107,11 +107,11 @@ export interface Figure {
 
 export interface ScheduleItem {
   id: string;
+  offeringId: string;
   start: string;
   end: string;
   subject: string;
   classroom: string;
-  teacher: string;
   room: string;
   now?: boolean;
 }

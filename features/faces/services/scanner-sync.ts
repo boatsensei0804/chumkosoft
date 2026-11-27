@@ -4,7 +4,7 @@ import { z } from "zod";
 import prisma from "@/lib/prisma";
 import { getScanSetting } from "@/features/kiosk/repositories/kiosk-repository";
 import { syncLateBehaviorPoints } from "@/features/behavior/services/late-points";
-import { notifyGuardiansOfCheckIn } from "@/features/line/services/line-service";
+import { scheduleGuardiansCheckInNotification } from "@/features/line/services/line-service";
 
 export const scannerEventSchema = z.object({
   eventId: z.string().uuid(),
@@ -117,7 +117,7 @@ async function processOne(deviceId: string, event: ScannerEvent, studentId?: str
       if (result === "checked_in" && event.localDate === dateFormatter.format(now)) {
         const name = [student.prefix, student.firstName, student.lastName].filter(Boolean).join(" ");
         const message = `${name} เข้าโรงเรียนแล้วเมื่อเวลา ${localTime} น.${isLate ? " (มาสาย)" : ""}`;
-        void notifyGuardiansOfCheckIn(student.id, name, localTime, message).catch(() => undefined);
+        scheduleGuardiansCheckInNotification(student.id, name, localTime, message);
       }
       return { eventId: event.eventId, accepted: true, result };
     } catch (error) {

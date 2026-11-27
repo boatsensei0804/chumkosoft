@@ -32,7 +32,10 @@ export function RecordActionButton({ operation, id, item }: { operation: RecordO
   const confirmLabel = includingRelated ? "ลบถาวรพร้อมรายการที่เกี่ยวข้อง" : label;
   const message = includingRelated
     ? "enrollments" in includingRelated
-      ? `ลบ “${item}” พร้อมประวัติลงทะเบียนเรียนของนักเรียนคนนี้ ${includingRelated.enrollments} รายการ ทั้งชุดจะกู้คืนไม่ได้`
+      ? `ลบ “${item}” พร้อม${[
+        includingRelated.enrollments > 0 && `ประวัติลงทะเบียนเรียน ${includingRelated.enrollments} รายการ`,
+        includingRelated.guardians > 0 && `ข้อมูลผู้ปกครองในถังขยะ ${includingRelated.guardians} รายการ`,
+      ].filter(Boolean).join(" และ")} ทั้งชุดจะกู้คืนไม่ได้`
       : `ลบ “${item}” พร้อมรายการเปิดสอน ${includingRelated.offerings} รายการและคาบสอน ${includingRelated.slots} คาบในถังขยะ ทั้งชุดจะกู้คืนไม่ได้`
     : purge
     ? `ลบ “${item}” ออกจากระบบถาวร รายการที่ลบแล้วจะกู้คืนไม่ได้`
@@ -40,24 +43,29 @@ export function RecordActionButton({ operation, id, item }: { operation: RecordO
 
   function confirm(): void {
     startTransition(async () => {
-      const result: PurgeResult = "purge" in operation
-        ? await purgeRecordAction(operation.purge, id, includingRelated ? includingRelated.token : undefined)
-        : await changeAdminAction(id, operation.change);
-      setFailure(result.ok ? null : result);
+      let result: PurgeResult;
+      try {
+        result = "purge" in operation
+          ? await purgeRecordAction(operation.purge, id, includingRelated ? includingRelated.token : undefined)
+          : await changeAdminAction(id, operation.change);
+      } catch {
+        result = { ok: false, message: "ไม่ได้รับผลการดำเนินการ กรุณาโหลดหน้าใหม่เพื่อตรวจสอบ" };
+      }
+      setFailure(purge && !result.ok ? result : null);
       if (result.ok) toast.success(result.message);
-      else if (!result.references?.length) toast.error(result.message ?? "ดำเนินการไม่สำเร็จ");
-      setConfirmation(null);
+      else if (!purge) toast.error(result.message ?? "ดำเนินการไม่สำเร็จ");
+      setConfirmation(purge && result.related ? "related" : null);
     });
   }
 
   return <>
-    <Button variant={destructive ? "destructive" : "outline"} className="min-h-10" onClick={() => setConfirmation("single")}>{label}</Button>
+    <Button variant={destructive ? "destructive" : "outline"} className="min-h-10" disabled={pending} onClick={() => setConfirmation("single")}>{label}</Button>
     <ConfirmDialog open={confirmation !== null} title={confirmLabel} message={message} pending={pending} destructive={destructive}
       confirmLabel={confirmLabel} onClose={() => setConfirmation(null)} onConfirm={confirm} />
-    {purge && references.length > 0 && (
+    {purge && failure && (
       <div role="alert" className="w-full rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-        <p className="font-semibold">{failure?.message}</p>
-        <ul className="mt-1 space-y-1">
+        <p className="font-semibold">{failure.message ?? "ดำเนินการไม่สำเร็จ"}</p>
+        {references.length > 0 && <ul className="mt-1 space-y-1">
           {references.map(({ label, count, archived, trashKind }) => (
             <li key={label}>
               {label} {count.toLocaleString("th-TH")} รายการ
@@ -70,10 +78,10 @@ export function RecordActionButton({ operation, id, item }: { operation: RecordO
               )}
             </li>
           ))}
-        </ul>
+        </ul>}
         {related && <Button size="sm" variant="destructive" className="mt-3 h-auto min-h-10 whitespace-normal"
-          onClick={() => setConfirmation("related")}>
-          {"enrollments" in related ? "ลบพร้อมประวัติลงทะเบียนเรียน" : "ลบพร้อมรายการที่เกี่ยวข้องในถังขยะ"}
+          disabled={pending} onClick={() => setConfirmation("related")}>
+          ตรวจสอบและยืนยันลบพร้อมรายการที่เกี่ยวข้อง
         </Button>}
       </div>
     )}

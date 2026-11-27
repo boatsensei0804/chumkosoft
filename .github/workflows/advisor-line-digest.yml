@@ -1,8 +1,6 @@
 name: Advisor LINE digest
 
 on:
-  schedule:
-    - cron: '0,30 * * * *' # Check configurable Bangkok time every 30 minutes
   workflow_dispatch:
 
 permissions: {}

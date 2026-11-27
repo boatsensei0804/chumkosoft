@@ -25,6 +25,7 @@ PG_PASS="$(openssl rand -hex 24)"
 REDIS_PASS="$(openssl rand -hex 24)"
 MINIO_PASS="$(openssl rand -hex 24)"
 SESSION_SECRET="$(openssl rand -base64 32)"
+DIGEST_SECRET="$(openssl rand -hex 32)"
 
 PG_USER="chumko"
 PG_DB="chumkosoft"
@@ -67,6 +68,7 @@ SESSION_SECRET="${SESSION_SECRET}"
 # ── LINE Official Account ──────────────────────────────────
 LINE_CHANNEL_ACCESS_TOKEN=""
 LINE_CHANNEL_SECRET=""
+ADVISOR_LINE_DIGEST_SECRET="${DIGEST_SECRET}"
 
 # ── Cloudflare Tunnel (public HTTPS) ───────────────────────
 CLOUDFLARE_TUNNEL_TOKEN=""

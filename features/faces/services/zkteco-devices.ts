@@ -26,7 +26,7 @@ export async function listAdmsDevices() {
     where: { OR: [{ admsSerial: { not: null } }, ...(legacy ? [{ id: legacy.id, admsSerial: null }] : [])] },
     select: {
       id: true, name: true, admsLocation: true, admsSerial: true, admsEnabled: true,
-      admsLastSeenAt: true, admsLastSyncAt: true,
+      admsLastSeenAt: true, admsLastSyncAt: true, admsLastUploadAt: true, admsLastUploadResult: true,
       kioskUser: { select: { email: true, id: true, isActive: true, isDeleted: true, role: true } },
       _count: { select: { pinMappings: { where: { student: { isDeleted: false } } } } },
     },

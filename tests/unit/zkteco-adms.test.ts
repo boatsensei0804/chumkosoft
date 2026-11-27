@@ -146,6 +146,65 @@ describe("ZKTeco ADMS receiver", () => {
     expect((await POST(request(query, "001\t2026-11-27 08:01:59\t0\t15"), context)).status).toBe(422);
   });
 
+  it("processes a mapped face check-in even if another row has an unmapped PIN", async () => {
+    configure();
+    const body = "009\t2026-11-27 08:01:59\t0\t15\n001\t2026-11-27 08:02:00\t0\t15";
+    const response = await POST(request("SN=MB10TEST&table=ATTLOG", body), context);
+    expect(response.status).toBe(422);
+    expect(batch).toHaveBeenCalledWith(deviceId, [
+      expect.objectContaining({ studentCode: "STUDENT-001", capturedAt: "2026-11-27T08:02:00+07:00" }),
+    ], new Map());
+    expect(updateDevice).toHaveBeenCalledWith({
+      where: { id: deviceId },
+      data: {
+        admsLastSeenAt: expect.any(Date),
+        admsLastSyncAt: expect.any(Date),
+        admsLastUploadAt: expect.any(Date),
+        admsLastUploadResult: { outcome: "unmapped_pin" },
+      },
+    });
+  });
+
+  it("processes a mapped face check-in even if a different ATTLOG row is malformed", async () => {
+    configure();
+    const body = "bad row\n001\t2026-11-27 08:02:00\t0\t15";
+    const response = await POST(request("SN=MB10TEST&table=ATTLOG", body), context);
+    expect(response.status).toBe(422);
+    expect(batch).toHaveBeenCalledWith(deviceId, [
+      expect.objectContaining({ studentCode: "STUDENT-001" }),
+    ], new Map());
+  });
+
+  it("records an ignored upload separately from a successful sync without retaining the PIN", async () => {
+    configure();
+    const body = "001\t2026-11-27 08:01:59\t0\t0";
+    const response = await POST(request("SN=MB10TEST&table=ATTLOG", body), context);
+    expect(await response.text()).toBe("OK: 1");
+    expect(batch).not.toHaveBeenCalled();
+    expect(updateDevice).toHaveBeenCalledWith({
+      where: { id: deviceId },
+      data: {
+        admsLastSeenAt: expect.any(Date),
+        admsLastUploadAt: expect.any(Date),
+        admsLastUploadResult: { outcome: "status_or_verification", status: 0, verification: 0 },
+      },
+    });
+  });
+
+  it("continues processing later scanner batches after a downstream attendance rejection", async () => {
+    configure();
+    batch.mockResolvedValueOnce({ accepted: [], rejected: [{ reason: "Attendance rule" }] });
+    const body = Array.from({ length: 21 }, (_, index) =>
+      "001\t2026-11-27 08:01:" + String(index).padStart(2, "0") + "\t0\t15",
+    ).join("\n");
+    const response = await POST(request("SN=MB10TEST&table=ATTLOG", body), context);
+    expect(response.status).toBe(422);
+    expect(batch).toHaveBeenCalledTimes(2);
+    expect(updateDevice).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ admsLastSyncAt: expect.any(Date), admsLastUploadResult: { outcome: "attendance_rule" } }),
+    }));
+  });
+
   it("accepts a Tunnel heartbeat and writes attendance through the server API without a Worker", async () => {
     configure();
     vi.stubEnv("ZKTECO_ADMS_TUNNEL_HOST", "scanner-0123456789abcdef0123456789abcdef.internal");

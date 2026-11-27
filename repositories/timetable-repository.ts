@@ -94,28 +94,24 @@ export async function listScheduleClassrooms(academicYearId: string) {
   });
 }
 
-/** The active class's lessons on a given weekday, ordered by period. */
-export async function findSlotsForDay(dayOfWeek: DayOfWeek) {
-  const ctx = await getActiveContext();
-  if (!ctx) return { classroomCode: null, slots: [] as Awaited<ReturnType<typeof querySlots>> };
-  const slots = await querySlots(ctx.termId, ctx.classroomId, dayOfWeek);
-  return { classroomCode: ctx.classroomCode, slots };
-}
-
-function querySlots(termId: string, classroomId: string, dayOfWeek: DayOfWeek) {
+/** A teacher's lessons across classrooms for the active term and weekday. */
+export async function findTeacherSlotsForDay(teacherId: string, dayOfWeek: DayOfWeek) {
   return prisma.timetableSlot.findMany({
-    where: { termId, classroomId, dayOfWeek, isDeleted: false },
+    where: {
+      teacherId, dayOfWeek, isDeleted: false,
+      term: { isActive: true, isDeleted: false, academicYear: { isActive: true, isDeleted: false } },
+      courseOffering: { teacherId, isDeleted: false, course: { isDeleted: false } },
+      classroom: { isDeleted: false },
+      period: { isDeleted: false, isBreak: false },
+    },
     orderBy: { period: { index: "asc" } },
     select: {
       id: true,
-      period: { select: { label: true, startTime: true, endTime: true } },
-      courseOffering: {
-        select: {
-          course: { select: { name: true } },
-          teacher: { select: { prefix: true, firstName: true, lastName: true } },
-          room: { select: { code: true, name: true, building: true } },
-        },
-      },
+      courseOfferingId: true,
+      classroom: { select: { code: true } },
+      period: { select: { startTime: true, endTime: true } },
+      courseOffering: { select: { course: { select: { name: true } } } },
+      room: { select: { code: true, name: true, building: true } },
     },
   });
 }

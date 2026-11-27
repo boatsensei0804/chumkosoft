@@ -6,6 +6,7 @@ import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { AdmsUploadResult } from "@/features/faces/zkteco-upload-result";
 import { idleAction } from "@/types/form";
 import { manageAdmsDevice } from "./actions";
 
@@ -20,11 +21,26 @@ type Device = {
   kioskActive: boolean;
   lastSeen: Date | null;
   lastSync: Date | null;
+  lastUpload: Date | null;
+  lastUploadResult: AdmsUploadResult | null;
   mappingCount: number;
 };
 
 const format = new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" });
 const timestamp = (date: Date | null) => date ? format.format(date) : "—";
+
+const uploadLabels = {
+  synced: "รับรายการเข้าโรงเรียนแล้ว",
+  before_mapping: "บันทึกเกิดก่อนตั้งค่าจับคู่รหัส",
+  invalid_body: "ข้อมูลที่เครื่องส่งมาว่างหรืออ่านไม่ได้",
+  invalid_row: "รูปแบบบันทึกไม่ถูกต้อง",
+  invalid_timestamp: "วันที่หรือเวลาที่เครื่องส่งมาไม่ถูกต้อง",
+  ambiguous_pin: "พบรหัสนักเรียนที่ตรงกันมากกว่าหนึ่งรายการ",
+  unmapped_pin: "ไม่พบรหัสนักเรียนที่ตรงกับ User ID",
+  attendance_rule: "ไม่ผ่านเงื่อนไขเช็กชื่อ เช่น ความยินยอม การลงทะเบียน หรือเวลาสแกน",
+  unavailable: "ระบบรับบันทึกขัดข้อง",
+  status_or_verification: "บันทึกไม่ใช่การเช็กเข้าด้วยใบหน้า",
+} satisfies Record<AdmsUploadResult["outcome"], string>;
 
 function status(device: Device, now: number) {
   if (!device.enabled) return { label: "หยุดรับบันทึก", className: "bg-surface text-muted" };
@@ -55,6 +71,7 @@ export default function ZktecoRegistry({ devices, kiosks, now }: { devices: Devi
       </header>
       {devices.length ? <ul className="divide-y divide-line">{devices.map((device) => {
         const current = status(device, now);
+        const upload = device.lastUploadResult;
         return <li key={device.id} className="space-y-3 p-5">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
@@ -68,6 +85,14 @@ export default function ZktecoRegistry({ devices, kiosks, now }: { devices: Devi
             <div><dt className="text-muted">ติดต่อครั้งล่าสุด</dt><dd>{timestamp(device.lastSeen)}</dd></div>
             <div><dt className="text-muted">ซิงก์บันทึกล่าสุด</dt><dd>{timestamp(device.lastSync)}</dd></div>
             <div><dt className="text-muted">คู่รหัสที่ตั้งเอง</dt><dd>{device.mappingCount} คู่รหัส</dd></div>
+          </dl>
+          <dl className="text-sm">
+            <dt className="text-muted">ผลรับบันทึกล่าสุด</dt>
+            <dd>
+              {device.lastUpload ? <>{timestamp(device.lastUpload)}{upload && <> · {uploadLabels[upload.outcome]}</>}</> : "ยังไม่พบการส่งบันทึก"}
+              {upload?.outcome === "status_or_verification" &&
+                <span className="text-muted"> (Status {upload.status ?? "—"}, Verify {upload.verification ?? "—"})</span>}
+            </dd>
           </dl>
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline" size="sm"><Link href={`/scanner-devices/pin-mappings?device=${device.id}`}>จับคู่รหัสนักเรียน</Link></Button>

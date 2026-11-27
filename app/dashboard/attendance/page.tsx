@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { UserCheck } from "lucide-react";
+import { ScanLine, UserCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import MascotEmptyState from "@/components/ui/mascot-empty-state";
 import PageHeader from "@/features/dashboard/components/page-header";
 import AttendanceModeTabs from "@/features/attendance/components/attendance-mode-tabs";
@@ -50,11 +51,15 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
 
   return (
     <>
-      <PageHeader compact title="เช็คชื่อ" subtitle="เช็คชื่อรายวิชา เช็คชื่อประจำห้อง และบันทึกเวลาเข้า–ออกโรงเรียน" />
+      <PageHeader compact title="เช็คชื่อ" subtitle="เช็คชื่อรายคาบ ประจำห้อง และดูบันทึกเข้า–ออกโรงเรียน"
+        actions={mode === "school" && user.role === "ADMIN" && <Button asChild variant="outline">
+          <Link href="/dashboard/kiosk#zkteco"><ScanLine aria-hidden="true" />จัดการเครื่องสแกน</Link>
+        </Button>}
+      />
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <AttendanceModeTabs mode={mode} />
+          <AttendanceModeTabs mode={mode} date={date} month={month} />
           <span className="inline-flex items-center gap-1.5 text-[11px] text-muted">
             <UserCheck className="size-[15px]" />
             {scopeNote}
@@ -87,7 +92,13 @@ async function HomeroomMode({
 }): Promise<React.ReactNode> {
   if (classroomId) {
     const [roster, calendar] = await Promise.all([getDailyClassRoster(date, classroomId, teacherScope), getDailyRollCallCalendar(month, teacherScope, classroomId)]);
-    return roster ? <>{calendar && <AttendanceDateOverview mode="homeroom" month={month} selectedDate={date} days={calendar} classroomId={classroomId} />}<DailyRollCallRoster roster={roster} initialFilter={filter} /></> : <PromptCard title="ไม่พบห้องเรียน" message="ห้องเรียนนี้ไม่มีในภาคเรียนปัจจุบัน หรือคุณไม่มีสิทธิ์เข้าถึง" />;
+    if (!roster) return <PromptCard title="ไม่พบห้องเรียน" message="ห้องเรียนนี้ไม่มีในภาคเรียนปัจจุบัน หรือคุณไม่มีสิทธิ์เข้าถึง" />;
+    return (
+      <>
+        <DailyRollCallRoster roster={roster} initialFilter={filter} />
+        {calendar && <AttendanceDateOverview mode="homeroom" month={month} selectedDate={date} days={calendar} classroomId={classroomId} />}
+      </>
+    );
   }
 
   const [calendar, rooms] = await Promise.all([
@@ -96,8 +107,8 @@ async function HomeroomMode({
   ]);
   return (
     <>
-      {calendar && <AttendanceDateOverview mode="homeroom" month={month} selectedDate={date} days={calendar} />}
       {rooms && <DailyRollCallOverview date={date} rooms={rooms} />}
+      {calendar && <AttendanceDateOverview mode="homeroom" month={month} selectedDate={date} days={calendar} />}
     </>
   );
 }
@@ -132,7 +143,6 @@ async function ClassMode({
         </Link>
       )}
       <AttendanceControls offerings={offerings} selectedOfferingId={selectedOfferingId} date={date} />
-      {calendar && <AttendanceDateOverview mode="class" month={month} selectedDate={date} days={calendar} offeringId={selectedOfferingId} />}
       {offerings.length === 0 ? (
         <PromptCard title="ยังไม่มีรายวิชาที่เปิดสอน" message="กรุณาเปิดรายวิชาและจัดตารางสอนในภาคเรียนปัจจุบันก่อนเริ่มเช็คชื่อ" />
       ) : !selectedOfferingId ? (
@@ -142,6 +152,7 @@ async function ClassMode({
       ) : (
         <PromptCard title="ไม่พบข้อมูล" message="ไม่พบรายวิชาที่เลือก หรือรายวิชานี้ไม่ใช่ของคุณ กรุณาเลือกใหม่อีกครั้ง" />
       )}
+      {calendar && <AttendanceDateOverview mode="class" month={month} selectedDate={date} days={calendar} offeringId={selectedOfferingId} />}
     </>
   );
 }
@@ -166,13 +177,13 @@ async function SchoolMode({
   return (
     <>
       <SchoolEntryControls classrooms={classrooms} classroomId={classroomId} date={date} />
-      {calendar && <AttendanceDateOverview mode="school" month={month} selectedDate={date} days={calendar} classroomId={classroomId} />}
-      {roster && <SchoolEntrySummary roster={roster} classrooms={classrooms.filter((room) => !classroomId || room.id === classroomId)} />}
       {roster ? (
         <SchoolEntryRoster roster={roster} />
       ) : (
         <PromptCard title="วันที่ไม่ถูกต้อง" message="กรุณาเลือกวันที่ใหม่อีกครั้ง" />
       )}
+      {calendar && <AttendanceDateOverview mode="school" month={month} selectedDate={date} days={calendar} classroomId={classroomId} />}
+      {roster && <SchoolEntrySummary roster={roster} classrooms={classrooms.filter((room) => !classroomId || room.id === classroomId)} />}
     </>
   );
 }

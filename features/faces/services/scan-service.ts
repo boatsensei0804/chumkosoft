@@ -2,7 +2,7 @@ import "server-only";
 
 import * as repo from "@/features/faces/repositories/scan-repository";
 import { findBestMatch } from "@/features/faces/lib/match";
-import { notifyGuardiansOfCheckIn } from "@/features/line/services/line-service";
+import { scheduleGuardiansCheckInNotification } from "@/features/line/services/line-service";
 import { getScanSetting } from "@/features/kiosk/repositories/kiosk-repository";
 import { logAudit } from "@/lib/audit";
 
@@ -146,8 +146,7 @@ export async function commitCheckIn(studentId: string, actorId?: string): Promis
       detail: `${studentName} · ${time}${entry.isLate ? " · สาย" : ""}`,
     });
     const message = entry.isLate ? `${studentName} เข้าโรงเรียนแล้ว (มาสาย) เมื่อเวลา ${time} น.` : undefined;
-    // Fire-and-forget: a LINE failure must never block the gate.
-    void notifyGuardiansOfCheckIn(studentId, studentName, time, message).catch(() => undefined);
+    scheduleGuardiansCheckInNotification(studentId, studentName, time, message);
   }
 
   return { status: entry.alreadyCheckedIn ? "already" : "matched", studentId, studentName, classroom, time, late: entry.isLate };
