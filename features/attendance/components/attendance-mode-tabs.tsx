@@ -10,15 +10,15 @@ const tabs = [
 
 export default function AttendanceModeTabs({ mode, date, month }: { mode: (typeof tabs)[number]["key"]; date: string; month: string }) {
   return (
-    <nav aria-label="รูปแบบการเช็คชื่อ" className="grid w-full grid-cols-3 gap-1 rounded-xl border border-line bg-card p-1">
+    <nav aria-label="รูปแบบการเช็คชื่อ" className="grid w-full grid-cols-3 gap-1 rounded-lg bg-surface p-1 sm:max-w-xl xl:w-auto">
       {tabs.map(({ key, label, icon: Icon }) => (
         <Link
           key={key}
           href={"/dashboard/attendance?" + new URLSearchParams({ mode: key, date, month })}
           aria-current={mode === key ? "page" : undefined}
           className={cn(
-            "flex min-h-11 items-center justify-center gap-2 rounded-lg px-2 py-2 text-center text-xs font-semibold transition-colors sm:text-sm",
-            mode === key ? "bg-brand text-white" : "text-muted hover:bg-school-panel-tint hover:text-ink",
+            "flex min-h-11 items-center justify-center gap-2 rounded-md px-2 py-2 text-center text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:px-4 sm:text-sm",
+            mode === key ? "bg-brand text-white" : "text-ink hover:bg-brand-soft hover:text-brand-ink",
           )}
         >
           <Icon aria-hidden="true" className="hidden size-4 shrink-0 sm:block" />

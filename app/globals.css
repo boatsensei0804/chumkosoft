@@ -81,98 +81,80 @@
 }
 @import "tw-animate-css";
 
-/*
-  chumkosoft design tokens
-  Scene: a school registrar at her desk on a bright morning, fluorescent office
-  light, moving quickly through student and course records. Light theme, calm,
-  institutional. Azure blue carries the brand identity (logo, active nav, key
-  figures); a deeper blue gradient carries the primary actions. The one bold
-  surface is the deep institutional-blue letterhead band. Restrained strategy.
-  All colors OKLCH. UI components are shadcn/ui (mapped to these tokens via the
-  @theme block below); Tailwind handles layout.
-*/
-
+/* Chumkosoft uses white surfaces, clear blue controls, and a navy workspace navigation. */
 :root {
-  /* Quiet neutral surfaces: strong reading contrast without decorative noise. */
   --bg: #ffffff;
-  --surface: #f4f8fd;
-  --surface-2: #eaf5ff;
-  --surface-sunken: oklch(0.946 0.008 255);
-  --school-panel: #fbfdff;
-  --school-panel-border: #cbdff2;
-  --school-panel-tint: #edf5fd;
-  --school-panel-wash: #d9eafa;
+  --surface: #eff6ff;
+  --surface-2: #eaf3ff;
+  --surface-sunken: #e1edfb;
+  --school-panel: #ffffff;
+  --school-panel-border: #d1e1f5;
+  --school-panel-tint: #edf5ff;
+  --school-panel-wash: #cbe5ff;
 
-  /* Ink — cool near-black; strong contrast for hours of reading */
-  --ink: #172033;
-  --ink-strong: #102e56;
-  --muted: #64748b;
-  /* Tertiary text (captions, placeholders, meta). Darkened from 0.6 → 0.54 so it
-     clears WCAG AA (~4.8:1 on white) while staying a visibly lighter tier than muted. */
-  --faint: oklch(0.54 0.028 256);
+  --ink: #152f4f;
+  --ink-strong: #0a2548;
+  --muted: #425a75;
+  --faint: #506784;
+  --line: #d2e1f4;
+  --line-strong: #90abd0;
 
-  /* Lines — cool hairlines */
-  --line: oklch(0.9 0.008 255);
-  --line-strong: oklch(0.82 0.012 255);
+  --brand: #0759bd;
+  --brand-strong: #084592;
+  --brand-ink: #104884;
+  --brand-soft: #e2efff;
+  --brand-softer: #f3f8ff;
+  --sky-accent: #8fd5ff;
+  --sky-accent-soft: #def1ff;
+  --sky-accent-ink: #073b74;
+  --nav-surface: #102f56;
+  --nav-hover: #204873;
+  --nav-ink: #f8fbff;
+  --nav-muted: #c9dcf6;
+  --nav-line: #466b96;
 
-  /* Brand — azure blue identity: logo, active nav, selection, key figures, chart */
-  --brand: #1769b3;
-  --brand-strong: #0b4385;
-  --brand-ink: #0b4385;
-  --brand-soft: #eaf5ff;
-  --brand-softer: #f4f8fd;
+  --primary: var(--brand);
+  --primary-hover: var(--brand-strong);
+  --primary-grad-from: var(--brand);
+  --primary-grad-to: var(--brand-strong);
+  --on-primary: #ffffff;
 
-  /* Primary action — blue gradient (see MUI theme); solid values are the fallback */
-  --primary: oklch(0.45 0.14 253);
-  --primary-hover: oklch(0.39 0.14 254);
-  --primary-grad-from: oklch(0.48 0.14 250);
-  --primary-grad-to: oklch(0.42 0.14 256);
-  --on-primary: oklch(0.99 0.006 250);
-
-  /* Blue — second brand tone (Thai academic gold-on-blue heraldry) */
+  /* Blue remains available for informational notices and data series. */
   --blue: oklch(0.52 0.13 250);
   --blue-strong: oklch(0.42 0.12 252);
   --blue-ink: oklch(0.42 0.13 252);
   --blue-soft: oklch(0.96 0.026 250);
+  --accent: var(--brand-soft);
+  --accent-soft: var(--brand-softer);
 
-  /* Accent maps to blue: links, info, second brand voice */
-  --accent: var(--blue);
-  --accent-soft: var(--blue-soft);
+  --band-from: var(--nav-surface);
+  --band-to: var(--brand-strong);
+  --band-ink: var(--nav-ink);
+  --band-muted: var(--nav-muted);
+  --band-line: var(--nav-line);
 
-  /* Letterhead band — deep institutional-blue gradient (the one bold surface) */
-  --band-from: oklch(0.29 0.066 260);
-  --band-to: oklch(0.44 0.12 250);
-  --band-ink: oklch(0.98 0.006 250);
-  --band-muted: oklch(0.84 0.032 250);
-  --band-line: oklch(0.98 0.006 250 / 0.14);
-
-  /* Semantic states */
-  --success: #16a34a;
-  --success-soft: oklch(0.955 0.03 152);
-  --warning: #f59e0b;
-  --warning-soft: oklch(0.96 0.04 65);
-  --danger: #e54860;
-  --danger-soft: oklch(0.96 0.035 25);
+  --success: #25704a;
+  --success-soft: #e3f1e7;
+  --warning: #97561b;
+  --warning-soft: #fbedd8;
+  --danger: #aa3042;
+  --danger-soft: #fae9e9;
   --info: var(--blue);
   --info-soft: var(--blue-soft);
+  --focus: #095db9;
 
-  /* Focus */
-  --focus: oklch(0.52 0.15 252);
-
-  /* Radii + elevation */
   --radius-sm: 6px;
   --radius: 10px;
   --radius-lg: 14px;
-  --shadow-sm: 0 1px 2px oklch(0.3 0.02 255 / 0.05);
-  --shadow-md: 0 4px 12px oklch(0.3 0.02 255 / 0.08);
-  --shadow-lg: 0 12px 32px oklch(0.3 0.02 255 / 0.12);
+  --shadow-sm: 0 1px 2px #173e6810;
+  --shadow-md: 0 4px 12px #173e6814;
+  --shadow-lg: 0 12px 32px #173e681c;
 }
 
 @layer components {
   .school-card {
     border: 1px solid var(--school-panel-border);
     background-color: var(--school-panel);
-    box-shadow: 0 5px 18px #234f7a14;
   }
 }
 
@@ -182,7 +164,7 @@
   --color-school-panel-border: var(--school-panel-border);
   --color-school-panel-tint: var(--school-panel-tint);
   --color-school-panel-wash: var(--school-panel-wash);
-  --shadow-school-panel: 0 5px 18px #234f7a14;
+  --shadow-school-panel: 0 2px 5px #162f230b;
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-surface-sunken: var(--surface-sunken);
@@ -197,6 +179,14 @@
   --color-brand-ink: var(--brand-ink);
   --color-brand-soft: var(--brand-soft);
   --color-brand-softer: var(--brand-softer);
+  --color-sky-accent: var(--sky-accent);
+  --color-sky-accent-soft: var(--sky-accent-soft);
+  --color-sky-accent-ink: var(--sky-accent-ink);
+  --color-nav-surface: var(--nav-surface);
+  --color-nav-hover: var(--nav-hover);
+  --color-nav-ink: var(--nav-ink);
+  --color-nav-muted: var(--nav-muted);
+  --color-nav-line: var(--nav-line);
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
   --color-blue: var(--blue);
@@ -210,10 +200,7 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
 
-  /* shadcn/ui semantic colours — mapped onto the chumkosoft OKLCH palette so
-     shadcn components inherit the blue-white theme. (Names that already exist
-     above — muted, accent — are left as-is; shadcn components avoid their bg
-     variants.) */
+  /* Shared component tokens. */
   --color-background: var(--bg);
   --color-foreground: var(--ink);
   --color-card: var(--bg);
@@ -245,8 +232,10 @@
   --z-tooltip: 1500;
 }
 
-* {
-  border-color: var(--line);
+@layer base {
+  * {
+    border-color: var(--line);
+  }
 }
 
 html {
@@ -263,7 +252,7 @@ body {
 }
 
 ::selection {
-  background: oklch(0.86 0.055 250);
+  background: var(--sky-accent-soft);
   color: var(--ink-strong);
 }
 
@@ -295,10 +284,11 @@ body {
 }
 
 /* Focus-visible ring, consistent across the app */
-:where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-  border-radius: 4px;
+@layer base {
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
 }
 
 @keyframes loading-sweep {
@@ -324,8 +314,8 @@ body {
 /* Shared staff workspace: consistent visual hierarchy across registry pages. */
 .school-workspace main > .mb-6 { isolation: isolate; }
 .school-workspace main table thead {
-  background: #edf5ff;
-  color: #355779;
+  background: var(--school-panel-tint);
+  color: var(--muted);
 }
 .school-workspace main table thead th {
   padding-top: 15px;
@@ -337,7 +327,7 @@ body {
 .school-workspace main table tbody tr {
   transition: background-color 150ms ease;
 }
-.school-workspace main table tbody tr:hover { background-color: #f4f9ff; }
+.school-workspace main table tbody tr:hover { background-color: var(--brand-softer); }
 .school-workspace main table tbody td { padding-top: 15px; padding-bottom: 15px; }
 .school-workspace main input:not([type="checkbox"]):not([type="radio"]),
 .school-workspace main select {
@@ -346,7 +336,7 @@ body {
 .school-workspace main input:focus-visible,
 .school-workspace main select:focus-visible,
 .school-workspace main textarea:focus-visible {
-  outline: 2px solid #93c5fd;
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 @media (prefers-reduced-motion: reduce) {

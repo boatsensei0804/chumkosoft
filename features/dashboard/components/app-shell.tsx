@@ -38,21 +38,21 @@ export default function AppShell({ children, user, today }: AppShellProps): Reac
 
   return (
     <div className="school-workspace relative min-h-dvh bg-surface xl:h-dvh xl:overflow-hidden">
-      <a href="#dashboard-main" className="sr-only z-50 rounded-xl bg-white px-4 py-3 font-semibold text-brand-ink shadow-lg focus:not-sr-only focus:fixed focus:left-4 focus:top-4">ข้ามไปยังเนื้อหาหลัก</a>
+      <a href="#dashboard-main" className="sr-only z-[var(--z-tooltip)] rounded-lg bg-card px-4 py-3 font-semibold text-brand-ink shadow-lg focus:not-sr-only focus:fixed focus:left-4 focus:top-4">ข้ามไปยังเนื้อหาหลัก</a>
 
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-[var(--z-sticky)] hidden w-60 border-r border-line bg-card xl:block">
+      <aside className="fixed inset-y-0 left-0 z-[var(--z-sticky)] hidden w-60 bg-nav-surface xl:block">
         <SidebarContent user={user} />
       </aside>
 
       {/* Mobile drawer */}
       <Sheet open={navOpen} onOpenChange={setNavOpen}>
-        <SheetContent side="left" showCloseButton={false} aria-describedby={undefined} className="w-72 max-w-[90vw] border-none bg-card p-0">
+        <SheetContent side="left" showCloseButton={false} aria-describedby={undefined} className="w-72 max-w-[90vw] border-none bg-nav-surface p-0">
           <SheetHeader className="sr-only">
             <SheetTitle>เมนูหลัก</SheetTitle>
           </SheetHeader>
           <SidebarContent user={user} onNavigate={() => setNavOpen(false)} />
-          <SheetClose aria-label="ปิดเมนู" className="absolute right-3 top-2.5 grid size-11 place-items-center rounded-lg text-white hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white">
+          <SheetClose aria-label="ปิดเมนู" className="absolute right-3 top-2.5 grid size-11 place-items-center rounded-lg text-nav-ink hover:bg-nav-hover focus-visible:outline-2 focus-visible:outline-sky-accent">
             <X className="size-5" aria-hidden="true" />
           </SheetClose>
         </SheetContent>

@@ -16,13 +16,13 @@ export default function LoginChoices({ t }: { t: Dictionary["login"] }): React.R
   }
 
   return <>
-    <div role="group" aria-label={t.title} className="mb-3 grid grid-cols-2 gap-2 rounded-xl bg-sky-50 p-1">
+    <div role="group" aria-label={t.title} className="mb-3 grid grid-cols-2 gap-2 rounded-xl border border-line bg-surface-2 p-1">
       <button type="button" aria-pressed={mode === "password"} onClick={() => setMode("password")}
-        className={`min-h-11 rounded-lg px-3 text-sm font-semibold ${mode === "password" ? "bg-white text-brand-ink shadow-sm" : "text-muted"}`}>
+        className={`min-h-11 rounded-lg px-3 text-sm font-semibold ${mode === "password" ? "bg-card text-brand-ink shadow-sm" : "text-muted hover:bg-brand-soft"}`}>
         {t.passwordTab}
       </button>
       <button type="button" aria-pressed={mode === "qr"} onClick={selectQr}
-        className={`min-h-11 rounded-lg px-3 text-sm font-semibold ${mode === "qr" ? "bg-white text-brand-ink shadow-sm" : "text-muted"}`}>
+        className={`min-h-11 rounded-lg px-3 text-sm font-semibold ${mode === "qr" ? "bg-card text-brand-ink shadow-sm" : "text-muted hover:bg-brand-soft"}`}>
         {t.qrTab}
       </button>
     </div>

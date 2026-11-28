@@ -106,7 +106,7 @@ export default function CoursesBrowser({ page, query, canManage }: CoursesBrowse
           </div>
           <div className={cn("hidden overflow-x-auto border-t border-line transition-opacity md:block xl:min-h-0 xl:flex-1 xl:overflow-auto", isPending && "opacity-60")}>
             <Table className="min-w-[640px]">
-              <TableHeader className="sticky top-0 z-10 bg-[#eaf5ff]">
+              <TableHeader className="sticky top-0 z-10 bg-surface-2">
                 <TableRow>
                   <TableHead>รหัสวิชา</TableHead>
                   <TableHead>ชื่อรายวิชา</TableHead>

@@ -29,7 +29,7 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
 
   return (
     <>
-      <PageHeader title={heading} subtitle={formatThaiWeekdayLong(now)}
+      <PageHeader title={heading} subtitle={formatThaiWeekdayLong(now)} pose="family"
         actions={overview.classroomCode && <>
           <Button asChild variant={user.role === "PARENT" ? "outline" : "default"}><a href="#weekly-schedule">ตารางเรียน</a></Button>
           <Button asChild variant={user.role === "PARENT" ? "default" : "outline"}><a href="#school-entry">เข้า–ออกวันนี้</a></Button>
@@ -37,48 +37,50 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
       />
       <div className="flex flex-col gap-4">
         {user.role === "PARENT" && options.length > 0 && (options.length > 1 || unavailable) && (
-          <nav aria-label="เลือกนักเรียน" className="flex flex-wrap items-center gap-2 rounded-2xl border border-blue-100 bg-white p-3">
+          <nav aria-label="เลือกนักเรียน" className="flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-card p-3">
             <span className="mr-1 text-sm font-semibold text-ink-strong">เลือกนักเรียน</span>
             {options.map((option) => (
               <Link key={option.id} href={`/portal?student=${encodeURIComponent(option.id)}`} aria-current={selectedId === option.id ? "page" : undefined}
-                className={`inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold ${selectedId === option.id ? "bg-brand text-white" : "bg-blue-50 text-brand-ink"}`}>
+                className={`inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold ${selectedId === option.id ? "bg-brand text-white" : "bg-surface-2 text-brand-ink hover:bg-brand-soft"}`}>
                 {option.name}
               </Link>
             ))}
           </nav>
         )}
         {unavailable && <p role="status" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">เปิดข้อมูลนักเรียนที่เลือกไม่ได้ กรุณาเลือกรายชื่อที่เชื่อมกับบัญชีนี้</p>}
-        {overview.studentName && (
-          <section id="school-entry" aria-labelledby="school-entry-title" tabIndex={-1} className="scroll-mt-20 rounded-xl border border-line bg-card p-4 sm:p-5">
-            <h2 id="school-entry-title" className="font-bold text-ink-strong">{overview.studentName}</h2>
-            <p className="mt-1 text-sm text-muted">
-              {[overview.classroomCode && "ห้อง " + overview.classroomCode, overview.gradeLevel, overview.termLabel].filter(Boolean).join(" · ")}
-            </p>
-            {overview.classroomCode && (
-              <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-3 text-sm">
-                <div><dt className="text-muted">เข้าโรงเรียนวันนี้</dt><dd className="mt-1 font-semibold text-ink-strong">
-                  {entry?.checkInAt ? formatBangkokTime(entry.checkInAt) + " น." : "ยังไม่มีบันทึก"}
-                  {entry?.checkInAt && entry.isLate && <span className="ml-2 text-xs text-amber-800">มาสาย</span>}
-                </dd></div>
-                <div><dt className="text-muted">ออกจากโรงเรียน</dt><dd className="mt-1 font-semibold text-ink-strong">
-                  {entry?.checkOutAt ? formatBangkokTime(entry.checkOutAt) + " น." : "ยังไม่มีบันทึก"}
-                </dd></div>
-              </dl>
-            )}
-          </section>
-        )}
-        {(!unavailable || !options.length) && <section id="weekly-schedule" tabIndex={-1} className="flex scroll-mt-20 flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="size-5 text-brand-strong" />
-            <h2 className="text-[16px] font-bold text-ink-strong">{roleNote}</h2>
-          </div>
-
-          {overview.hasSchedule ? (
-            <WeeklySchedule key={selectedId} overview={overview} initialDay={weekday} />
-          ) : (
-            <EmptyState studentResolved={overview.studentName !== null} />
+        <div className={overview.studentName && !unavailable ? "grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]" : "grid gap-4"}>
+          {overview.studentName && (
+            <section id="school-entry" aria-labelledby="school-entry-title" tabIndex={-1} className="scroll-mt-20 rounded-xl border border-line bg-card p-4 sm:p-5">
+              <h2 id="school-entry-title" className="font-bold text-ink-strong">{overview.studentName}</h2>
+              <p className="mt-1 text-sm text-muted">
+                {[overview.classroomCode && "ห้อง " + overview.classroomCode, overview.gradeLevel, overview.termLabel].filter(Boolean).join(" · ")}
+              </p>
+              {overview.classroomCode && (
+                <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-3 text-sm">
+                  <div><dt className="text-muted">เข้าโรงเรียนวันนี้</dt><dd className="mt-1 font-semibold text-ink-strong">
+                    {entry?.checkInAt ? formatBangkokTime(entry.checkInAt) + " น." : "ยังไม่มีบันทึก"}
+                    {entry?.checkInAt && entry.isLate && <span className="ml-2 text-xs text-amber-800">มาสาย</span>}
+                  </dd></div>
+                  <div><dt className="text-muted">ออกจากโรงเรียน</dt><dd className="mt-1 font-semibold text-ink-strong">
+                    {entry?.checkOutAt ? formatBangkokTime(entry.checkOutAt) + " น." : "ยังไม่มีบันทึก"}
+                  </dd></div>
+                </dl>
+              )}
+            </section>
           )}
-        </section>}
+          {(!unavailable || !options.length) && <section id="weekly-schedule" tabIndex={-1} className="flex scroll-mt-20 flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="size-5 text-brand-strong" />
+              <h2 className="text-[16px] font-bold text-ink-strong">{roleNote}</h2>
+            </div>
+
+            {overview.hasSchedule ? (
+              <WeeklySchedule key={selectedId} overview={overview} initialDay={weekday} />
+            ) : (
+              <EmptyState studentResolved={overview.studentName !== null} />
+            )}
+          </section>}
+        </div>
       </div>
     </>
   );

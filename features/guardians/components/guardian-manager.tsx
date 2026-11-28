@@ -111,7 +111,7 @@ export default function GuardianManager({ page, query, classrooms, classroomId, 
           </div>
           <div className={cn("hidden overflow-auto rounded-[22px] school-card transition-opacity md:block xl:min-h-0 xl:flex-1", isPending && "opacity-60")}>
             <Table className="min-w-[820px]">
-              <TableHeader className="sticky top-0 z-10 bg-[#eaf5ff]">
+              <TableHeader className="sticky top-0 z-10 bg-surface-2">
                 <TableRow>
                   <TableHead>นักเรียน</TableHead>
                   <TableHead>ห้องเรียน</TableHead>

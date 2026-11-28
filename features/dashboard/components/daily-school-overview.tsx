@@ -6,6 +6,7 @@ import { ArrowUpRight, BriefcaseMedical, CalendarDays, CircleHelp, Clock3, Searc
 import type { DailyClassSummary } from "@/features/attendance/types";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const metrics = [
   { key: "present", filter: "PRESENT", label: "มาตรงเวลา", icon: UserRoundCheck, chip: "bg-emerald-100 text-emerald-700" },
@@ -27,6 +28,7 @@ export default function DailySchoolOverview({ rooms, date, scoped }: { rooms: Da
   const unchecked = rooms.reduce((sum, room) => sum + room.unchecked, 0);
   const checked = Math.max(0, total - unchecked);
   const pct = total ? Math.round(checked / total * 100) : 0;
+  const pendingRooms = rooms.filter((room) => room.unchecked > 0).length;
   const visible = rooms.filter((room) => `${room.classroomCode} ${room.gradeLevel}`.includes(query.trim()) && (!attentionOnly || room.unchecked > 0));
   const rosterUrl = (id: string) => `/dashboard/attendance?mode=homeroom&date=${date}&classroom=${encodeURIComponent(id)}`;
 
@@ -44,19 +46,22 @@ export default function DailySchoolOverview({ rooms, date, scoped }: { rooms: Da
         </Button>}
       </header>
 
-      <div className="border-y border-line bg-surface px-4 py-4 sm:px-5">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <p className="text-sm text-ink">เช็คชื่อแล้ว <strong className="tabular-nums text-ink-strong">{number(checked)} / {number(total)}</strong> คน</p>
-          <span className="text-sm font-semibold tabular-nums text-brand-ink">{total ? `${pct}%` : "—"}</span>
+      <div className="mx-4 mb-4 rounded-xl bg-brand-soft p-4 text-brand-ink sm:mx-5 sm:p-5">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="text-sm font-semibold">เช็คชื่อแล้ว</p>
+            <p className="mt-1 text-sm tabular-nums"><strong className="text-3xl leading-tight sm:text-4xl">{number(checked)}</strong> จาก {number(total)} คน</p>
+          </div>
+          {total > 0 && <span className="text-lg font-bold tabular-nums">{pct}%</span>}
         </div>
         {total > 0 && (
-          <div role="progressbar" aria-label="เช็คชื่อแล้ว" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} className="mt-2 h-2 overflow-hidden rounded-full bg-school-panel-wash">
+          <div role="progressbar" aria-label="เช็คชื่อแล้ว" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} className="mt-3 h-2 overflow-hidden rounded-full bg-brand/15">
             <div style={{ width: `${pct}%` }} className="h-full rounded-full bg-brand" />
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-px bg-line min-[375px]:grid-cols-3 2xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-px border-t border-line bg-line sm:grid-cols-3 2xl:grid-cols-6">
         {metrics.map((metric) => {
           const count = rooms.reduce((sum, room) => sum + room[metric.key], 0);
           return (
@@ -65,7 +70,10 @@ export default function DailySchoolOverview({ rooms, date, scoped }: { rooms: Da
                 metricTrigger.current = event.currentTarget;
                 setSelectedMetric(metric);
               }}
-              className="group min-w-0 bg-card p-2.5 text-left transition-colors hover:bg-brand-soft focus-visible:z-10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand sm:p-3">
+              className={cn(
+                "group min-w-0 p-3 text-left transition-colors focus-visible:z-10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
+                metric.key === "unchecked" && count > 0 ? "bg-amber-50 hover:bg-amber-100" : "bg-card hover:bg-brand-soft",
+              )}>
               <span className="flex items-center gap-1.5 text-xs font-semibold text-ink sm:gap-2">
                 <span className={`grid size-6 shrink-0 place-items-center rounded-md ${metric.chip}`}>
                   <metric.icon className="size-3.5" aria-hidden="true" />
@@ -87,12 +95,12 @@ export default function DailySchoolOverview({ rooms, date, scoped }: { rooms: Da
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
         <h2 id="classroom-tracking-heading" className="text-base font-bold text-ink-strong">ติดตามรายห้อง</h2>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-          <Button type="button" variant={attentionOnly ? "secondary" : "outline"} aria-pressed={attentionOnly} onClick={() => setAttentionOnly(!attentionOnly)} className="h-10">
-            ยังเช็คไม่ครบ ({rooms.filter((room) => room.unchecked > 0).length})
+          <Button type="button" variant={attentionOnly ? "secondary" : "outline"} aria-pressed={attentionOnly} onClick={() => setAttentionOnly(!attentionOnly)} className="h-11">
+            ยังเช็คไม่ครบ ({number(pendingRooms)})
           </Button>
           <label className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-line bg-card px-2.5 focus-within:ring-2 focus-within:ring-brand sm:w-40">
             <Search className="size-4 shrink-0 text-muted" aria-hidden="true" />
-            <input aria-label="ค้นหาห้องในภาพรวมวันนี้" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหาห้องเรียน" className="w-full min-w-0 bg-transparent text-sm outline-none" />
+            <input aria-label="ค้นหาห้องในภาพรวมวันนี้" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหาห้องเรียน" className="h-11 w-full min-w-0 bg-transparent text-base outline-none sm:text-sm" />
           </label>
         </div>
       </header>

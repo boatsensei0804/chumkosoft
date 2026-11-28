@@ -152,7 +152,7 @@ export default function StudentsBrowser({ page, query, filter, classrooms, class
                   onClick={() => navigate({ filter: f.key, page: 1 })}
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[13px] font-semibold transition-colors",
-                    active ? "bg-blue text-[var(--band-ink)]" : "bg-surface-2 text-muted hover:text-ink",
+                    active ? "bg-brand-soft text-brand-ink" : "bg-surface-2 text-muted hover:text-ink",
                   )}
                 >
                   {f.label}
@@ -210,7 +210,7 @@ export default function StudentsBrowser({ page, query, filter, classrooms, class
           </div>
           <div className={cn("hidden max-h-[52dvh] overflow-auto border-t border-line transition-opacity md:block", isPending && "opacity-60")}>
             <Table className="min-w-[720px]">
-              <TableHeader className="sticky top-0 z-10 bg-[#edf5ff] shadow-[0_1px_0_0_#d9e8f8]">
+              <TableHeader className="sticky top-0 z-10 bg-surface-2 shadow-[0_1px_0_0_var(--line)]">
                 <TableRow>
                   {isAdmin && <TableHead className="w-11">
                     <Checkbox

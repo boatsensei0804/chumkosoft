@@ -104,7 +104,7 @@ export default function TeachersBrowser({ page, query, filter, canManageAccounts
                   onClick={() => navigate({ filter: f.key, page: 1 })}
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[13px] font-semibold transition-colors",
-                    active ? "bg-blue text-[var(--band-ink)]" : "bg-surface-2 text-muted hover:text-ink",
+                    active ? "bg-brand-soft text-brand-ink" : "bg-surface-2 text-muted hover:text-ink",
                   )}
                 >
                   {f.label}
@@ -145,7 +145,7 @@ export default function TeachersBrowser({ page, query, filter, canManageAccounts
           </div>
           <div className={cn("hidden overflow-x-auto border-t border-line transition-opacity md:block xl:min-h-0 xl:flex-1 xl:overflow-auto", isPending && "opacity-60")}>
             <Table className="min-w-[720px]">
-              <TableHeader className="sticky top-0 z-10 bg-[#eaf5ff]">
+              <TableHeader className="sticky top-0 z-10 bg-surface-2">
                 <TableRow>
                   <TableHead>ครูและบุคลากร</TableHead>
                   <TableHead>ตำแหน่ง</TableHead>

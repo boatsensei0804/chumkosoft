@@ -108,7 +108,7 @@ export default function ClassroomsBrowser({ classrooms, teachers, canManage }: C
           </div>
           <div className="hidden overflow-x-auto border-t border-line md:block xl:min-h-0 xl:flex-1 xl:overflow-auto">
             <Table className="min-w-[720px]">
-              <TableHeader className="sticky top-0 z-10 bg-[#eaf5ff]">
+              <TableHeader className="sticky top-0 z-10 bg-surface-2">
                 <TableRow>
                   <TableHead>ห้องเรียน</TableHead>
                   <TableHead>ครูที่ปรึกษา</TableHead>

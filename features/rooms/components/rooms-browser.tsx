@@ -89,7 +89,7 @@ export default function RoomsBrowser({ rooms, canManage }: { rooms: RoomRow[]; c
           </div>
           <div className="hidden overflow-x-auto border-t border-line md:block xl:min-h-0 xl:flex-1 xl:overflow-auto">
             <Table className="min-w-[640px]">
-              <TableHeader className="sticky top-0 z-10 bg-[#eaf5ff]">
+              <TableHeader className="sticky top-0 z-10 bg-surface-2">
                 <TableRow>
                   <TableHead>รหัสห้อง</TableHead>
                   <TableHead>ชื่อห้อง</TableHead>

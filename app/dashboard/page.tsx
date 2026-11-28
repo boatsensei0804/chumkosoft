@@ -68,6 +68,7 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
   return (
     <>
       <PageHeader
+        featured
         title={isAdmin ? "ภาพรวมโรงเรียน" : "งานของฉันวันนี้"}
         subtitle={greeting + " · " + formatThaiWeekdayLong(now) + " · " + term}
         actions={<Button asChild className="h-11">
@@ -78,9 +79,9 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
         </Button>}
       />
       {pendingLeave > 0 && (
-        <Link href="/dashboard/leave-requests?view=all&status=pending#leave-list" className="mb-5 flex min-h-11 items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-900 transition-colors hover:bg-amber-100">
+        <Link href="/dashboard/leave-requests?view=all&status=pending#leave-list" className="mb-5 flex min-h-11 items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 transition-colors hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
           <CalendarX2 className="size-5 shrink-0" aria-hidden="true" />
-          <span className="flex-1">คำขอลา / ขอมาสายรอพิจารณา {pendingLeave.toLocaleString("th-TH")} รายการ</span>
+          <span className="grow"><strong>คำขอลาและขอมาสาย</strong> · รอพิจารณา {pendingLeave.toLocaleString("th-TH")} รายการ</span>
           <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
         </Link>
       )}
@@ -90,12 +91,14 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
           {(isAdmin || hasRooms) && <DailySchoolOverview rooms={rooms ?? []} date={date} scoped={!isAdmin} />}
         </div>
         <div className="min-w-0 space-y-5">
-          <SectionCard title="ทางลัด" bodyClassName="px-2 py-1.5">
-            <ul>
+          <SectionCard title="งานที่ใช้บ่อย" bodyClassName="p-2">
+            <ul className="grid gap-1 sm:grid-cols-2 xl:grid-cols-1">
               {shortcuts.map(({ href, label, icon: Icon }) => (
                 <li key={href}>
-                  <Link href={href} className="group flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-ink transition-colors hover:bg-brand-soft hover:text-brand-ink">
-                    <Icon className="size-[18px] shrink-0 text-brand" aria-hidden="true" />
+                  <Link href={href} className="group flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-semibold text-ink transition-colors hover:bg-brand-soft hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand">
+                    <span className="grid size-8 shrink-0 place-items-center rounded-md bg-brand-soft text-brand">
+                      <Icon className="size-4" aria-hidden="true" />
+                    </span>
                     <span className="flex-1">{label}</span>
                     <ArrowRight className="size-4 shrink-0 text-muted group-hover:text-brand" aria-hidden="true" />
                   </Link>
@@ -107,7 +110,7 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
         </div>
         {registry && (
           <details className="rounded-xl border border-line bg-card px-4 py-3 xl:col-span-2">
-            <summary className="min-h-8 cursor-pointer font-semibold text-brand-ink">สรุปทะเบียนโรงเรียน</summary>
+            <summary className="min-h-8 cursor-pointer py-1 font-semibold text-brand-ink focus-visible:outline-2 focus-visible:outline-brand">สรุปทะเบียนโรงเรียน</summary>
             <div className="mt-3"><SummaryFigures figures={registry[0]} /></div>
             <div className="mt-4 grid gap-4 lg:grid-cols-2">
               <EnrolmentTrend data={registry[2]} />

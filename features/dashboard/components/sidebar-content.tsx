@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { BookOpen, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import SidebarNav from "./sidebar-nav";
@@ -20,8 +20,8 @@ export default function SidebarContent({ user, onNavigate }: SidebarContentProps
   const current = getCurrentNavItem(groups, pathname);
 
   return (
-    <div className="flex h-full flex-col bg-school-panel">
-      <Link href="/dashboard" onClick={onNavigate} aria-label="Chumkosoft ภาพรวม" className="flex h-16 shrink-0 items-center border-b-2 border-amber-300 bg-ink-strong px-4 focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-white">
+    <div className="flex h-full flex-col bg-nav-surface text-nav-ink [&_a:focus-visible]:outline-sky-accent [&_summary:focus-visible]:outline-sky-accent">
+      <Link href="/dashboard" onClick={onNavigate} aria-label="Chumkosoft ภาพรวม" className="mx-3 flex h-16 shrink-0 items-center border-b border-nav-line px-2 focus-visible:-outline-offset-4">
         <BrandMark inverse />
       </Link>
 
@@ -32,15 +32,21 @@ export default function SidebarContent({ user, onNavigate }: SidebarContentProps
           const GroupIcon = group.icon;
           return <details key={`${group.label}-${active ? "active" : "inactive"}`} open={active || group.openByDefault || undefined} className="group/nav shrink-0 rounded-[16px]">
             <summary className={cn(
-              "flex min-h-11 cursor-pointer list-none items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-semibold transition-colors hover:bg-surface [&::-webkit-details-marker]:hidden",
-              active ? "text-brand-ink" : "text-muted",
+              "flex min-h-11 cursor-pointer list-none items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-semibold transition-colors hover:bg-nav-hover [&::-webkit-details-marker]:hidden",
+              active ? "text-sky-accent" : "text-nav-muted",
             )}>
-              {GroupIcon && <GroupIcon className="size-4 shrink-0" aria-hidden="true" />}<span className="flex-1">{group.label}</span><ChevronDown aria-hidden="true" className="size-4 shrink-0 transition-transform group-open/nav:rotate-180" />
+              {GroupIcon && <GroupIcon className="size-4 shrink-0" aria-hidden="true" />}<span className="flex-1">{group.label}</span><ChevronDown aria-hidden="true" className="size-4 shrink-0 motion-safe:transition-transform group-open/nav:rotate-180" />
             </summary>
-            <div className="ml-4 border-l border-line py-1 pl-2"><SidebarNav items={group.items} activeKey={current?.key} onNavigate={onNavigate} /></div>
+            <div className="ml-4 border-l border-nav-line py-1 pl-2"><SidebarNav items={group.items} activeKey={current?.key} onNavigate={onNavigate} /></div>
           </details>;
         })}
       </nav>
+      <div className="mx-3 shrink-0 border-t border-nav-line py-2">
+        <Link href="/guide?role=teacher" onClick={onNavigate} className="flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 text-sm text-nav-muted hover:bg-nav-hover hover:text-nav-ink">
+          <BookOpen className="size-[18px] shrink-0" aria-hidden="true" />
+          คู่มือการใช้งาน
+        </Link>
+      </div>
     </div>
   );
 }

@@ -17,7 +17,7 @@ export default function PortalHeader({ user }: { user: CurrentUser }): React.Rea
           <p className="text-[12px] text-muted leading-tight">{user.subtitle}</p>
         </div>
         <span
-          className="grid size-9 shrink-0 place-items-center rounded-full bg-amber-100 text-[13px] font-semibold text-amber-950"
+          className="grid size-9 shrink-0 place-items-center rounded-full bg-sky-accent-soft text-[13px] font-semibold text-sky-accent-ink"
           aria-hidden="true"
         >
           {user.initials}

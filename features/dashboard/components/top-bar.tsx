@@ -49,7 +49,7 @@ export default function TopBar({ user, onOpenNav, today, onOpenPalette }: TopBar
         onClick={onOpenPalette}
         aria-label="ค้นหาและไปยังหน้า (⌘K)"
         aria-keyshortcuts="Meta+K Control+K"
-        className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-line bg-surface text-left transition-colors hover:border-line-strong hover:bg-brand-soft sm:w-40 sm:justify-start sm:px-3 xl:w-56"
+        className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-line bg-surface text-left motion-safe:transition-colors hover:border-line-strong hover:bg-brand-soft sm:w-40 sm:justify-start sm:px-3 xl:w-56"
       >
         <Search className="size-[18px] shrink-0 text-brand-ink" aria-hidden="true" />
         <span className="hidden min-w-0 flex-1 truncate text-sm text-muted sm:block">ค้นหาเมนู</span>
@@ -70,7 +70,7 @@ export default function TopBar({ user, onOpenNav, today, onOpenPalette }: TopBar
               aria-label="เมนูบัญชีผู้ใช้"
             >
               <Avatar className="size-8">
-                <AvatarFallback className="bg-amber-100 text-[13px] font-semibold text-amber-950">{user.initials}</AvatarFallback>
+                <AvatarFallback className="bg-sky-accent-soft text-[13px] font-semibold text-sky-accent-ink">{user.initials}</AvatarFallback>
               </Avatar>
               <ChevronDown className="hidden size-4 text-muted sm:block" />
             </button>

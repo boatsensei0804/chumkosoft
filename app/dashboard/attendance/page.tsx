@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ScanLine, UserCheck } from "lucide-react";
+import { ArrowRight, Clock3, ScanLine, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MascotEmptyState from "@/components/ui/mascot-empty-state";
 import PageHeader from "@/features/dashboard/components/page-header";
@@ -33,6 +33,12 @@ interface AttendancePageProps {
   searchParams: Promise<{ mode?: string; offering?: string; classroom?: string; date?: string; month?: string; filter?: string }>;
 }
 
+const attendanceDescriptions = {
+  class: "เลือกวิชาและวันที่เพื่อบันทึกการเข้าเรียนรายคาบ",
+  homeroom: "บันทึกสถานะนักเรียนประจำวันและติดตามห้องที่เช็คชื่อแล้ว",
+  school: "ดูเวลาเข้า–ออกโรงเรียนจากจุดสแกนและรายการที่ครูบันทึก",
+};
+
 export default async function AttendancePage({ searchParams }: AttendancePageProps): Promise<React.ReactNode> {
   // Authoritative RBAC + who's looking: admins see every class; a teacher is
   // scoped to their own teaching offerings and advisory classrooms.
@@ -51,17 +57,17 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
 
   return (
     <>
-      <PageHeader pose="schedule" title="เช็คชื่อ" subtitle="เช็คชื่อรายคาบ ประจำห้อง และดูบันทึกเข้า–ออกโรงเรียน"
-        actions={mode === "school" && user.role === "ADMIN" && <Button asChild variant="outline">
+      <PageHeader pose="schedule" compact title="เช็คชื่อ" subtitle={attendanceDescriptions[mode]}
+        actions={mode === "school" && user.role === "ADMIN" && <Button asChild variant="outline" className="min-h-11">
           <Link href="/dashboard/kiosk#zkteco"><ScanLine aria-hidden="true" />จัดการเครื่องสแกน</Link>
         </Button>}
       />
 
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col items-start gap-3 rounded-xl border border-line bg-card p-2 sm:p-3 xl:flex-row xl:items-center xl:justify-between xl:gap-5">
           <AttendanceModeTabs mode={mode} date={date} month={month} />
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted">
-            <UserCheck className="size-[15px]" />
+          <span className="inline-flex items-start gap-1.5 px-2 py-1 text-xs leading-relaxed text-muted">
+            <UserCheck className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
             {scopeNote}
           </span>
         </div>
@@ -136,10 +142,13 @@ async function ClassMode({
   return (
     <>
       {nextSlot && nextOffering && (
-        <Link href={`/dashboard/attendance?${new URLSearchParams({ mode: "class", offering: nextOffering.id, date })}`} className="flex min-h-11 flex-wrap items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-2 text-sm text-brand-ink hover:border-brand">
-          <strong>{nextSlot.inProgress ? "คาบปัจจุบัน" : "คาบถัดไปวันนี้"}</strong>
-          <span>{nextOffering.label} · {nextSlot.period.startTime}–{nextSlot.period.endTime} น.</span>
-          <span className="ml-auto font-semibold">เปิดเช็กชื่อ</span>
+        <Link href={`/dashboard/attendance?${new URLSearchParams({ mode: "class", offering: nextOffering.id, date })}`} className="group flex min-h-11 flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-line bg-brand-soft p-3 text-sm text-brand-ink transition-colors hover:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:p-4">
+          <Clock3 className="size-5 shrink-0" aria-hidden="true" />
+          <span className="min-w-0 grow">
+            <strong className="block">{nextSlot.inProgress ? "คาบปัจจุบัน" : "คาบถัดไปวันนี้"}</strong>
+            <span className="mt-0.5 block break-words">{nextOffering.label} · {nextSlot.period.startTime}–{nextSlot.period.endTime} น.</span>
+          </span>
+          <span className="flex items-center gap-1.5 font-bold group-hover:underline">เปิดเช็คชื่อ <ArrowRight className="size-4" aria-hidden="true" /></span>
         </Link>
       )}
       <AttendanceControls offerings={offerings} selectedOfferingId={selectedOfferingId} date={date} />
