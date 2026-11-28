@@ -53,6 +53,8 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
   ]);
   const greeting = user.firstName ? thaiGreeting(now) + " คุณ" + user.firstName : thaiGreeting(now);
   const hasRooms = Boolean(rooms?.length);
+  const startedRooms = rooms?.filter((room) => room.total > 0) ?? [];
+  const remainingRooms = startedRooms.filter((room) => room.unchecked > 0);
   const shortcuts = isAdmin ? [
     { href: "/dashboard/attendance?mode=school", label: "บันทึกเข้า–ออกโรงเรียน", icon: ScanLine },
     { href: "/dashboard/students", label: "รายชื่อนักเรียน", icon: GraduationCap },
@@ -68,7 +70,6 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
   return (
     <>
       <PageHeader
-        featured
         title={isAdmin ? "ภาพรวมโรงเรียน" : "งานของฉันวันนี้"}
         subtitle={greeting + " · " + formatThaiWeekdayLong(now) + " · " + term}
         actions={<Button asChild className="h-11">
@@ -78,13 +79,25 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
           </Link>
         </Button>}
       />
-      {pendingLeave > 0 && (
-        <Link href="/dashboard/leave-requests?view=all&status=pending#leave-list" className="mb-5 flex min-h-11 items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 transition-colors hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
-          <CalendarX2 className="size-5 shrink-0" aria-hidden="true" />
-          <span className="grow"><strong>คำขอลาและขอมาสาย</strong> · รอพิจารณา {pendingLeave.toLocaleString("th-TH")} รายการ</span>
-          <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
-        </Link>
-      )}
+      <section aria-labelledby="today-work" className="mb-5 overflow-hidden rounded-2xl border border-line bg-card">
+        <h2 id="today-work" className="border-b border-line px-4 py-3 text-base font-bold text-ink-strong sm:px-5">งานที่ต้องทำวันนี้</h2>
+        <ul className="divide-y divide-line">
+          {startedRooms.length > 0 && (
+            <li className="px-4 py-3 sm:px-5">
+              <p className="font-semibold">เช็กชื่อประจำห้อง <span className="font-normal text-muted">ครบ {startedRooms.length - remainingRooms.length} จาก {startedRooms.length} ห้อง</span></p>
+              {remainingRooms.length > 0 ? <ul className="mt-2 flex flex-wrap gap-2">{remainingRooms.map((room) => (
+                <li key={room.classroomId}><Link href={`/dashboard/attendance?${new URLSearchParams({ mode: "homeroom", date, classroom: room.classroomId, filter: "unchecked" })}`} className="inline-flex min-h-11 items-center rounded-lg bg-warning-soft px-3 text-sm font-semibold text-warning hover:underline">
+                  {room.classroomCode} · ยังไม่เช็ก {room.unchecked} คน
+                </Link></li>
+              ))}</ul> : <p className="mt-1 text-sm font-medium text-success">เช็กชื่อครบทุกห้องแล้ว</p>}
+            </li>
+          )}
+          <li><Link href="/dashboard/leave-requests?view=all&status=pending#leave-list" className="flex min-h-11 flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm font-semibold hover:bg-surface sm:px-5">
+            <span className="inline-flex items-center gap-2"><CalendarX2 aria-hidden="true" className="size-4" /> คำขอลาและขอมาสายรอพิจารณา</span>
+            <span className={pendingLeave ? "text-warning" : "text-muted"}>{pendingLeave} รายการ <ArrowRight aria-hidden="true" className="inline size-4" /></span>
+          </Link></li>
+        </ul>
+      </section>
       <nav aria-labelledby="dashboard-shortcuts" className="mb-6 rounded-2xl border border-line bg-card p-4 sm:p-5">
         <h2 id="dashboard-shortcuts" className="mb-3 text-base font-bold text-ink-strong">งานที่ใช้บ่อย</h2>
         <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

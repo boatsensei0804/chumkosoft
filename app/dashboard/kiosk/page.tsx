@@ -58,17 +58,14 @@ export default async function KioskPage(): Promise<React.ReactNode> {
     lastUploadResult: admsUploadResultSchema.safeParse(device.admsLastUploadResult).data ?? null,
   }));
 
-  const deviceTotals = [
-    { label: "เครื่องที่ลงทะเบียน", value: rows.length },
-    { label: "เครื่องที่เปิดรับบันทึก", value: rows.filter((device) => device.enabled && device.kioskActive).length },
-    { label: "เครื่องที่เคยส่งบันทึก", value: rows.filter((device) => device.lastUpload).length },
-  ];
+  const now = clock[0].now.getTime();
+  const online = rows.filter((device) => device.enabled && device.kioskActive && device.lastSeen && now - device.lastSeen.getTime() <= 120_000);
+  const needsReview = rows.filter((device) => !online.includes(device) || (!device.lastSync || (device.lastUploadResult && device.lastUploadResult.outcome !== "synced")));
 
   return (
     <>
       <PageHeader
         pose="scan"
-        featured
         title="จุดสแกนใบหน้า"
         subtitle="ตรวจสถานะเครื่องและบันทึกที่ส่งถึงโรงเรียน"
         actions={<>
@@ -80,14 +77,20 @@ export default async function KioskPage(): Promise<React.ReactNode> {
         </>}
       />
 
-      <dl className="mb-4 grid grid-cols-3 overflow-hidden rounded-xl border border-line bg-brand-soft text-brand-ink">
-        {deviceTotals.map(({ label, value }) => (
-          <div key={label} className="border-line px-2.5 py-3 [&+div]:border-s sm:px-5 sm:py-4">
-            <dt className="text-xs font-medium leading-snug sm:text-sm">{label}</dt>
-            <dd className="mt-1 text-2xl font-bold tabular-nums sm:text-3xl">{value}</dd>
+      <section aria-labelledby="scanner-health" className="mb-5 rounded-2xl border border-line bg-card p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 id="scanner-health" className="font-bold text-ink-strong">สถานะเครื่อง ZKTeco</h2>
+            <p className="mt-1 text-sm text-muted">ออนไลน์ {online.length} จาก {rows.length} เครื่อง · ต้องตรวจ {needsReview.length} เครื่อง</p>
           </div>
-        ))}
-      </dl>
+          <Button asChild variant="outline"><Link href="#zkteco">ดูผลรับบันทึกจากเครื่อง</Link></Button>
+        </div>
+        {needsReview.length > 0 && <ul className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
+          {needsReview.map((device) => <li key={device.id}><Link href={`#scanner-${device.id}`} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-warning-soft px-3 text-sm font-semibold text-warning hover:underline">
+            {device.name} · {!device.enabled ? "หยุดรับบันทึก" : !device.kioskActive ? "บัญชีไม่พร้อม" : !device.lastSeen ? "รอติดต่อ" : !online.includes(device) ? "ออฟไลน์" : !device.lastSync ? "ยังไม่มีผลซิงก์" : "ตรวจผลรับบันทึกล่าสุด"}
+          </Link></li>)}
+        </ul>}
+      </section>
 
       <nav aria-label="ส่วนต่าง ๆ ในหน้าจุดสแกน" className="mb-5">
         <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -104,7 +107,7 @@ export default async function KioskPage(): Promise<React.ReactNode> {
       </nav>
 
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,23rem)]">
-        <ZktecoRegistry devices={rows} kiosks={kiosks} now={clock[0].now.getTime()} />
+        <ZktecoRegistry devices={rows} kiosks={kiosks} now={now} />
 
         <div className="min-w-0 space-y-5 xl:col-start-2 xl:row-span-2 xl:row-start-1">
           <div id="kiosk-scan-times" tabIndex={-1} className="scroll-mt-24"><ScanSettingForm setting={setting} /></div>

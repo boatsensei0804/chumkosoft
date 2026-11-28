@@ -56,43 +56,9 @@ Success looks like: staff complete routine records work faster and with fewer er
 students and teachers self-serve their timetables and attendance without contacting the
 office; and every action is correctly scoped to the user's role and to the active term.
 
-## Brand Personality
+## Interface design
 
-Trustworthy, calm, and competent — the quiet confidence of institutional software people
-rely on, not consumer flash. Three words: **dependable, clear, unobtrusive.**
-
-The interface should feel like a well-run school office: organized, legible, and
-respectful of the user's time. It recedes into the task rather than competing for
-attention. Tone in copy is plain, direct, and reassuring — never playful at the expense
-of clarity, never cold.
-
-## Anti-references
-
-- **Generic SaaS-cream dashboards** — big gradient hero metric, identical icon-card grids,
-  purple-to-blue gradients. Reads as templated; carries no institutional trust.
-- **Consumer ed-tech gamification** — cartoon mascots, confetti, streaks, badges. Wrong
-  register for a system of record used by staff all day.
-- **Enterprise-beige legacy admin** — cramped gray tables, tiny hit targets, no empty or
-  loading states, inconsistent controls screen to screen. The thing this replaces.
-- **Over-designed marketing polish inside the app** — display fonts on labels, decorative
-  motion, glassmorphism. The tool should disappear into the task.
-
-## Design Principles
-
-1. **The tool disappears into the task.** Earned familiarity over novelty. Standard
-   navigation, standard affordances, consistent component vocabulary screen to screen.
-   Delight is reserved for moments, never spread across pages.
-2. **Role is the frame.** Every surface is designed for who is looking. Show each role
-   only what they can act on; never expose an affordance a user isn't permitted to use.
-3. **Density where staff need it, calm where families need it.** Data-dense tables and
-   compact forms for daily staff work; spacious, plainly-labeled read views for
-   students and parents.
-4. **Trust is built from completeness.** Every interactive state exists — hover, focus,
-   active, disabled, loading, error, empty. Skeletons over spinners; empty states that
-   teach the interface. Half-finished states erode institutional trust fastest.
-5. **Legibility is non-negotiable.** Real contrast, real hit targets, real focus rings.
-   This is software people are required to use, often for hours — readability outranks
-   elegance every time.
+See [DESIGN.md](DESIGN.md) for the visual system and [the screen specifications](docs/interface-screens.md) for page-level behavior.
 
 ## Accessibility & Inclusion
 

@@ -88,7 +88,7 @@ export default function ZktecoRegistry({ devices, kiosks, now }: { devices: Devi
         const current = status(device, now);
         const upload = device.lastUploadResult;
         const uploadMessage = upload ? uploadLabels[upload.outcome] : "ได้รับข้อมูลจากเครื่องแล้ว";
-        return <li key={device.id} className="space-y-4 px-4 py-4 sm:px-5">
+        return <li key={device.id} id={`scanner-${device.id}`} tabIndex={-1} className="space-y-4 px-4 py-4 sm:px-5">
           <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
             <div className="min-w-0 flex-1 basis-40">
               <h3 className="break-words text-base font-bold text-ink-strong">{device.name}</h3>
