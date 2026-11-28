@@ -3,8 +3,8 @@ import PDFDocument from "pdfkit";
 import path from "node:path";
 import { LINK_STATUS_LABELS, formatLinkPercentage, type LineLinkReport, type LinkReportStudent } from "@/features/line/line-link-report";
 
-const REGULAR = path.join(process.cwd(), "offline_scanner/fonts/Prompt-Regular.ttf");
-const BOLD = path.join(process.cwd(), "offline_scanner/fonts/Prompt-Bold.ttf");
+const REGULAR = path.join(process.cwd(), "public/fonts/prompt/Prompt-Regular.ttf");
+const BOLD = path.join(process.cwd(), "public/fonts/prompt/Prompt-Bold.ttf");
 const WIDTHS = [24, 55, 123, 63, 180, 90];
 const HEADERS = ["ที่", "รหัสนักเรียน", "ชื่อนักเรียน", "สถานะนักเรียน", "ผู้ปกครอง / LINE / สถานะบัญชี", "รหัสรอผูก"];
 

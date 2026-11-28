@@ -10,8 +10,8 @@ const number = (value: number) => value.toLocaleString("th-TH");
 /** Vector charts with the same student denominator as the on-screen overview. */
 export async function createLineLinkChartsPdf(report: LineLinkReport): Promise<Uint8Array> {
   const doc = new PDFDocument({ size: "A4", margin: 0, bufferPages: true, autoFirstPage: false, info: { Title: "สรุปการผูกบัญชี LINE", Author: "Chumkosoft School" } });
-  doc.registerFont("Prompt", path.join(process.cwd(), "offline_scanner/fonts/Prompt-Regular.ttf"));
-  doc.registerFont("PromptBold", path.join(process.cwd(), "offline_scanner/fonts/Prompt-Bold.ttf"));
+  doc.registerFont("Prompt", path.join(process.cwd(), "public/fonts/prompt/Prompt-Regular.ttf"));
+  doc.registerFont("PromptBold", path.join(process.cwd(), "public/fonts/prompt/Prompt-Bold.ttf"));
   const chunks: Buffer[] = [];
   doc.on("data", (chunk: Buffer) => chunks.push(chunk));
   const complete = new Promise<Uint8Array>((resolve, reject) => { doc.on("end", () => resolve(Buffer.concat(chunks))); doc.on("error", reject); });

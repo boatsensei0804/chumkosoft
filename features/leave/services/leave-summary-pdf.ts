@@ -12,8 +12,8 @@ const STATUSES = [{ key: "PENDING", label: "รอพิจารณา", color:
 export async function createLeaveSummaryPdf(report: LeaveDailyReport): Promise<Uint8Array> {
   const summary = summarizeDailyLeave(report.items.filter(item => item.startDate <= report.date && item.endDate >= report.date), report.totalStudents);
   const doc = new PDFDocument({ size: "A4", margin: 0, info: { Title: "สรุปคำขอลาและขอมาสาย", Author: "Chumkosoft School" } });
-  doc.registerFont("Prompt", path.join(process.cwd(), "offline_scanner/fonts/Prompt-Regular.ttf"));
-  doc.registerFont("PromptBold", path.join(process.cwd(), "offline_scanner/fonts/Prompt-Bold.ttf"));
+  doc.registerFont("Prompt", path.join(process.cwd(), "public/fonts/prompt/Prompt-Regular.ttf"));
+  doc.registerFont("PromptBold", path.join(process.cwd(), "public/fonts/prompt/Prompt-Bold.ttf"));
   const chunks: Buffer[] = [];
   doc.on("data", (chunk: Buffer) => chunks.push(chunk));
   const complete = new Promise<Uint8Array>((resolve, reject) => { doc.on("end", () => resolve(Buffer.concat(chunks))); doc.on("error", reject); });

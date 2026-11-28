@@ -10,7 +10,7 @@ type Document = InstanceType<typeof PDFDocument>;
 
 const WIDTH = 595.28;
 const CARD_WIDTH = (WIDTH - 75) / 2;
-const FONT_DIR = path.join(process.cwd(), "offline_scanner", "fonts");
+const FONT_DIR = path.join(process.cwd(), "public", "fonts", "prompt");
 const REGULAR = path.join(FONT_DIR, "Prompt-Regular.ttf");
 const BOLD = path.join(FONT_DIR, "Prompt-Bold.ttf");
 const BLUE = "#155b9d";
