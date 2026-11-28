@@ -4,7 +4,7 @@ import Mascot, { type MascotPose } from "@/components/ui/mascot";
 import { cn } from "@/lib/utils";
 
 export default function PageHeader({
-  title, subtitle, actions, compact = false, pose = "welcome", featured = false,
+  title, subtitle, actions, compact = false, pose = "welcome", featured = true,
 }: {
   title: string;
   subtitle?: string;
