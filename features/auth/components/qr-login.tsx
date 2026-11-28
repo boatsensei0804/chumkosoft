@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -14,7 +14,7 @@ export function useQrChallenge(display = false) {
   const [error, setError] = useState("");
   const requesting = useRef(false);
 
-  async function createChallenge(force = false): Promise<void> {
+  const createChallenge = useCallback(async (force = false): Promise<void> => {
     if (requesting.current || (!force && challenge && challenge.expiresAt > Date.now())) return;
     requesting.current = true;
     setBusy(true);
@@ -32,7 +32,7 @@ export function useQrChallenge(display = false) {
       requesting.current = false;
       setBusy(false);
     }
-  }
+  }, [base, challenge]);
 
   return { display, base, challenge, setChallenge, busy, error, setError, createChallenge };
 }
@@ -95,12 +95,12 @@ export default function QrLogin({ t, qr }: { t: Dictionary["login"]; qr: ReturnT
     {error && <p role="alert" className="rounded-xl bg-danger-soft px-3 py-2 text-sm text-destructive">{error}</p>}
     {challenge ? <>
       <div className="flex flex-col items-center rounded-2xl border border-blue-100 bg-white p-3 text-center">
-        <Image unoptimized src={challenge.qrDataUrl} width={240} height={240} alt={t.qrTab} className="size-[clamp(156px,22dvh,210px)]" />
+        <Image unoptimized src={challenge.qrDataUrl} width={240} height={240} alt={t.qrTab} className={display ? "aspect-square w-64 max-w-full" : "size-[clamp(156px,22dvh,210px)]"} />
         <p className="mt-2 break-all font-mono text-base font-bold tracking-wide text-ink-strong">{!display && "LOGIN "}{challenge.code}</p>
         <p className="mt-1 text-xs text-muted">{display ? "ตรวจรหัสนี้บนมือถือก่อนยืนยัน" : t.qrCode}</p>
       </div>
       <div className="flex flex-wrap justify-center gap-x-2 text-center text-sm font-semibold text-brand-ink">
-        <p role="status">{approved ? t.submitting : t.qrWaiting}</p>
+        <p role="status">{approved ? t.submitting : display ? "รอยืนยันบนมือถือ" : t.qrWaiting}</p>
         {!approved && <p role="timer">{t.qrExpires} {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, "0")}</p>}
       </div>
       <div className="flex flex-wrap justify-center gap-2">
@@ -112,14 +112,21 @@ export default function QrLogin({ t, qr }: { t: Dictionary["login"]; qr: ReturnT
         {t.qrPreparing}
       </div>
     ) : (
-      <Button type="button" className="w-full" size="lg" onClick={() => void createChallenge(true)}>{display ? "แสดง QR สำหรับเข้าสู่จอ" : t.qrRefresh}</Button>
+      <Button type="button" className="w-full" size="lg" onClick={() => void createChallenge(true)}>{display ? "สร้าง QR ใหม่" : t.qrRefresh}</Button>
     )}
-    <p className="text-xs leading-5 text-muted">{display ? "ใช้บัญชีจุดสแกนของโรงเรียนในการยืนยัน" : t.qrLinkedOnly}</p>
+    {!display && <p className="text-xs leading-5 text-muted">{t.qrLinkedOnly}</p>}
   </div>;
 }
 
 
 export function DisplayQrLogin({ t }: { t: Dictionary["login"] }) {
   const qr = useQrChallenge(true);
+  const { createChallenge } = qr;
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    void createChallenge();
+  }, [createChallenge]);
   return <QrLogin t={t} qr={qr} />;
 }
