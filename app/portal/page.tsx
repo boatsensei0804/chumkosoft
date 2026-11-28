@@ -51,7 +51,7 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
         <div className={overview.studentName && !unavailable ? "grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]" : "grid gap-4"}>
           {overview.studentName && (
             <section id="school-entry" aria-labelledby="school-entry-title" tabIndex={-1} className="scroll-mt-20 rounded-xl border border-line bg-card p-4 sm:p-5">
-              <h2 id="school-entry-title" className="font-bold text-ink-strong">{overview.studentName}</h2>
+              <h2 id="school-entry-title" className="wrap-anywhere text-lg font-bold text-ink-strong">{overview.studentName}</h2>
               <p className="mt-1 text-sm text-muted">
                 {[overview.classroomCode && "ห้อง " + overview.classroomCode, overview.gradeLevel, overview.termLabel].filter(Boolean).join(" · ")}
               </p>
@@ -70,7 +70,7 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
           )}
           {(!unavailable || !options.length) && <section id="weekly-schedule" tabIndex={-1} className="flex scroll-mt-20 flex-col gap-3">
             <div className="flex items-center gap-2">
-              <CalendarDays className="size-5 text-brand-strong" />
+              <CalendarDays aria-hidden="true" className="size-5 text-brand-strong" />
               <h2 className="text-[16px] font-bold text-ink-strong">{roleNote}</h2>
             </div>
 

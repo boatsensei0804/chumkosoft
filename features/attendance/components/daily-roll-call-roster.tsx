@@ -24,15 +24,15 @@ const STATUS_STYLE: Record<DailyRollCallStatusKey, { idle: string; active: strin
 
 type RosterFilter = "all" | "unchecked" | DailyRollCallStatusKey;
 
-export default function DailyRollCallRoster({ roster, initialFilter }: { roster: DailyClassRoster; initialFilter?: string }): React.ReactNode {
+export default function DailyRollCallRoster({ roster, month = roster.date.slice(0, 7), initialFilter }: { roster: DailyClassRoster; month?: string; initialFilter?: string }): React.ReactNode {
   const filter = initialFilter === "unchecked"
     ? "unchecked"
     : DAILY_ROLL_CALL_STATUSES.find((status) => status === initialFilter) ?? "all";
   const rosterKey = `${roster.date}:${roster.classroomId}:${roster.students.map((student) => `${student.studentId}:${student.status ?? "unchecked"}`).join(",")}`;
-  return <DailyRollCallRosterEditor key={`${rosterKey}:${filter}`} roster={roster} initialFilter={filter} />;
+  return <DailyRollCallRosterEditor key={`${rosterKey}:${filter}`} roster={roster} month={month} initialFilter={filter} />;
 }
 
-function DailyRollCallRosterEditor({ roster, initialFilter }: { roster: DailyClassRoster; initialFilter: RosterFilter }): React.ReactNode {
+function DailyRollCallRosterEditor({ roster, month, initialFilter }: { roster: DailyClassRoster; month: string; initialFilter: RosterFilter }): React.ReactNode {
   const router = useRouter();
   const [statuses, setStatuses] = useState<Record<string, DailyRollCallStatusKey | null>>(() =>
     Object.fromEntries(roster.students.map((student) => [student.studentId, student.status])),
@@ -87,7 +87,7 @@ function DailyRollCallRosterEditor({ roster, initialFilter }: { roster: DailyCla
           <h2 className="mt-0.5 text-base font-semibold text-ink-strong">ห้อง {roster.classroomCode}</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/attendance?mode=homeroom&date=${roster.date}`)}>
+          <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/attendance?${new URLSearchParams({ mode: "homeroom", date: roster.date, month })}`)}>
             <ArrowLeft className="size-4" /> ภาพรวมห้อง
           </Button>
           <Button variant="outline" size="sm" disabled={isRefreshing || isSaving || changedEntries.length > 0} onClick={() => startRefresh(() => router.refresh())}>
@@ -191,7 +191,10 @@ function DailyRollCallRosterEditor({ roster, initialFilter }: { roster: DailyCla
       </div>
 
       <footer className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-2 rounded-b-2xl border-t border-school-panel-border bg-school-panel px-4 py-3 shadow-[0_-3px_12px_#234f7a14] sm:px-5 md:static md:shadow-none">
-        <p className="text-xs text-muted">ยังไม่เช็ค {counts.unchecked} คน · รายชื่อที่ยังไม่เลือกสถานะจะไม่ถูกบันทึก</p>
+        <div className="text-xs text-muted">
+          <p className="font-semibold text-ink">ห้อง {roster.classroomCode} · {dateLabel}</p>
+          <p>เปลี่ยนสถานะ {changedEntries.length} คน · ยังไม่เช็ค {counts.unchecked} คน</p>
+        </div>
         <Button className="min-h-11" onClick={save} disabled={isSaving || isRefreshing || changedEntries.length === 0}>
           <Save className="size-4" /> {isSaving ? "กำลังบันทึก…" : "บันทึกการเช็คชื่อ"}
         </Button>

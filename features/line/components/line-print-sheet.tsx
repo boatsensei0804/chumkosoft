@@ -40,9 +40,9 @@ export default function LinePrintSheet({ classroomId, classroom, oaUrl, qrDataUr
   for (let i = 0; i < cards.length; i += 6) pages.push(cards.slice(i, i + 6));
 
   return (
-    <main className="line-print-root min-h-screen bg-surface px-4 py-5 sm:px-8">
+    <section aria-labelledby="line-print-title" className="line-print-root min-h-screen bg-surface px-4 py-5 sm:px-8">
       <header className="line-print-toolbar mx-auto mb-5 flex max-w-5xl flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-bg p-4 shadow-sm">
-        <div><p className="text-sm font-bold text-ink-strong">เอกสารเชื่อม LINE · {classroom}</p><p className="mt-0.5 text-xs text-muted">{cards.length.toLocaleString("th-TH")} ใบ · A4 แนวตั้ง · QR เพิ่มเพื่อน LINE OA</p></div>
+        <div><h1 id="line-print-title" className="text-base font-bold text-ink-strong">เอกสารเชื่อม LINE · {classroom}</h1><p className="mt-0.5 text-xs text-muted">{cards.length.toLocaleString("th-TH")} ใบ · A4 แนวตั้ง · QR เพิ่มเพื่อน LINE OA</p></div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline"><Link href={`/dashboard/line/report?classroom=${encodeURIComponent(classroomId)}`}>กลับรายงาน</Link></Button>
           <Button asChild variant="outline"><a href={`/dashboard/line/export/pdf?${new URLSearchParams({ oa: oaUrl, classroom: classroomId })}`}>PDF ห้องนี้</a></Button>
@@ -80,6 +80,6 @@ export default function LinePrintSheet({ classroomId, classroom, oaUrl, qrDataUr
           ))}
         </div>
       )}
-    </main>
+    </section>
   );
 }

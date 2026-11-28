@@ -50,7 +50,7 @@ export default function Home(): React.ReactNode {
 
       <main id="main-content">
         <section aria-labelledby="home-title" className={`${frame} pt-5 pb-8 sm:pt-8 sm:pb-12`}>
-          <div className="relative isolate overflow-hidden rounded-[24px] bg-nav-surface text-nav-ink lg:flex lg:min-h-[490px] lg:items-center">
+          <div className="relative isolate overflow-hidden rounded-[24px] border border-nav-line bg-nav-surface text-nav-ink lg:flex lg:min-h-[490px] lg:items-center">
             <div className="relative z-10 px-5 py-7 sm:px-9 sm:py-10 lg:w-[55%] lg:px-12">
               <h1 id="home-title" className="text-balance text-[clamp(2.2rem,4.5vw,3.8rem)] font-bold leading-[1.22] tracking-tight">
                 ดูแลการมาเรียน <span className="block text-sky-accent">จากโรงเรียนถึงบ้าน</span>
@@ -59,8 +59,8 @@ export default function Home(): React.ReactNode {
                 ครูเช็คชื่อและติดตามการเข้าเรียน ผู้ปกครองรับข่าว แจ้งลา หรือขอมาสายผ่าน LINE ของโรงเรียน
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2">
-                <Button asChild size="lg" className="min-h-12 rounded-xl bg-white text-brand-ink hover:bg-sky-accent active:bg-sky-accent-soft focus-visible:ring-sky-accent">
-                  <Link href="/login">เข้าสู่ระบบโรงเรียน <ArrowRight aria-hidden="true" /></Link>
+                <Button asChild size="lg" className="group min-h-12 rounded-xl bg-sky-accent text-sky-accent-ink hover:bg-sky-accent-soft active:bg-white focus-visible:ring-sky-accent">
+                  <Link href="/login">เข้าสู่ระบบโรงเรียน <ArrowRight aria-hidden="true" className="motion-safe:transition-transform motion-safe:duration-150 motion-safe:ease-out motion-safe:group-hover:translate-x-0.5" /></Link>
                 </Button>
                 <a href="#manual" className="inline-flex min-h-11 items-center rounded-sm font-semibold text-white underline decoration-sky-accent/60 underline-offset-4 hover:decoration-white focus-visible:outline-sky-accent">เปิดคู่มือใช้งาน</a>
               </div>
@@ -94,7 +94,7 @@ export default function Home(): React.ReactNode {
             <div>
               <h2 id="families-title" className="max-w-[16ch] text-2xl font-bold leading-tight sm:text-3xl">เชื่อม LINE ของผู้ปกครอง</h2>
               <p className="mt-3 max-w-[38ch] text-sm leading-7 text-white/85">ใช้บัญชี LINE เดียวรับข่าวจากโรงเรียนและติดตามคำขอของบุตรหลานได้</p>
-              <Link href="/guide?role=parent" className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-sky-accent underline-offset-4 hover:underline">
+              <Link href="/guide?role=parent" className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-semibold text-sky-accent underline underline-offset-4 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-accent">
                 คู่มือผู้ปกครอง <ArrowRight aria-hidden="true" className="size-4" />
               </Link>
             </div>
@@ -126,9 +126,9 @@ export default function Home(): React.ReactNode {
           <div className="divide-y divide-line border-y border-line">
             {questions.map(({ title, answer }) => (
               <details key={title} className="group">
-                <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-md py-4 text-sm font-semibold text-ink-strong hover:text-brand [&::-webkit-details-marker]:hidden">
+                <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-md py-4 text-sm font-semibold text-ink-strong hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand [&::-webkit-details-marker]:hidden">
                   {title}
-                  <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-brand motion-safe:transition-transform group-open:rotate-180" />
+                  <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-brand motion-safe:transition-transform motion-safe:duration-150 motion-safe:ease-out group-open:rotate-180" />
                 </summary>
                 <p className="max-w-[60ch] pb-4 pe-6 text-sm leading-7 text-muted">{answer}</p>
               </details>

@@ -23,6 +23,7 @@ const poseDescription: Record<MascotPose, string> = {
 };
 
 const poseArtwork: Partial<Record<MascotPose, string>> = {
+  welcome: "welcome-v2.webp",
   notify: "announcement.webp",
   conduct: "conduct.webp",
   checkout: "checkout.webp",

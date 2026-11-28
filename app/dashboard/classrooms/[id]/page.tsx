@@ -20,9 +20,10 @@ export const dynamic = "force-dynamic";
 
 interface ClassroomDetailPageProps {
   params: Promise<{ id: string }>;
+  inDialog?: boolean;
 }
 
-export default async function ClassroomDetailPage({ params }: ClassroomDetailPageProps): Promise<React.ReactNode> {
+export default async function ClassroomDetailPage({ params, inDialog = false }: ClassroomDetailPageProps): Promise<React.ReactNode> {
   const user = await requireRoles(["ADMIN", "TEACHER"]);
   const { id } = await params;
   const [detail, offeringOptions] = await Promise.all([getClassroomDetail(id), listOfferingOptions()]);
@@ -30,10 +31,10 @@ export default async function ClassroomDetailPage({ params }: ClassroomDetailPag
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href="/dashboard/classrooms" className="inline-flex w-fit items-center gap-1.5 text-[13px] font-semibold text-muted transition-colors hover:text-ink">
-        <ChevronLeft className="size-[18px]" />
+      {!inDialog && <Link href="/dashboard/classrooms" className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-md px-2 text-sm font-semibold text-muted hover:bg-brand-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-brand">
+        <ChevronLeft aria-hidden="true" className="size-[18px]" />
         กลับไปรายการห้องเรียน
-      </Link>
+      </Link>}
 
       {/* Header: the relationship anchor — classroom + homeroom teacher */}
       <section className="flex flex-col gap-4 rounded-[24px] school-card bg-linear-to-r from-school-panel to-school-panel-tint p-4 sm:p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -42,7 +43,7 @@ export default async function ClassroomDetailPage({ params }: ClassroomDetailPag
             <Users className="size-6" />
           </span>
           <div>
-            <h1 className="text-[22px] font-bold text-ink-strong">{detail.code}</h1>
+            <h1 className="wrap-anywhere text-[22px] font-bold leading-snug text-ink-strong">{detail.code}</h1>
             <p className="text-[13px] text-muted">
               {detail.gradeLevel}
               {detail.termLabel ? ` · ${detail.termLabel}` : ""}

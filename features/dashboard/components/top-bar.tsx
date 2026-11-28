@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { getCurrentNavItem, getNavGroups } from "../nav";
-import { Menu, Search, CalendarDays, LogOut, ChevronDown, ChevronRight } from "lucide-react";
+import { Menu, Search, CalendarDays, LogOut, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -30,17 +30,17 @@ export default function TopBar({ user, onOpenNav, today, onOpenPalette }: TopBar
   const section = groups.find((group) => group.items.some((item) => item.key === current?.key))?.label;
   return (
     <header className="sticky top-0 z-[var(--z-sticky)] flex h-16 shrink-0 items-center gap-3 border-b border-line bg-card px-4 sm:px-6 xl:px-8">
-      <Button variant="ghost" size="icon" onClick={onOpenNav} aria-label="เปิดเมนู" className="xl:hidden">
-        <Menu className="size-5" />
+      <Button variant="ghost" size="icon" onClick={onOpenNav} aria-label="เปิดเมนู" className="size-11 shrink-0 rounded-lg border border-line bg-surface xl:hidden">
+        <Menu aria-hidden="true" className="size-5" />
       </Button>
 
-      <div className="flex min-w-0 items-center gap-1.5 text-sm">
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
         {section && (
-          <span className="hidden items-center gap-1.5 whitespace-nowrap text-muted 2xl:inline-flex">
-            {section}<ChevronRight className="size-3.5" aria-hidden="true" />
+          <span className="hidden truncate text-xs text-muted sm:block">
+            {section}
           </span>
         )}
-        <p className="truncate font-semibold text-ink-strong">{current?.label ?? "พื้นที่ทำงาน"}</p>
+        <p className="truncate text-sm font-bold text-ink-strong sm:text-base">{current?.label ?? "พื้นที่ทำงาน"}</p>
       </div>
 
       {/* Opens the ⌘K command palette — a real destination search, not a text field. */}
@@ -49,7 +49,7 @@ export default function TopBar({ user, onOpenNav, today, onOpenPalette }: TopBar
         onClick={onOpenPalette}
         aria-label="ค้นหาและไปยังหน้า (⌘K)"
         aria-keyshortcuts="Meta+K Control+K"
-        className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-line bg-surface text-left motion-safe:transition-colors hover:border-line-strong hover:bg-brand-soft sm:w-40 sm:justify-start sm:px-3 xl:w-56"
+        className="flex size-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-line bg-surface text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand motion-safe:transition-colors hover:border-line-strong hover:bg-brand-soft sm:w-40 sm:justify-start sm:px-3 xl:w-56"
       >
         <Search className="size-[18px] shrink-0 text-brand-ink" aria-hidden="true" />
         <span className="hidden min-w-0 flex-1 truncate text-sm text-muted sm:block">ค้นหาเมนู</span>
@@ -66,7 +66,7 @@ export default function TopBar({ user, onOpenNav, today, onOpenPalette }: TopBar
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="flex min-h-10 items-center gap-2 rounded-lg border border-transparent px-1.5 transition-colors hover:border-line hover:bg-surface-2"
+              className="flex min-h-11 items-center gap-2 rounded-lg border border-transparent px-1.5 focus-visible:outline-2 focus-visible:outline-brand motion-safe:transition-colors hover:border-line hover:bg-surface-2"
               aria-label="เมนูบัญชีผู้ใช้"
             >
               <Avatar className="size-8">

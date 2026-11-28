@@ -46,7 +46,7 @@ export default function SidebarNav({ items, activeKey, onNavigate }: SidebarNavP
                 onClick={onNavigate}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "group relative flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-semibold motion-safe:transition-colors",
+                  "group relative flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-semibold motion-safe:transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-accent",
                   active ? "bg-white text-nav-surface before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-r-full before:bg-sky-accent" : "text-nav-ink hover:bg-nav-hover",
                 )}
               >

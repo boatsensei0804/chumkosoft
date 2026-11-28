@@ -16,18 +16,18 @@ export default function BrandScene({
       aria-hidden="true"
       className={cn(
         "pointer-events-none absolute overflow-hidden",
-        banner ? "right-0 top-0 h-28 w-36 sm:h-full sm:w-[52%]" : "inset-0",
+        banner ? "hidden inset-y-0 end-0 w-24 @xs:block @sm:w-28 @lg:w-36 @3xl:w-[52%]" : "inset-0",
       )}
     >
       <Image
-        src="/mascot/campus.webp"
+        src="/mascot/campus-v2.webp"
         alt=""
         fill
         unoptimized
         priority={priority}
         className={cn(
           "object-cover object-right",
-          banner && "opacity-75 [mask-composite:intersect] [mask-image:linear-gradient(to_right,transparent,black_70%),linear-gradient(to_bottom,black_74%,transparent)] sm:[mask-image:linear-gradient(to_right,transparent,black_70%)]",
+          banner && "hidden opacity-75 [mask-image:linear-gradient(to_right,transparent,black_70%)] @3xl:block",
         )}
       />
       <Mascot
@@ -38,7 +38,7 @@ export default function BrandScene({
         className={cn(
           "absolute object-contain",
           banner
-            ? "right-1 top-1 h-[98%] w-auto max-w-28 sm:right-[7%] sm:top-[2%] sm:h-[96%] sm:max-w-48"
+            ? "end-2 top-1/2 size-24 -translate-y-1/2 @sm:size-28 @lg:end-4 @lg:size-32 @3xl:end-[7%] @3xl:size-44"
             : "inset-x-0 bottom-[14%] mx-auto h-auto max-h-[74%] w-[80%] max-w-72 drop-shadow-sm",
         )}
       />

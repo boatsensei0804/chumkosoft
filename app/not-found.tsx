@@ -32,10 +32,10 @@ export default function NotFound(): React.ReactNode {
             </p>
             <Link
               href="/"
-              className="mt-6 inline-flex items-center gap-2 rounded-[10px] px-4 py-2.5 text-[14px] font-semibold"
+              className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand px-4 py-2.5 text-[14px] font-semibold"
               style={{ backgroundColor: "var(--primary)", color: "var(--on-primary)" }}
             >
-              <LayoutDashboard className="size-[18px]" />
+              <LayoutDashboard aria-hidden="true" className="size-[18px]" />
               กลับสู่หน้าหลัก
             </Link>
             <Link href="/guide" className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-brand-ink hover:underline">เปิดคู่มือใช้งาน</Link>

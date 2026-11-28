@@ -27,8 +27,8 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
               ระบบไม่สามารถแสดงหน้านี้ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง หากยังพบปัญหาโปรดติดต่อผู้ดูแลระบบ
             </p>
             <div className="mt-6 flex items-center gap-2">
-              <Button onClick={reset}>
-                <RefreshCw className="size-[18px]" /> ลองใหม่อีกครั้ง
+              <Button className="min-h-11" onClick={reset}>
+                <RefreshCw aria-hidden="true" className="size-[18px]" /> ลองใหม่อีกครั้ง
               </Button>
             </div>
           </div>

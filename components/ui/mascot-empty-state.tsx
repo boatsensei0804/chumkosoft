@@ -12,9 +12,9 @@ interface MascotEmptyStateProps {
 
 export default function MascotEmptyState({ title, description, action, pose = "empty", compact = false, className = "" }: MascotEmptyStateProps): React.ReactNode {
   return (
-    <div className={`flex flex-col items-center justify-center rounded-[20px] border border-dashed border-blue-200 bg-[#f8fbff] px-5 text-center ${compact ? "py-6" : "py-10"} ${className}`}>
+    <div className={`flex flex-col items-center justify-center rounded-[20px] border border-dashed border-line-strong bg-brand-softer px-5 text-center ${compact ? "py-6" : "py-10"} ${className}`}>
       <Mascot pose={pose} size={compact ? 88 : 128} decorative />
-      <h3 className="mt-2 text-base font-bold text-ink-strong">{title}</h3>
+      <h3 className="mt-2 max-w-full text-balance wrap-anywhere text-base font-bold text-ink-strong">{title}</h3>
       {description && <p className="mt-1 max-w-md text-sm leading-relaxed text-muted">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>

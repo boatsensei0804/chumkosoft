@@ -22,12 +22,15 @@ export function useQrChallenge(display = false) {
     setChallenge(null);
     try {
       const response = await fetch(`${base}/start`, { method: "POST", credentials: "same-origin", cache: "no-store" });
-      const data = await response.json();
-      if (!response.ok || !data.ok) throw new Error(data.message || "สร้าง QR ไม่สำเร็จ");
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.ok) {
+        setError(data?.message || "สร้าง QR ไม่สำเร็จ กรุณาลองใหม่");
+        return;
+      }
       const expiresAt = Date.now() + data.expiresIn * 1000;
       setChallenge({ code: data.code, qrDataUrl: data.qrDataUrl, lineUrl: data.lineUrl, expiresAt });
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "สร้าง QR ไม่สำเร็จ");
+    } catch {
+      setError("เชื่อมต่อเว็บเพื่อสร้าง QR ไม่สำเร็จ กรุณาลองใหม่");
     } finally {
       requesting.current = false;
       setBusy(false);
@@ -63,20 +66,20 @@ export default function QrLogin({ t, qr }: { t: Dictionary["login"]; qr: ReturnT
       polling = true;
       try {
         const response = await fetch(`${base}/claim`, { method: "POST", credentials: "same-origin", cache: "no-store" });
-        const data = await response.json();
+        const data = await response.json().catch(() => null);
         if (stopped) return;
-        if (response.ok && data.state === "approved" && data.redirectTo) {
+        if (response.ok && data?.state === "approved" && data.redirectTo) {
           stopped = true;
           setApproved(true);
           window.location.assign(data.redirectTo);
-        } else if (response.ok && data.state === "pending") {
+        } else if (response.ok && data?.state === "pending") {
           setError("");
         } else if (response.status === 410) {
           stopped = true;
           setChallenge(null);
-          setError(data.message || "QR หมดอายุแล้ว กรุณาสร้างใหม่");
+          setError(data?.message || "QR หมดอายุแล้ว กรุณาสร้างใหม่");
         } else if (!response.ok) {
-          setError(data.message || "ตรวจสถานะ QR ไม่สำเร็จ");
+          setError(data?.message || "ตรวจสถานะ QR ไม่สำเร็จ");
         }
       } catch {
         if (!stopped) setError("เชื่อมต่อเว็บไม่ได้ กำลังลองใหม่…");

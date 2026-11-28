@@ -29,6 +29,14 @@ function todayInBangkok(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
 }
 
+function attendanceDate(value: unknown): string {
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const parsed = new Date(`${value}T00:00:00Z`);
+    if (!Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value) return value;
+  }
+  return todayInBangkok();
+}
+
 interface AttendancePageProps {
   searchParams: Promise<{ mode?: string; offering?: string; classroom?: string; date?: string; month?: string; filter?: string }>;
 }
@@ -47,8 +55,9 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
 
   const params = await searchParams;
   const mode = params.mode === "school" ? "school" : params.mode === "homeroom" ? "homeroom" : "class";
-  const date = params.date ?? todayInBangkok();
-  const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(params.month ?? "") ? params.month! : date.slice(0, 7);
+  const date = attendanceDate(params.date);
+  const classroomId = typeof params.classroom === "string" ? params.classroom : "";
+  const month = typeof params.month === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(params.month) ? params.month : date.slice(0, 7);
 
   const scopeNote =
     user.role === "ADMIN"
@@ -65,7 +74,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-col items-start gap-3 rounded-xl border border-line bg-card p-2 sm:p-3 xl:flex-row xl:items-center xl:justify-between xl:gap-5">
-          <AttendanceModeTabs mode={mode} date={date} month={month} />
+          <AttendanceModeTabs mode={mode} date={date} month={month} classroomId={classroomId} />
           <span className="inline-flex items-start gap-1.5 px-2 py-1 text-xs leading-relaxed text-muted">
             <UserCheck className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
             {scopeNote}
@@ -74,9 +83,9 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         {mode === "class" ? (
           <ClassMode selectedOfferingId={params.offering ?? ""} date={date} month={month} teacherScope={teacherScope} />
         ) : mode === "school" ? (
-          <SchoolMode classroomId={params.classroom ?? ""} date={date} month={month} teacherScope={teacherScope} />
+          <SchoolMode classroomId={classroomId} date={date} month={month} teacherScope={teacherScope} />
         ) : (
-          <HomeroomMode classroomId={params.classroom ?? ""} date={date} month={month} teacherScope={teacherScope} filter={params.filter} />
+          <HomeroomMode classroomId={classroomId} date={date} month={month} teacherScope={teacherScope} filter={params.filter} />
         )}
       </div>
     </>
@@ -101,7 +110,7 @@ async function HomeroomMode({
     if (!roster) return <PromptCard title="ไม่พบห้องเรียน" message="ห้องเรียนนี้ไม่มีในภาคเรียนปัจจุบัน หรือคุณไม่มีสิทธิ์เข้าถึง" />;
     return (
       <>
-        <DailyRollCallRoster roster={roster} initialFilter={filter} />
+        <DailyRollCallRoster roster={roster} month={month} initialFilter={filter} />
         {calendar && <AttendanceDateOverview mode="homeroom" month={month} selectedDate={date} days={calendar} classroomId={classroomId} />}
       </>
     );

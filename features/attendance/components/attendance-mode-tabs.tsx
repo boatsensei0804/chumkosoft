@@ -8,13 +8,13 @@ const tabs = [
   { key: "school", label: "เข้า–ออกโรงเรียน", icon: UserCheck },
 ] as const;
 
-export default function AttendanceModeTabs({ mode, date, month }: { mode: (typeof tabs)[number]["key"]; date: string; month: string }) {
+export default function AttendanceModeTabs({ mode, date, month, classroomId }: { mode: (typeof tabs)[number]["key"]; date: string; month: string; classroomId?: string }) {
   return (
     <nav aria-label="รูปแบบการเช็คชื่อ" className="grid w-full grid-cols-3 gap-1 rounded-lg bg-surface p-1 sm:max-w-xl xl:w-auto">
       {tabs.map(({ key, label, icon: Icon }) => (
         <Link
           key={key}
-          href={"/dashboard/attendance?" + new URLSearchParams({ mode: key, date, month })}
+          href={"/dashboard/attendance?" + new URLSearchParams({ mode: key, date, month, ...(key !== "class" && classroomId ? { classroom: classroomId } : {}) })}
           aria-current={mode === key ? "page" : undefined}
           className={cn(
             "flex min-h-11 items-center justify-center gap-2 rounded-md px-2 py-2 text-center text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:px-4 sm:text-sm",

@@ -61,7 +61,7 @@ export default function AppShell({ children, user, today }: AppShellProps): Reac
       {/* Content column */}
       <div className="relative z-10 xl:flex xl:h-dvh xl:min-h-0 xl:flex-col xl:pl-60">
         <TopBar user={user} onOpenNav={() => setNavOpen(true)} today={today} onOpenPalette={() => setPaletteOpen(true)} />
-        <main id="dashboard-main" tabIndex={-1} className="mx-auto w-full max-w-[1480px] scroll-mt-20 px-4 pb-10 pt-5 sm:px-6 sm:pt-7 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overscroll-contain xl:px-8">{children}</main>
+        <main id="dashboard-main" tabIndex={-1} className="mx-auto w-full min-w-0 max-w-[1480px] scroll-mt-20 px-4 pb-10 pt-5 sm:px-6 sm:pt-7 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overscroll-contain xl:px-8">{children}</main>
       </div>
 
       <CommandPalette open={paletteOpen} items={commandItems} onClose={() => setPaletteOpen(false)} />

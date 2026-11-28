@@ -51,7 +51,7 @@ export default async function AdminRecordsPage({ searchParams }: {
         <ul className="divide-y divide-line">
           {archived.slice(0, trashPageSize).map((item) => (
             <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-              <div className="min-w-0"><p className="break-all font-medium text-ink">{item.label}</p>
+              <div className="min-w-0"><p className="wrap-anywhere font-medium text-ink">{item.label}</p>
                 {item.deletedAt && <time dateTime={item.deletedAt.toISOString()} className="text-xs text-muted">ลบเมื่อ {formatDate.format(item.deletedAt)}</time>}
               </div>
               <div className="flex flex-wrap gap-2">
@@ -63,7 +63,7 @@ export default async function AdminRecordsPage({ searchParams }: {
         </ul>
         {!archived.length && <p className="rounded-xl bg-surface p-4 text-sm text-muted">ไม่มีรายการในหน้านี้</p>}
         {(page > 1 || archived.length > trashPageSize) && (
-          <nav aria-label="หน้ารายการถังขยะ" className="mt-4 flex items-center gap-2">
+          <nav aria-label="หน้ารายการถังขยะ" className="mt-4 flex flex-wrap items-center gap-2">
             {page > 1 && <Button asChild variant="outline"><Link href={`${trashUrl}&page=${page - 1}`}>ก่อนหน้า</Link></Button>}
             <span className="text-sm text-muted">หน้า {page}</span>
             {archived.length > trashPageSize && <Button asChild variant="outline"><Link href={`${trashUrl}&page=${page + 1}`}>ถัดไป</Link></Button>}

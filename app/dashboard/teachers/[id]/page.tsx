@@ -53,9 +53,10 @@ function Field({ label, value }: { label: string; value: string | number | null 
 
 interface TeacherDetailPageProps {
   params: Promise<{ id: string }>;
+  inDialog?: boolean;
 }
 
-export default async function TeacherDetailPage({ params }: TeacherDetailPageProps): Promise<React.ReactNode> {
+export default async function TeacherDetailPage({ params, inDialog = false }: TeacherDetailPageProps): Promise<React.ReactNode> {
   const user = await requireRoles(["ADMIN", "TEACHER"]);
   const { id } = await params;
   const detail = await getStaffDetail(id);
@@ -71,10 +72,10 @@ export default async function TeacherDetailPage({ params }: TeacherDetailPagePro
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href="/dashboard/teachers" className="inline-flex w-fit items-center gap-1.5 text-[13px] font-semibold text-muted transition-colors hover:text-ink">
-        <ChevronLeft className="size-[18px]" />
+      {!inDialog && <Link href="/dashboard/teachers" className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-md px-2 text-sm font-semibold text-muted hover:bg-brand-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-brand">
+        <ChevronLeft aria-hidden="true" className="size-[18px]" />
         กลับไปรายชื่อครูและบุคลากร
-      </Link>
+      </Link>}
 
       {/* Header */}
       <section className="flex flex-col gap-4 rounded-[24px] school-card bg-linear-to-r from-school-panel to-school-panel-tint p-4 sm:p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -83,7 +84,7 @@ export default async function TeacherDetailPage({ params }: TeacherDetailPagePro
             {s.firstName.charAt(0)}
           </span>
           <div>
-            <h1 className="text-[22px] font-bold text-ink-strong">{fullName}</h1>
+            <h1 className="wrap-anywhere text-[22px] font-bold leading-snug text-ink-strong">{fullName}</h1>
             <p className="text-[13px] text-muted">
               รหัส {s.code}
               {s.position ? ` · ${s.position}` : ""}

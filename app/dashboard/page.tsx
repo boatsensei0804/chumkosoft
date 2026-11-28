@@ -85,27 +85,32 @@ export default async function DashboardOverviewPage(): Promise<React.ReactNode> 
           <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
         </Link>
       )}
+      <nav aria-labelledby="dashboard-shortcuts" className="mb-6 rounded-2xl border border-line bg-card p-4 sm:p-5">
+        <h2 id="dashboard-shortcuts" className="mb-3 text-base font-bold text-ink-strong">งานที่ใช้บ่อย</h2>
+        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {shortcuts.map(({ href, label, icon: Icon }) => (
+            <li key={href}>
+              <Link
+                href={href}
+                className="group flex min-h-14 h-full items-center gap-3 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-semibold text-ink motion-safe:transition-colors hover:border-line-strong hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              >
+                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-card text-brand">
+                  <Icon className="size-[18px]" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 flex-1 text-pretty">{label}</span>
+                <ArrowRight className="size-4 shrink-0 text-muted group-hover:text-brand" aria-hidden="true" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_248px] 2xl:grid-cols-[minmax(0,1fr)_280px]">
         <div className="min-w-0 space-y-5">
           {schedule && <TodaySchedule date={date} {...schedule} />}
           {(isAdmin || hasRooms) && <DailySchoolOverview rooms={rooms ?? []} date={date} scoped={!isAdmin} />}
         </div>
         <div className="min-w-0 space-y-5">
-          <SectionCard title="งานที่ใช้บ่อย" bodyClassName="p-2">
-            <ul className="grid gap-1 sm:grid-cols-2 xl:grid-cols-1">
-              {shortcuts.map(({ href, label, icon: Icon }) => (
-                <li key={href}>
-                  <Link href={href} className="group flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-semibold text-ink transition-colors hover:bg-brand-soft hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-brand">
-                    <span className="grid size-8 shrink-0 place-items-center rounded-md bg-brand-soft text-brand">
-                      <Icon className="size-4" aria-hidden="true" />
-                    </span>
-                    <span className="flex-1">{label}</span>
-                    <ArrowRight className="size-4 shrink-0 text-muted group-hover:text-brand" aria-hidden="true" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </SectionCard>
           <Announcements items={announcements} />
         </div>
         {registry && (

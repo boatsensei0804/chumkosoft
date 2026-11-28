@@ -38,7 +38,7 @@ export default function TimetableWorkspace(props: TimetableWorkspaceProps): Reac
 
   return (
     <div className="flex flex-col gap-4">
-      <div role="tablist" aria-label="มุมมองตารางสอน" className="flex w-fit flex-wrap gap-1 rounded-lg border border-line bg-surface-2 p-1">
+      <div role="group" aria-label="มุมมองตารางสอน" className="flex w-fit flex-wrap gap-1 rounded-lg border border-line bg-surface-2 p-1">
         <MainTab active={mainView === "overview"} onClick={() => setMainView("overview")} icon={CalendarDays}>ภาพรวมตารางสอน</MainTab>
         {props.canManage && <MainTab active={mainView === "edit"} onClick={() => setMainView("edit")} icon={Clock3}>จัดและแก้ตาราง</MainTab>}
       </div>
@@ -51,12 +51,11 @@ function MainTab({ active, onClick, icon: Icon, children }: { active: boolean; o
   return (
     <button
       type="button"
-      role="tab"
-      aria-selected={active}
+      aria-pressed={active}
       onClick={onClick}
-      className={cn("inline-flex items-center gap-2 rounded-md px-3 py-2 text-[13px] font-semibold", active ? "bg-bg text-brand-ink shadow-sm" : "text-muted hover:text-ink-strong")}
+      className={cn("inline-flex min-h-11 items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-brand", active ? "bg-bg text-brand-ink shadow-sm" : "text-muted hover:text-ink-strong")}
     >
-      <Icon className="size-4" />{children}
+      <Icon aria-hidden="true" className="size-4 shrink-0" />{children}
     </button>
   );
 }
@@ -161,7 +160,7 @@ function Metric({ icon: Icon, label, value }: { icon: LucideIcon; label: string;
 }
 
 function OverviewTab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }): React.ReactNode {
-  return <button type="button" onClick={onClick} className={cn("border-b-2 px-3 py-2 text-[13px] font-semibold", active ? "border-brand text-brand-ink" : "border-transparent text-muted hover:text-ink-strong")}>{children}</button>;
+  return <button type="button" onClick={onClick} aria-pressed={active} className={cn("min-h-11 border-b-2 px-3 py-2 focus-visible:outline-2 focus-visible:outline-brand text-[13px] font-semibold", active ? "border-brand text-brand-ink" : "border-transparent text-muted hover:text-ink-strong")}>{children}</button>;
 }
 
 function ClassroomSummary({ overview, days, onSelect }: { overview: ScheduleOverviewData; days: DayInfo[]; onSelect: (id: string) => void }): React.ReactNode {
@@ -182,7 +181,7 @@ function ClassroomSummary({ overview, days, onSelect }: { overview: ScheduleOver
           />;
         })}
       </div>
-      <div className="hidden max-h-[58dvh] overflow-auto md:block">
+      <div role="region" tabIndex={0} aria-label="รายการตารางสอน เลื่อนเพื่อดูข้อมูลเพิ่มเติม" className="hidden max-h-[58dvh] overflow-auto focus-visible:outline-2 focus-visible:outline-brand md:block">
         <table className="w-full min-w-[780px] border-collapse text-left text-sm">
           <thead><tr className="border-b border-line bg-surface text-xs font-semibold text-muted"><th className="px-4 py-3">ห้อง</th>{days.map((day) => <th key={day.key} className="px-3 py-3 text-center">{day.short}</th>)}<th className="px-3 py-3 text-right">จัดแล้ว / เป้าหมาย</th><th className="px-4 py-3" /></tr></thead>
           <tbody>
@@ -240,7 +239,7 @@ function ReadOnlyGrid({
             })}</div>
           </details>)}
         </div>
-        <div className="hidden max-h-[58dvh] overflow-auto md:block">
+        <div role="region" tabIndex={0} aria-label="รายการตารางสอน เลื่อนเพื่อดูข้อมูลเพิ่มเติม" className="hidden max-h-[58dvh] overflow-auto focus-visible:outline-2 focus-visible:outline-brand md:block">
           <div className="min-w-[780px]">
             <div className="grid gap-px bg-line" style={{ gridTemplateColumns: "78px repeat(5, minmax(130px, 1fr))" }}>
               <div className="bg-surface px-2 py-2.5 text-[11px] font-semibold text-muted">คาบ</div>

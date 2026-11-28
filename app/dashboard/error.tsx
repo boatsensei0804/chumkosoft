@@ -15,7 +15,7 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
       title="โหลดหน้านี้ไม่สำเร็จ"
       description="เกิดข้อผิดพลาดขณะดึงข้อมูล กรุณาลองใหม่อีกครั้ง"
       pose="error"
-      action={<Button onClick={reset}><RefreshCw className="size-[18px]" /> ลองใหม่อีกครั้ง</Button>}
+      action={<Button className="min-h-11" onClick={reset}><RefreshCw aria-hidden="true" className="size-[18px]" /> ลองใหม่อีกครั้ง</Button>}
     />
   );
 }

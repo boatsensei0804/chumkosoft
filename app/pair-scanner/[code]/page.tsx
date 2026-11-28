@@ -25,17 +25,17 @@ export default async function PairScannerPage({ params, searchParams }: PageProp
 
   return (
     <main className="grid min-h-dvh place-items-center bg-linear-to-br from-school-panel-tint to-school-panel-wash px-4 py-6 text-ink-strong">
-      <section className="grid w-full max-w-5xl overflow-hidden rounded-[28px] school-card lg:grid-cols-[0.85fr_1fr]">
+      <section className="grid w-full min-w-0 max-w-5xl overflow-hidden rounded-[28px] school-card lg:grid-cols-[0.85fr_1fr]">
         <div className="relative hidden min-h-[620px] overflow-hidden bg-[#dff0ff] lg:block">
           <BrandScene pose="scan" />
           <div className="absolute inset-x-5 bottom-5 rounded-2xl border border-white/70 bg-white/85 p-4 backdrop-blur-sm"><p className="font-bold text-brand-ink">เชื่อมเครื่องสแกนอย่างปลอดภัย</p><p className="mt-1 text-sm text-muted">ตรวจรหัสบนเครื่องก่อนยืนยันทุกครั้ง</p></div>
         </div>
-        <div className="p-6 sm:p-8 lg:self-center lg:p-10">
+        <div className="min-w-0 p-5 sm:p-8 lg:self-center lg:p-10">
         <Mascot pose={connected ? "success" : state === "pending" ? "scan" : "error"} size={110} decorative className="mx-auto mb-4" />
         <p className="text-sm font-bold text-sky-700">Chumkosoft · จุดสแกนใบหน้า</p>
         <h1 className="mt-3 text-2xl font-bold">เชื่อมโปรแกรมสแกน</h1>
         <p className="mt-2 text-sm text-slate-600">ตรวจว่ารหัสนี้ตรงกับที่แสดงบนโปรแกรมในเครื่อง แล้วจึงกดยืนยัน</p>
-        <div className="mt-5 rounded-xl bg-sky-50 px-4 py-5 text-center font-mono text-2xl font-bold tracking-widest text-sky-900">
+        <div className="mt-5 rounded-xl bg-sky-50 px-4 py-5 text-center wrap-anywhere font-mono text-xl font-bold tracking-wider sm:text-2xl text-sky-900">
           {code}
         </div>
 
@@ -72,7 +72,7 @@ export default async function PairScannerPage({ params, searchParams }: PageProp
                   </label>
                 </>
               )}
-              <button type="submit" className="w-full rounded-lg bg-sky-700 px-4 py-3 font-semibold text-white hover:bg-sky-800">
+              <button type="submit" className="min-h-11 w-full rounded-lg bg-brand px-4 py-3 font-semibold text-white hover:bg-brand-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
                 ยืนยันการเชื่อมเครื่องสแกน
               </button>
             </form>

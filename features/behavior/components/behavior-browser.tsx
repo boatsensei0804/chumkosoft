@@ -217,7 +217,7 @@ function StudentPoints({ student, history }: { student: StudentSummary; history:
           <div className="flex flex-wrap items-end gap-3">
             <div role="group" aria-label="ประเภทการเปลี่ยนคะแนน" className="inline-flex flex-wrap gap-1 rounded-lg bg-surface p-1">
               {([{ key: "DEDUCT", label: "หักคะแนน", Icon: Minus }, { key: "ADD", label: "เพิ่มคะแนน", Icon: Plus }] as const).map(({ key, label, Icon }) => (
-                <Button key={key} type="button" variant="ghost" aria-pressed={direction === key} onClick={() => setDirection(key)} className={cn("min-h-10", direction === key && "bg-card text-brand-ink shadow-xs")}>
+                <Button key={key} type="button" variant="ghost" aria-pressed={direction === key} onClick={() => setDirection(key)} className={cn("min-h-11", direction === key && "bg-card text-brand-ink shadow-xs")}>
                   <Icon aria-hidden="true" />{label}
                 </Button>
               ))}

@@ -16,7 +16,10 @@ export default function WeeklySchedule({ overview, initialDay }: { overview: Por
     <>
     <section className="rounded-[22px] border border-blue-100 bg-white p-3 md:hidden"><div role="group" aria-label="เลือกวันดูตารางเรียน" className="mb-3 flex flex-wrap gap-1">{days.map((item) => <button key={item.key} type="button" aria-pressed={day === item.key} onClick={() => setDay(item.key)} className={`min-h-11 flex-1 rounded-xl px-2 text-sm font-semibold ${day === item.key ? "bg-brand text-white" : "bg-blue-50 text-muted"}`}>{item.short}</button>)}</div><div className="space-y-2">{periods.map((period) => { const cell = period.cells[day]; return period.isBreak ? <p key={period.periodId} className="rounded-xl bg-slate-100 p-3 text-xs text-muted">{period.label} · {period.start}–{period.end}</p> : <div key={period.periodId} className="flex gap-3 rounded-xl border border-line p-3"><div className="w-20 shrink-0 text-xs text-muted"><p className="font-semibold text-ink">{period.label}</p><p className="mt-1">{period.start}–{period.end}</p></div>{cell ? <button type="button" className="min-h-11 min-w-0 flex-1 text-left" onClick={() => setSelected({ ...cell, time: `${period.start}–${period.end}`, day: days.find((item) => item.key === day)?.label ?? "" })}><p className="text-sm font-semibold text-brand-ink">{cell.subject}</p><p className="mt-1 text-xs text-muted">{cell.teacher} · {cell.room}</p></button> : <p className="text-sm text-muted">ไม่มีคาบเรียน</p>}</div>; })}</div></section>
     <div
-      className="hidden overflow-x-auto rounded-[22px] md:block"
+      role="region"
+      aria-label="ตารางเรียนประจำสัปดาห์ เลื่อนเพื่อดูทุกวัน"
+      tabIndex={0}
+      className="hidden overflow-x-auto rounded-[22px] focus-visible:outline-2 focus-visible:outline-brand md:block"
       style={{ backgroundColor: "var(--bg)", border: "1px solid var(--line)" }}
     >
       <div className="min-w-[720px]">

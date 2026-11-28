@@ -13,7 +13,7 @@ export default async function ScanPage({ searchParams }: { searchParams: Promise
   const viewer = await getDisplayViewer();
   if (!viewer) redirect("/kiosk/login");
   const [params, devices] = await Promise.all([searchParams, listLiveScanDevices(viewer)]);
-  const deviceId = devices.find(({ id }) => id === params.device)?.id ?? devices[0]?.id ?? null;
+  const device = devices.find(({ id }) => id === params.device) ?? devices[0];
 
   return (
     <div className="flex min-h-dvh flex-col bg-card text-ink">
@@ -23,7 +23,7 @@ export default async function ScanPage({ searchParams }: { searchParams: Promise
           <div className="flex flex-wrap items-center gap-2">
             {devices.length > 1 && (
               <form action="/scan" className="flex items-center gap-2">
-                <select aria-label="เลือกเครื่องสแกน" name="device" defaultValue={deviceId ?? ""} className="min-h-10 w-40 rounded-lg border border-line bg-card px-2 text-sm sm:w-52">
+                <select aria-label="เลือกเครื่องสแกน" name="device" defaultValue={device?.id ?? ""} className="min-h-10 w-40 rounded-lg border border-line bg-card px-2 text-sm sm:w-52">
                   {devices.map(({ id, name }) => <option key={id} value={id}>{name}</option>)}
                 </select>
                 <Button type="submit" variant="outline" className="min-h-10">เลือก</Button>
@@ -33,7 +33,7 @@ export default async function ScanPage({ searchParams }: { searchParams: Promise
           </div>
         </div>
       </header>
-      <LiveScanDisplay key={deviceId ?? "all"} deviceId={deviceId} hasDevices={devices.length > 0} />
+      <LiveScanDisplay key={device?.id ?? "all"} deviceId={device?.id ?? null} deviceName={device?.name} hasDevices={Boolean(device)} />
     </div>
   );
 }

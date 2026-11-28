@@ -34,10 +34,10 @@ export default async function UnauthorizedPage(): Promise<React.ReactNode> {
               หากคิดว่าเป็นข้อผิดพลาด กรุณาติดต่อผู้ดูแลระบบ
             </p>
 
-            <Button asChild className="mt-6 w-full"><Link href={homePathForRole(user.role)}>กลับหน้าหลักของฉัน</Link></Button>
+            <Button asChild className="mt-6 min-h-11 w-full"><Link href={homePathForRole(user.role)}>กลับหน้าหลักของฉัน</Link></Button>
             <form action={logoutAction} className="mt-3 w-full">
               <Button type="submit" variant="outline" size="lg" className="w-full">
-                <LogOut className="size-[18px]" /> ออกจากระบบ
+                <LogOut aria-hidden="true" className="size-[18px]" /> ออกจากระบบ
               </Button>
             </form>
           </div>

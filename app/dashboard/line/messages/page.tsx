@@ -141,7 +141,7 @@ export default async function LineMessagesPage({ searchParams }: { searchParams:
                 <ArrowDown aria-hidden="true" className="size-4 shrink-0 text-muted motion-safe:transition-transform group-open:rotate-180" />
               </summary>
               {daily.size ? (
-                <div tabIndex={0} aria-label="รายการสรุปการส่งย้อนหลัง" role="region" className="max-h-80 overflow-auto border-t border-line">
+                <div tabIndex={0} aria-label="รายการสรุปการส่งย้อนหลัง" role="region" className="max-h-80 overflow-auto border-t border-line focus-visible:outline-2 focus-visible:outline-brand">
                   <table className="w-full text-left text-xs">
                     <thead className="sticky top-0 bg-surface text-muted">
                       <tr>

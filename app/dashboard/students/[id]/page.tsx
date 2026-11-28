@@ -67,9 +67,10 @@ function Tags({ items }: { items: string[] }): React.ReactNode {
 
 interface StudentDetailPageProps {
   params: Promise<{ id: string }>;
+  inDialog?: boolean;
 }
 
-export default async function StudentDetailPage({ params }: StudentDetailPageProps): Promise<React.ReactNode> {
+export default async function StudentDetailPage({ params, inDialog = false }: StudentDetailPageProps): Promise<React.ReactNode> {
   const [{ id }, user] = await Promise.all([params, requireRoles(STAFF_ROLES)]);
   const s = await getStudentDetail(id);
   if (!s) notFound();
@@ -106,10 +107,10 @@ export default async function StudentDetailPage({ params }: StudentDetailPagePro
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href="/dashboard/students" className="inline-flex w-fit items-center gap-1.5 text-[13px] font-semibold text-muted transition-colors hover:text-ink">
-        <ChevronLeft className="size-[18px]" />
+      {!inDialog && <Link href="/dashboard/students" className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-md px-2 text-sm font-semibold text-muted hover:bg-brand-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-brand">
+        <ChevronLeft aria-hidden="true" className="size-[18px]" />
         กลับไปรายชื่อนักเรียน
-      </Link>
+      </Link>}
 
       {/* Header */}
       <section className="flex flex-col gap-4 rounded-[24px] school-card bg-linear-to-r from-school-panel to-school-panel-tint p-4 sm:p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -118,7 +119,7 @@ export default async function StudentDetailPage({ params }: StudentDetailPagePro
             {s.firstName.charAt(0)}
           </span>
           <div>
-            <h1 className="text-[22px] font-bold text-ink-strong">{fullName}</h1>
+            <h1 className="wrap-anywhere text-[22px] font-bold leading-snug text-ink-strong">{fullName}</h1>
             <p className="text-[13px] text-muted">
               รหัส {s.code} · ห้อง {s.classroom} · {s.grade}
             </p>
