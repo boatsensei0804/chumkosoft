@@ -73,7 +73,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
       />
 
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col items-start gap-3 rounded-xl border border-line bg-card p-2 sm:p-3 xl:flex-row xl:items-center xl:justify-between xl:gap-5">
+        <div className="flex flex-col items-start gap-3 rounded-2xl border border-line bg-card p-2 shadow-school-panel sm:p-3 xl:flex-row xl:items-center xl:justify-between xl:gap-5">
           <AttendanceModeTabs mode={mode} date={date} month={month} classroomId={classroomId} />
           <span className="inline-flex items-start gap-1.5 px-2 py-1 text-xs leading-relaxed text-muted">
             <UserCheck className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />

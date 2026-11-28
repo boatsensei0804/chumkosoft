@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, LogIn, LogOut } from "lucide-react";
 import WeeklySchedule from "@/features/portal/components/weekly-schedule";
 import { getCurrentUser } from "@/lib/dal";
 import { getPortalOverview } from "@/features/portal/services/portal-service";
@@ -50,18 +50,18 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
         {unavailable && <p role="status" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">เปิดข้อมูลนักเรียนที่เลือกไม่ได้ กรุณาเลือกรายชื่อที่เชื่อมกับบัญชีนี้</p>}
         <div className={overview.studentName && !unavailable ? "grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]" : "grid gap-4"}>
           {overview.studentName && (
-            <section id="school-entry" aria-labelledby="school-entry-title" tabIndex={-1} className="scroll-mt-20 rounded-xl border border-line bg-card p-4 sm:p-5">
+            <section id="school-entry" aria-labelledby="school-entry-title" tabIndex={-1} className="scroll-mt-20 rounded-2xl border border-line bg-card p-4 shadow-school-panel sm:p-5">
               <h2 id="school-entry-title" className="wrap-anywhere text-lg font-bold text-ink-strong">{overview.studentName}</h2>
               <p className="mt-1 text-sm text-muted">
                 {[overview.classroomCode && "ห้อง " + overview.classroomCode, overview.gradeLevel, overview.termLabel].filter(Boolean).join(" · ")}
               </p>
               {overview.classroomCode && (
-                <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-3 text-sm">
-                  <div><dt className="text-muted">เข้าโรงเรียนวันนี้</dt><dd className="mt-1 font-semibold text-ink-strong">
+                <dl className="mt-4 grid grid-cols-1 gap-2 border-t border-line pt-4 text-sm min-[380px]:grid-cols-2">
+                  <div className="rounded-xl bg-brand-softer p-3"><dt className="flex items-center gap-2 font-medium text-brand-ink"><LogIn aria-hidden="true" className="size-4 shrink-0" /> เข้าโรงเรียนวันนี้</dt><dd className="mt-2 font-semibold tabular-nums text-ink-strong">
                     {entry?.checkInAt ? formatBangkokTime(entry.checkInAt) + " น." : "ยังไม่มีบันทึก"}
                     {entry?.checkInAt && entry.isLate && <span className="ml-2 text-xs text-amber-800">มาสาย</span>}
                   </dd></div>
-                  <div><dt className="text-muted">ออกจากโรงเรียน</dt><dd className="mt-1 font-semibold text-ink-strong">
+                  <div className="rounded-xl bg-surface p-3"><dt className="flex items-center gap-2 font-medium text-muted"><LogOut aria-hidden="true" className="size-4 shrink-0" /> ออกจากโรงเรียน</dt><dd className="mt-2 font-semibold tabular-nums text-ink-strong">
                     {entry?.checkOutAt ? formatBangkokTime(entry.checkOutAt) + " น." : "ยังไม่มีบันทึก"}
                   </dd></div>
                 </dl>

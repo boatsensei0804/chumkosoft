@@ -33,20 +33,20 @@ export default function DailySchoolOverview({ rooms, date, scoped }: { rooms: Da
   const rosterUrl = (id: string) => `/dashboard/attendance?mode=homeroom&date=${date}&classroom=${encodeURIComponent(id)}`;
 
   return <div className="space-y-5">
-    <section aria-labelledby="daily-attendance-heading" className="overflow-hidden rounded-xl border border-line bg-card">
+    <section aria-labelledby="daily-attendance-heading" className="overflow-hidden rounded-2xl border border-line bg-card shadow-school-panel">
       <header className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5">
         <div>
           <h2 id="daily-attendance-heading" className="text-lg font-bold text-ink-strong">เช็คชื่อประจำห้องวันนี้</h2>
           <p className="mt-0.5 text-sm text-muted">{scoped ? "ห้องที่คุณเป็นที่ปรึกษา" : "ทุกห้องในภาคเรียนปัจจุบัน"}</p>
         </div>
-        {scoped && <Button asChild variant="outline">
-          <Link href={`/dashboard/attendance?mode=homeroom&date=${date}`}>
+        <Button asChild variant="outline" className="h-11">
+          <Link href={`/dashboard/attendance?mode=homeroom&date=${date}#attendance-calendar`}>
             <CalendarDays aria-hidden="true" /> ปฏิทินเช็คชื่อ
           </Link>
-        </Button>}
+        </Button>
       </header>
 
-      <div className="mx-4 mb-4 rounded-xl bg-brand-soft p-4 text-brand-ink sm:mx-5 sm:p-5">
+      <div className="mx-4 mb-4 rounded-xl bg-brand-softer p-4 text-brand-ink sm:mx-5 sm:p-5">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <p className="text-sm font-semibold">เช็คชื่อแล้ว</p>
@@ -61,7 +61,7 @@ export default function DailySchoolOverview({ rooms, date, scoped }: { rooms: Da
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-px border-t border-line bg-line sm:grid-cols-3 2xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-px border-t border-line bg-line sm:grid-cols-3">
         {metrics.map((metric) => {
           const count = rooms.reduce((sum, room) => sum + room[metric.key], 0);
           return (
@@ -71,7 +71,7 @@ export default function DailySchoolOverview({ rooms, date, scoped }: { rooms: Da
                 setSelectedMetric(metric);
               }}
               className={cn(
-                "group min-w-0 p-3 text-left transition-colors focus-visible:z-10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
+                "group min-w-0 p-3 text-left sm:px-4 transition-colors focus-visible:z-10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
                 metric.key === "unchecked" && count > 0 ? "bg-amber-50 hover:bg-amber-100" : "bg-card hover:bg-brand-soft",
               )}>
               <span className="flex items-center gap-1.5 text-xs font-semibold text-ink sm:gap-2">
@@ -91,7 +91,7 @@ export default function DailySchoolOverview({ rooms, date, scoped }: { rooms: Da
       </div>
     </section>
 
-    <section aria-labelledby="classroom-tracking-heading" className="overflow-hidden rounded-xl border border-line bg-card">
+    <section aria-labelledby="classroom-tracking-heading" className="overflow-hidden rounded-2xl border border-line bg-card shadow-school-panel">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
         <h2 id="classroom-tracking-heading" className="text-base font-bold text-ink-strong">ติดตามรายห้อง</h2>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">

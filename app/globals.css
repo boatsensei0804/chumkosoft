@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 @page line-a4 {
   size: A4 portrait;
@@ -79,39 +80,38 @@
   .line-print-page { gap: 4mm; margin: 0; }
   .line-parent-card { border-radius: 3mm; box-shadow: none; }
 }
-@import "tw-animate-css";
 
-/* Chumkosoft uses white surfaces, clear blue controls, and a navy workspace navigation. */
+/* Shared surfaces and semantic colors for the school workspace. */
 :root {
   --bg: #ffffff;
-  --surface: #eff6ff;
-  --surface-2: #eaf3ff;
-  --surface-sunken: #e1edfb;
+  --surface: #f5f5fa;
+  --surface-2: #eeedf7;
+  --surface-sunken: #e8e5f3;
   --school-panel: #ffffff;
-  --school-panel-border: #d1e1f5;
-  --school-panel-tint: #edf5ff;
-  --school-panel-wash: #cbe5ff;
+  --school-panel-border: #e3dfef;
+  --school-panel-tint: #f2effa;
+  --school-panel-wash: #ded6fa;
 
-  --ink: #152f4f;
-  --ink-strong: #0a2548;
-  --muted: #425a75;
-  --faint: #506784;
-  --line: #d2e1f4;
-  --line-strong: #90abd0;
+  --ink: #29243e;
+  --ink-strong: #201a35;
+  --muted: #554e6a;
+  --faint: #625b76;
+  --line: #e3dfed;
+  --line-strong: #9d94b6;
 
-  --brand: #0759bd;
-  --brand-strong: #084592;
-  --brand-ink: #104884;
-  --brand-soft: #e2efff;
-  --brand-softer: #f3f8ff;
-  --sky-accent: #8fd5ff;
-  --sky-accent-soft: #def1ff;
-  --sky-accent-ink: #073b74;
-  --nav-surface: #102f56;
-  --nav-hover: #204873;
-  --nav-ink: #f8fbff;
-  --nav-muted: #c9dcf6;
-  --nav-line: #466b96;
+  --brand: #5839b2;
+  --brand-strong: #472895;
+  --brand-ink: #452b88;
+  --brand-soft: #ede6ff;
+  --brand-softer: #f8f5ff;
+  --sky-accent: #d5c5ff;
+  --sky-accent-soft: #eee7ff;
+  --sky-accent-ink: #482889;
+  --nav-surface: #282044;
+  --nav-hover: #3b305b;
+  --nav-ink: #fbf9ff;
+  --nav-muted: #ded5f0;
+  --nav-line: #62547a;
 
   --primary: var(--brand);
   --primary-hover: var(--brand-strong);
@@ -141,11 +141,11 @@
   --danger-soft: #fae9e9;
   --info: var(--blue);
   --info-soft: var(--blue-soft);
-  --focus: #095db9;
+  --focus: #6239c2;
 
   --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 14px;
+  --radius: 14px;
+  --radius-lg: 20px;
   --shadow-sm: 0 1px 2px #173e6810;
   --shadow-md: 0 4px 12px #173e6814;
   --shadow-lg: 0 12px 32px #173e681c;
@@ -164,7 +164,7 @@
   --color-school-panel-border: var(--school-panel-border);
   --color-school-panel-tint: var(--school-panel-tint);
   --color-school-panel-wash: var(--school-panel-wash);
-  --shadow-school-panel: 0 2px 5px #162f230b;
+  --shadow-school-panel: 0 2px 3px rgb(36 22 70 / 4%);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-surface-sunken: var(--surface-sunken);
@@ -312,14 +312,14 @@ body {
 }
 
 /* Shared staff workspace: consistent visual hierarchy across registry pages. */
-.school-workspace main > .mb-6 { isolation: isolate; }
+
 .school-workspace main table thead {
   background: var(--school-panel-tint);
   color: var(--muted);
 }
 .school-workspace main table thead th {
-  padding-top: 15px;
-  padding-bottom: 15px;
+  padding-top: 12px;
+  padding-bottom: 12px;
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
@@ -328,7 +328,7 @@ body {
   transition: background-color 150ms ease;
 }
 .school-workspace main table tbody tr:hover { background-color: var(--brand-softer); }
-.school-workspace main table tbody td { padding-top: 15px; padding-bottom: 15px; }
+.school-workspace main table tbody td { padding-top: 12px; padding-bottom: 12px; }
 .school-workspace main input:not([type="checkbox"]):not([type="radio"]),
 .school-workspace main select {
   min-height: 40px;

@@ -49,36 +49,35 @@ export default function Home(): React.ReactNode {
       </header>
 
       <main id="main-content">
-        <section aria-labelledby="home-title" className={`${frame} pt-5 pb-8 sm:pt-8 sm:pb-12`}>
-          <div className="relative isolate overflow-hidden rounded-[24px] border border-nav-line bg-nav-surface text-nav-ink lg:flex lg:min-h-[490px] lg:items-center">
-            <div className="relative z-10 px-5 py-7 sm:px-9 sm:py-10 lg:w-[55%] lg:px-12">
-              <h1 id="home-title" className="text-balance text-[clamp(2.2rem,4.5vw,3.8rem)] font-bold leading-[1.22] tracking-tight">
-                ดูแลการมาเรียน <span className="block text-sky-accent">จากโรงเรียนถึงบ้าน</span>
+        <section aria-labelledby="home-title" className={`${frame} py-6 sm:py-10`}>
+          <div className="grid overflow-hidden rounded-[28px] bg-brand-softer lg:min-h-[490px] lg:grid-cols-2">
+            <div className="flex min-w-0 flex-col justify-center px-5 py-8 sm:p-10 lg:p-12">
+              <h1 id="home-title" className="text-balance text-[clamp(2.25rem,4.6vw,4rem)] font-bold leading-[1.16] tracking-tight text-ink-strong">
+                ดูแลการมาเรียน <span className="block text-brand">จากโรงเรียนถึงบ้าน</span>
               </h1>
-              <p className="mt-4 max-w-[39ch] text-pretty text-base leading-relaxed text-nav-muted sm:text-lg">
+              <p className="mt-5 max-w-[39ch] text-pretty text-base leading-relaxed text-muted sm:text-lg">
                 ครูเช็คชื่อและติดตามการเข้าเรียน ผู้ปกครองรับข่าว แจ้งลา หรือขอมาสายผ่าน LINE ของโรงเรียน
               </p>
-              <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2">
-                <Button asChild size="lg" className="group min-h-12 rounded-xl bg-sky-accent text-sky-accent-ink hover:bg-sky-accent-soft active:bg-white focus-visible:ring-sky-accent">
-                  <Link href="/login">เข้าสู่ระบบโรงเรียน <ArrowRight aria-hidden="true" className="motion-safe:transition-transform motion-safe:duration-150 motion-safe:ease-out motion-safe:group-hover:translate-x-0.5" /></Link>
+              <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2">
+                <Button asChild size="lg" className="group min-h-12 rounded-xl">
+                  <Link href="/login">เข้าสู่ระบบโรงเรียน <ArrowRight aria-hidden="true" className="motion-safe:transition-transform motion-safe:group-hover:translate-x-0.5" /></Link>
                 </Button>
-                <a href="#manual" className="inline-flex min-h-11 items-center rounded-sm font-semibold text-white underline decoration-sky-accent/60 underline-offset-4 hover:decoration-white focus-visible:outline-sky-accent">เปิดคู่มือใช้งาน</a>
+                <a href="#manual" className="inline-flex min-h-11 items-center rounded-md px-1 font-semibold text-brand-ink underline-offset-4 hover:underline">เปิดคู่มือใช้งาน</a>
               </div>
             </div>
-            <div className="relative aspect-[16/10] sm:aspect-[2/1] lg:absolute lg:inset-y-0 lg:right-0 lg:w-[58%] lg:aspect-auto">
+            <div className="relative aspect-[16/10] overflow-hidden sm:aspect-[2/1] lg:aspect-auto">
               <BrandScene priority />
-              <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-linear-to-b from-nav-surface via-transparent via-35% lg:bg-linear-to-r lg:via-45%" />
             </div>
           </div>
         </section>
 
-        <section id="features" aria-labelledby="features-title" className="border-y border-line bg-surface">
+        <section id="features" aria-labelledby="features-title" className="border-y border-line bg-card">
           <div className={`${frame} py-9 sm:py-12`}>
             <h2 id="features-title" className="mb-6 text-2xl font-bold text-ink-strong sm:text-3xl">เช็คชื่อ รับข่าว และแจ้งลา</h2>
-            <ul className="grid divide-y divide-line md:grid-cols-3 md:divide-x md:divide-y-0">
+            <ul className="grid gap-3 md:grid-cols-3">
               {features.map(({ icon: Icon, title, description }) => (
-                <li key={title} className="flex min-w-0 gap-4 py-5 first:pt-0 last:pb-0 md:flex-col md:py-0 md:pe-5 md:ps-5 md:first:ps-0 md:last:pe-0">
-                  <Icon aria-hidden="true" className="mt-1 size-5 shrink-0 text-brand md:mt-0 md:size-6" />
+                <li key={title} className="flex min-w-0 gap-4 rounded-2xl border border-line bg-surface p-5 md:flex-col">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand"><Icon aria-hidden="true" className="size-5" /></span>
                   <div>
                     <h3 className="text-lg font-semibold text-ink-strong">{title}</h3>
                     <p className="mt-2 max-w-[35ch] text-sm leading-7 text-muted">{description}</p>

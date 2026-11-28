@@ -23,15 +23,15 @@ export default function LoginForm({ t, display = false }: { display?: boolean; t
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="login-identifier">{t.identifier}</Label>
-        <Input id="login-identifier" name="identifier" type="text" autoComplete="username" defaultValue={state.identifier} required autoFocus disabled={isPending} />
+        <Input id="login-identifier" name="identifier" type="text" autoComplete="username" className="h-11 rounded-lg" defaultValue={state.identifier} required autoFocus disabled={isPending} />
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="login-password">{t.password}</Label>
-        <Input id="login-password" name="password" type="password" autoComplete="current-password" required disabled={isPending} />
+        <Input id="login-password" name="password" type="password" autoComplete="current-password" className="h-11 rounded-lg" required disabled={isPending} />
       </div>
 
-      <Button type="submit" size="lg" className="w-full" disabled={isPending}>
+      <Button type="submit" size="lg" className="h-11 w-full" disabled={isPending}>
         {isPending ? t.submitting : t.submit}
       </Button>
     </form>

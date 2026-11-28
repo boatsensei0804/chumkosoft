@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { CalendarDays, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import LeaveSummaryShare from "@/features/leave/components/leave-summary-share";
 import LeaveSummaryCharts from "@/features/leave/components/leave-summary-charts";
 import { requestKindLabel } from "@/features/leave/request-kind";
@@ -67,22 +69,41 @@ export default function LeaveRequestsBrowser({ report, isAdmin, initialFilter }:
   return <div className="space-y-5">
     {message && <p role="status" className="rounded-lg bg-brand-soft px-4 py-3 text-sm font-semibold text-ink">{message}</p>}
     <section id="leave-list" className="scroll-mt-4 overflow-hidden rounded-2xl school-card">
-      <div className="flex flex-wrap items-center gap-2 border-b border-school-panel-border bg-school-panel-tint p-4"><h2 className="mr-2 text-base font-bold text-ink-strong">รายการคำขอ</h2><Link href={`/dashboard/leave-requests?date=${report.date}`} className={`min-h-11 rounded-lg px-3 py-2 text-sm font-semibold ${report.allDates ? "border border-line" : "bg-brand text-white"}`}>รายการวันที่เลือก</Link><Link href={`/dashboard/leave-requests?date=${report.date}&view=all`} className={`min-h-11 rounded-lg px-3 py-2 text-sm font-semibold ${report.allDates ? "bg-brand text-white" : "border border-line"}`}>ทุกวันในภาคเรียนนี้</Link><p className="text-xs text-muted">{report.allDates ? "ใช้ค้นหาคำขอเก่าหรือข้อมูลทดสอบได้" : `คำขอที่ครอบคลุมวันที่ ${thaiDate(report.date)}`}</p></div>
-      <div className="border-b border-school-panel-border px-4 py-3">
-        <form action="/dashboard/leave-requests" method="get" className="flex flex-wrap items-end gap-2">{report.allDates && <input type="hidden" name="view" value="all" />}<label className="text-xs font-semibold text-muted">วันที่ลา / ขอมาสาย<input aria-label="วันที่รายงานคำขอลา" type="date" name="date" defaultValue={report.date} required className="mt-1 block min-h-11 rounded-lg border border-line bg-surface px-3 text-sm text-ink" /></label><button type="submit" className="min-h-11 rounded-lg bg-brand px-4 text-sm font-semibold text-white">ดูสรุป</button><Link href="/dashboard/leave-requests" className="min-h-11 rounded-lg border border-line px-3 py-2 text-sm font-semibold">วันนี้</Link></form>
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-4 py-4 sm:px-5">
+        <div>
+          <h2 className="text-lg font-bold text-ink-strong">รายการคำขอ</h2>
+          <p className="mt-1 text-sm text-muted">{report.allDates ? report.term ?? "ภาคเรียนปัจจุบัน" : `คำขอที่ครอบคลุมวันที่ ${thaiDate(report.date)}`}</p>
+        </div>
+        <nav aria-label="ช่วงเวลาของคำขอ" className="flex flex-wrap gap-1 rounded-xl bg-surface p-1">
+          <Link href={`/dashboard/leave-requests?date=${report.date}`} aria-current={!report.allDates ? "page" : undefined} className={`inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold ${report.allDates ? "text-muted hover:bg-brand-soft" : "bg-brand-soft text-brand-ink"}`}>วันที่เลือก</Link>
+          <Link href={`/dashboard/leave-requests?date=${report.date}&view=all`} aria-current={report.allDates ? "page" : undefined} className={`inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold ${report.allDates ? "bg-brand-soft text-brand-ink" : "text-muted hover:bg-brand-soft"}`}>ทั้งภาคเรียน</Link>
+        </nav>
+      </header>
+      <div className="border-b border-line bg-brand-softer px-4 py-3 sm:px-5">
+        <form action="/dashboard/leave-requests" method="get" className="flex flex-wrap items-end gap-2">
+          {report.allDates && <input type="hidden" name="view" value="all" />}
+          <label className="text-xs font-semibold text-muted">วันที่ลา / ขอมาสาย
+            <input aria-label="วันที่รายงานคำขอลา" type="date" name="date" defaultValue={report.date} required className="mt-1 block min-h-11 rounded-lg border border-line bg-card px-3 text-sm text-ink" />
+          </label>
+          <Button type="submit" variant="outline" className="h-11"><CalendarDays aria-hidden="true" /> เลือกวันที่</Button>
+          <Button asChild variant="ghost" className="h-11"><Link href="/dashboard/leave-requests">วันนี้</Link></Button>
+        </form>
       </div>
-      <div className="flex flex-wrap gap-3 border-b border-line p-4">
-        <input aria-label="ค้นหาคำขอลา" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="ค้นหานักเรียน ห้อง ผู้ปกครอง หรือชื่อ LINE" className="min-h-11 min-w-0 basis-full rounded-lg border border-school-panel-border bg-white px-3 py-2 text-sm md:flex-1 md:basis-48" />
+      <div className="flex flex-wrap items-center gap-2 border-b border-line p-4 sm:px-5">
+        <label className="flex min-h-11 min-w-0 basis-full items-center gap-2 rounded-lg border border-line bg-card px-3 focus-within:outline-2 focus-within:outline-brand md:flex-1 md:basis-48">
+          <Search aria-hidden="true" className="size-4 shrink-0 text-faint" />
+          <input aria-label="ค้นหาคำขอลา" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="ค้นหานักเรียน ห้อง ผู้ปกครอง หรือชื่อ LINE" className="w-full min-w-0 py-2 text-base outline-none! sm:text-sm" />
+        </label>
         <select aria-label="กรองห้องเรียนคำขอลา" value={classroom} onChange={(event) => { setClassroom(event.target.value); setPage(1); }} className="min-h-10 rounded-xl border border-line bg-surface px-3 text-sm"><option value="">ทุกห้องเรียน</option>{classrooms.map((room) => <option key={room} value={room}>{room}</option>)}</select>
         <select aria-label="ประเภทการลา" value={kind} onChange={(event) => { setKind(event.target.value as LeaveKind | "ALL"); setPage(1); }} className="min-h-10 rounded-xl border border-line bg-surface px-3 text-sm"><option value="ALL">ทุกประเภท</option><option value="SICK">ลาป่วย</option><option value="PERSONAL">ลากิจ</option><option value="LATE">ขอมาสาย</option></select>
         <select aria-label="กรองสถานะคำขอลา" value={filter} onChange={(event) => { setFilter(event.target.value as LeaveStatus | "ALL"); setPage(1); }} className="rounded-lg border border-line bg-surface px-3 py-2 text-sm">
           <option value="PENDING">รอพิจารณา</option><option value="APPROVED">อนุมัติแล้ว</option><option value="REJECTED">ไม่อนุมัติ</option><option value="ALL">ทั้งหมด</option>
         </select>
       </div>
-      {visible.length === 0 ? <MascotEmptyState compact pose="schedule" className="m-4" title="ไม่พบคำขอลาหรือขอมาสาย" description="ลองเปลี่ยนวันที่ ห้องเรียน ประเภท หรือสถานะที่เลือก" /> : <div className="divide-y divide-school-panel-border md:max-h-[52dvh] md:overflow-y-auto">{pageItems.map((item) => <article key={item.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      {visible.length === 0 ? <MascotEmptyState compact pose="schedule" className="m-4" title="ไม่พบคำขอลาหรือขอมาสาย" description="ลองเปลี่ยนวันที่ ห้องเรียน ประเภท หรือสถานะที่เลือก" /> : <div className="divide-y divide-line">{pageItems.map((item) => <article key={item.id} className="flex flex-col gap-2 px-4 py-3 hover:bg-brand-softer sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold text-ink-strong">{item.studentName}</span><span className="text-xs text-muted">{item.studentCode} · ห้อง {item.classroomCode}</span>
+            <span className="min-w-0 wrap-anywhere font-semibold text-ink-strong">{item.studentName}</span><span className="text-xs text-muted">{item.studentCode} · ห้อง {item.classroomCode}</span>
             <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${item.status === "PENDING" ? "bg-warning-soft text-warning" : item.status === "APPROVED" ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}>{item.status === "PENDING" ? "รอพิจารณา" : item.status === "APPROVED" ? "อนุมัติ" : "ไม่อนุมัติ"}</span>
           </div>
           <p className="mt-2 text-sm text-ink">{requestKindLabel(item.kind)} · {thaiDate(item.startDate)}{item.endDate === item.startDate ? "" : ` ถึง ${thaiDate(item.endDate)}`}</p>

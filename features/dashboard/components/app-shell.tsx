@@ -1,11 +1,12 @@
 "use client";
 
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import SidebarContent from "./sidebar-content";
 import TopBar from "./top-bar";
 import CommandPalette from "./command-palette";
+import { cn } from "@/lib/utils";
 import { getNavGroups } from "../nav";
 import type { CurrentUser } from "@/lib/dal";
 
@@ -17,7 +18,9 @@ interface AppShellProps {
 
 export default function AppShell({ children, user, today }: AppShellProps): ReactNode {
   const [navOpen, setNavOpen] = useState(false);
+  const [navCollapsed, setNavCollapsed] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const navTrigger = useRef<HTMLButtonElement>(null);
 
   // Every destination the current role can reach, flattened for the ⌘K palette.
   const commandItems = useMemo(
@@ -41,13 +44,25 @@ export default function AppShell({ children, user, today }: AppShellProps): Reac
       <a href="#dashboard-main" className="sr-only z-[var(--z-tooltip)] rounded-lg bg-card px-4 py-3 font-semibold text-brand-ink shadow-lg focus:not-sr-only focus:fixed focus:left-4 focus:top-4">ข้ามไปยังเนื้อหาหลัก</a>
 
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-[var(--z-sticky)] hidden w-60 bg-nav-surface xl:block">
-        <SidebarContent user={user} />
+      <aside id="desktop-dashboard-nav" className={cn(
+        "fixed inset-y-0 left-0 z-30 hidden border-r border-nav-line bg-nav-surface xl:block",
+        navCollapsed ? "w-18" : "w-60",
+      )}>
+        <SidebarContent user={user} compact={navCollapsed} />
       </aside>
 
       {/* Mobile drawer */}
       <Sheet open={navOpen} onOpenChange={setNavOpen}>
-        <SheetContent side="left" showCloseButton={false} aria-describedby={undefined} className="w-72 max-w-[90vw] border-none bg-nav-surface p-0">
+        <SheetContent
+          side="left"
+          showCloseButton={false}
+          aria-describedby={undefined}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            navTrigger.current?.focus();
+          }}
+          className="w-72 max-w-[90vw] border-none bg-nav-surface p-0"
+        >
           <SheetHeader className="sr-only">
             <SheetTitle>เมนูหลัก</SheetTitle>
           </SheetHeader>
@@ -59,9 +74,21 @@ export default function AppShell({ children, user, today }: AppShellProps): Reac
       </Sheet>
 
       {/* Content column */}
-      <div className="relative z-10 xl:flex xl:h-dvh xl:min-h-0 xl:flex-col xl:pl-60">
-        <TopBar user={user} onOpenNav={() => setNavOpen(true)} today={today} onOpenPalette={() => setPaletteOpen(true)} />
-        <main id="dashboard-main" tabIndex={-1} className="mx-auto w-full min-w-0 max-w-[1480px] scroll-mt-20 px-4 pb-10 pt-5 sm:px-6 sm:pt-7 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overscroll-contain xl:px-8">{children}</main>
+      <div className={cn(
+        "relative z-10 xl:flex xl:h-dvh xl:min-h-0 xl:flex-col",
+        navCollapsed ? "xl:pl-18" : "xl:pl-60",
+      )}>
+        <TopBar
+          user={user}
+          navOpen={navOpen}
+          navTrigger={navTrigger}
+          onOpenNav={() => setNavOpen(true)}
+          navCollapsed={navCollapsed}
+          onToggleNav={() => setNavCollapsed((collapsed) => !collapsed)}
+          today={today}
+          onOpenPalette={() => setPaletteOpen(true)}
+        />
+        <main id="dashboard-main" tabIndex={-1} className="mx-auto w-full min-w-0 max-w-[1480px] scroll-mt-20 px-4 pb-12 pt-5 sm:px-6 sm:pt-8 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overscroll-contain xl:px-8">{children}</main>
       </div>
 
       <CommandPalette open={paletteOpen} items={commandItems} onClose={() => setPaletteOpen(false)} />

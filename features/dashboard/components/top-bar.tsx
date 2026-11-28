@@ -1,8 +1,9 @@
 "use client";
 
+import type { Ref } from "react";
 import { usePathname } from "next/navigation";
 import { getCurrentNavItem, getNavGroups } from "../nav";
-import { Menu, Search, CalendarDays, LogOut, ChevronDown } from "lucide-react";
+import { Menu, Search, CalendarDays, LogOut, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -18,29 +19,42 @@ import type { CurrentUser } from "@/lib/dal";
 
 interface TopBarProps {
   user: CurrentUser;
+  navOpen: boolean;
+  navTrigger: Ref<HTMLButtonElement>;
   onOpenNav: () => void;
+  navCollapsed: boolean;
+  onToggleNav: () => void;
   today: string;
   onOpenPalette: () => void;
 }
 
-export default function TopBar({ user, onOpenNav, today, onOpenPalette }: TopBarProps): React.ReactNode {
+export default function TopBar({ user, navOpen, navTrigger, onOpenNav, navCollapsed, onToggleNav, today, onOpenPalette }: TopBarProps): React.ReactNode {
   const pathname = usePathname();
   const groups = getNavGroups(user.role);
   const current = getCurrentNavItem(groups, pathname);
   const section = groups.find((group) => group.items.some((item) => item.key === current?.key))?.label;
   return (
-    <header className="sticky top-0 z-[var(--z-sticky)] flex h-16 shrink-0 items-center gap-3 border-b border-line bg-card px-4 sm:px-6 xl:px-8">
-      <Button variant="ghost" size="icon" onClick={onOpenNav} aria-label="เปิดเมนู" className="size-11 shrink-0 rounded-lg border border-line bg-surface xl:hidden">
+    <header className="sticky top-0 z-30 flex h-17 shrink-0 items-center gap-3 border-b border-line bg-card px-4 sm:px-6 xl:px-8">
+      <Button ref={navTrigger} variant="ghost" size="icon" onClick={onOpenNav} aria-label="เปิดเมนู" aria-haspopup="dialog" aria-expanded={navOpen} className="size-11 shrink-0 rounded-lg border border-line bg-surface xl:hidden">
         <Menu aria-hidden="true" className="size-5" />
       </Button>
+      <Button
+        variant="ghost" size="icon" onClick={onToggleNav}
+        aria-label={navCollapsed ? "ขยายเมนูด้านข้าง" : "ย่อเมนูด้านข้าง"}
+        aria-controls="desktop-dashboard-nav" aria-expanded={!navCollapsed}
+        className="hidden size-11 shrink-0 text-muted xl:inline-flex"
+      >
+        {navCollapsed ? <PanelLeftOpen aria-hidden="true" /> : <PanelLeftClose aria-hidden="true" />}
+      </Button>
 
-      <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         {section && (
-          <span className="hidden truncate text-xs text-muted sm:block">
-            {section}
-          </span>
+          <>
+            <span className="hidden shrink-0 text-sm text-muted sm:block">{section}</span>
+            <ChevronRight className="hidden size-3.5 shrink-0 text-faint sm:block" aria-hidden="true" />
+          </>
         )}
-        <p className="truncate text-sm font-bold text-ink-strong sm:text-base">{current?.label ?? "พื้นที่ทำงาน"}</p>
+        <p className="truncate text-sm font-bold text-ink-strong">{current?.label ?? "พื้นที่ทำงาน"}</p>
       </div>
 
       {/* Opens the ⌘K command palette — a real destination search, not a text field. */}
@@ -66,10 +80,11 @@ export default function TopBar({ user, onOpenNav, today, onOpenPalette }: TopBar
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="flex min-h-11 items-center gap-2 rounded-lg border border-transparent px-1.5 focus-visible:outline-2 focus-visible:outline-brand motion-safe:transition-colors hover:border-line hover:bg-surface-2"
+              className="flex min-h-11 max-w-52 items-center gap-2 rounded-lg border border-transparent px-1.5 focus-visible:outline-2 focus-visible:outline-brand motion-safe:transition-colors hover:border-line hover:bg-surface-2"
               aria-label="เมนูบัญชีผู้ใช้"
             >
-              <Avatar className="size-8">
+              <span className="hidden min-w-0 truncate text-sm font-semibold text-ink 2xl:block">{user.displayName}</span>
+              <Avatar className="size-8 shrink-0">
                 <AvatarFallback className="bg-sky-accent-soft text-[13px] font-semibold text-sky-accent-ink">{user.initials}</AvatarFallback>
               </Avatar>
               <ChevronDown className="hidden size-4 text-muted sm:block" />

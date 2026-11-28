@@ -10,7 +10,7 @@ export default function AttendanceDateOverview(props: AttendanceCalendarProps): 
   const date = new Date(`${props.selectedDate}T00:00:00Z`);
   const dateLabel = Number.isNaN(date.getTime()) ? props.selectedDate : new Intl.DateTimeFormat("th-TH", { dateStyle: "long", timeZone: "UTC" }).format(date);
   const noSession = day?.state === "no-session";
-  return <section aria-label="ปฏิทินและสรุปวันที่เลือก" className="overflow-hidden rounded-2xl border border-school-panel-border bg-school-panel shadow-school-panel">
+  return <section id="attendance-calendar" aria-label="ปฏิทินและสรุปวันที่เลือก" className="scroll-mt-20 overflow-hidden rounded-2xl border border-school-panel-border bg-school-panel shadow-school-panel">
     <div className="grid grid-cols-1 items-start lg:grid-cols-[minmax(0,1.2fr)_minmax(260px,0.8fr)]">
       <div className="min-w-0"><CalendarDisclosure><AttendanceCalendar {...props} embedded /></CalendarDisclosure></div>
       <aside aria-label="สรุปวันที่เลือก" className="order-first min-w-0 h-full border-b border-school-panel-border bg-school-panel-tint p-3 lg:order-last lg:border-b-0 lg:border-l sm:p-5">

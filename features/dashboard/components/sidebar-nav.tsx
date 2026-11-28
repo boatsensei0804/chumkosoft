@@ -9,9 +9,10 @@ interface SidebarNavProps {
   items: NavItem[];
   activeKey?: string;
   onNavigate?: () => void;
+  compact?: boolean;
 }
 
-export default function SidebarNav({ items, activeKey, onNavigate }: SidebarNavProps): React.ReactNode {
+export default function SidebarNav({ items, activeKey, onNavigate, compact = false }: SidebarNavProps): React.ReactNode {
   return (
     <TooltipProvider delayDuration={200}>
       <ul className="flex flex-col gap-0.5">
@@ -45,14 +46,16 @@ export default function SidebarNav({ items, activeKey, onNavigate }: SidebarNavP
                 href={item.href}
                 onClick={onNavigate}
                 aria-current={active ? "page" : undefined}
+                title={compact ? item.label : undefined}
                 className={cn(
                   "group relative flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-semibold motion-safe:transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-accent",
-                  active ? "bg-white text-nav-surface before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-r-full before:bg-sky-accent" : "text-nav-ink hover:bg-nav-hover",
+                  active ? "bg-sky-accent-soft text-brand-ink before:absolute before:inset-y-2.5 before:left-0 before:w-[3px] before:rounded-r-full before:bg-sky-accent" : "text-nav-ink hover:bg-nav-hover",
+                  compact && "justify-center",
                 )}
               >
                 <Icon aria-hidden="true" className={cn("size-[18px] shrink-0", active ? "text-sky-accent-ink" : "text-nav-muted")} />
-                <span className="flex-1">{item.label}</span>
-                {typeof item.badge === "number" && (
+                <span className={compact ? "sr-only" : "flex-1"}>{item.label}</span>
+                {!compact && typeof item.badge === "number" && (
                   <span
                     className={cn(
                       "tabular rounded-full px-1.5 py-0.5 text-[11px] font-semibold",

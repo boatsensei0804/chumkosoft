@@ -46,9 +46,9 @@ export default async function ScannerDevicesPage() {
     { id: "scanner-review", title: "เครื่องที่ต้องตรวจ", rows: rows.filter((row) => row.needsReview) },
     { id: "scanner-ready", title: "เครื่องพร้อมใช้งาน", rows: rows.filter((row) => !row.needsReview) },
   ];
-  const field = "mt-1 w-full rounded-xl border border-sky-200 bg-white px-3 py-3 text-slate-900 focus:border-sky-600 focus:outline-none";
+  const field = "mt-1 w-full rounded-xl border border-line bg-white px-3 py-3 text-ink focus:border-brand focus:outline-none";
   return (
-    <div className="min-h-dvh bg-sky-50 text-slate-900"><PortalHeader user={user} /><ScannerDevicesAutoRefresh /><main className="px-4 py-6 sm:px-8">
+    <div className="min-h-dvh bg-surface text-ink"><PortalHeader user={user} /><ScannerDevicesAutoRefresh /><main className="px-4 py-6 sm:px-8">
       <div className="mx-auto max-w-6xl">
         <PageHeader pose="scan" title="จัดการอุปกรณ์สแกน" subtitle="ดูสถานะและตั้งค่าเครื่องสแกนของโรงเรียน" actions={<>
           <Button asChild><Link href="/kiosk/login">เข้าสู่จอ Kiosk</Link></Button>
@@ -107,14 +107,14 @@ export default async function ScannerDevicesPage() {
                   <form action={removeScannerDevice} className="mt-2 flex flex-wrap items-center gap-3"><input type="hidden" name="id" value={device.id} />
                     <label><input type="checkbox" name="confirm" required /> ยืนยันนำเครื่องนี้ออกและหยุดรับข้อมูล โดยเก็บประวัติเดิม</label>
                     <Button variant="outline">ยืนยันลบเครื่อง</Button></form></details>}
-                <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 p-4">
+                <div className="mt-4 rounded-xl border border-line bg-surface p-4">
                   <p className="font-semibold">ควบคุมหน้าจอ · โหมดปัจจุบัน: {device.displayOverride === "AUTO" ? "ตามตาราง" : device.displayOverride === "ON" ? "เปิดค้าง" : "พักจอค้าง"}</p>
-                  <p className="mt-1 text-xs text-slate-600">จอ Kiosk ที่เลือกเครื่องนี้จะรับคำสั่งเมื่อออนไลน์ ระหว่างพักจอยังบันทึกการสแกนได้</p>
+                  <p className="mt-1 text-xs text-muted">จอ Kiosk ที่เลือกเครื่องนี้จะรับคำสั่งเมื่อออนไลน์ ระหว่างพักจอยังบันทึกการสแกนได้</p>
                   <form action={setScannerDisplayOverride} className="mt-3 flex flex-wrap gap-2">
                     <input type="hidden" name="deviceId" value={device.id} />
-                    <button name="mode" value="AUTO" className="rounded-lg border border-sky-200 min-h-11 bg-white px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-brand">ตามตาราง</button>
-                    <button name="mode" value="ON" className="rounded-lg border border-sky-200 min-h-11 bg-white px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-brand">เปิดจอ</button>
-                    <button name="mode" value="OFF" className="rounded-lg border border-sky-200 min-h-11 bg-white px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-brand">พักจอ</button>
+                    <button name="mode" value="AUTO" className="rounded-lg border border-line min-h-11 bg-white px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-brand">ตามตาราง</button>
+                    <button name="mode" value="ON" className="rounded-lg border border-line min-h-11 bg-white px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-brand">เปิดจอ</button>
+                    <button name="mode" value="OFF" className="rounded-lg border border-line min-h-11 bg-white px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-brand">พักจอ</button>
                   </form>
                 </div>
                   </div>
@@ -125,9 +125,9 @@ export default async function ScannerDevicesPage() {
               </ul>
             </section>
           ))}
-          <section className="rounded-2xl border border-sky-100 bg-white p-5 shadow-sm sm:p-7">
+          <section className="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-7">
             <h2 className="text-xl font-bold">เวลาสแกนของโรงเรียน</h2>
-            <p className="mt-1 text-sm text-slate-600">ใช้เวลาไทยกับทุกเครื่อง และใช้ตัดสินว่าสแกนสายหรือไม่</p>
+            <p className="mt-1 text-sm text-muted">ใช้เวลาไทยกับทุกเครื่อง และใช้ตัดสินว่าสแกนสายหรือไม่</p>
             <p className="mt-3 text-sm font-semibold text-ink">เริ่ม {scanTime.scanStartTime} น. · สายตั้งแต่ {scanTime.lateAfterTime} น.</p>
             {user.role === "ADMIN" && (
               <DeviceSettingsDialog title="เวลาสแกนของโรงเรียน" action={saveScannerTime}>

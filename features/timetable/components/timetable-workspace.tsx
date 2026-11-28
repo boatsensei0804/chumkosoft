@@ -38,7 +38,7 @@ export default function TimetableWorkspace(props: TimetableWorkspaceProps): Reac
 
   return (
     <div className="flex flex-col gap-4">
-      <div role="group" aria-label="มุมมองตารางสอน" className="flex w-fit flex-wrap gap-1 rounded-lg border border-line bg-surface-2 p-1">
+      <div role="group" aria-label="มุมมองตารางสอน" className="flex w-fit flex-wrap gap-1 rounded-xl border border-line bg-card p-1">
         <MainTab active={mainView === "overview"} onClick={() => setMainView("overview")} icon={CalendarDays}>ภาพรวมตารางสอน</MainTab>
         {props.canManage && <MainTab active={mainView === "edit"} onClick={() => setMainView("edit")} icon={Clock3}>จัดและแก้ตาราง</MainTab>}
       </div>
@@ -53,7 +53,7 @@ function MainTab({ active, onClick, icon: Icon, children }: { active: boolean; o
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={cn("inline-flex min-h-11 items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-brand", active ? "bg-bg text-brand-ink shadow-sm" : "text-muted hover:text-ink-strong")}
+      className={cn("inline-flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-brand", active ? "bg-brand-soft text-brand-ink" : "text-muted hover:bg-surface")}
     >
       <Icon aria-hidden="true" className="size-4 shrink-0" />{children}
     </button>
@@ -79,10 +79,10 @@ function TimetableOverview(props: TimetableWorkspaceProps): React.ReactNode {
 
   return (
     <div className="flex flex-col gap-4">
-      <section className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-line bg-bg px-4 py-3.5 sm:px-5">
+      <section className="flex flex-wrap items-end justify-between gap-3 rounded-2xl border border-line bg-card px-4 py-4 shadow-school-panel sm:px-5">
         <div>
-          <p className="text-xs font-medium text-muted">ดูการจัดสอนทั้งภาคเรียน</p>
-          <h2 className="mt-0.5 text-base font-semibold text-ink-strong">ภาพรวม · ห้องเรียน · ครูผู้สอน</h2>
+          <h2 className="text-lg font-bold text-ink-strong">ตารางสอนประจำภาคเรียน</h2>
+          <p className="mt-1 text-sm text-muted">ดูจำนวนคาบที่จัดแล้ว และเปิดตารางของแต่ละห้องหรือครู</p>
         </div>
         <label className="flex flex-col gap-1.5 text-xs font-medium text-muted">
           ภาคเรียน
@@ -92,7 +92,7 @@ function TimetableOverview(props: TimetableWorkspaceProps): React.ReactNode {
         </label>
       </section>
 
-      <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-line bg-bg sm:grid-cols-4">
+      <div className="grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-card shadow-school-panel sm:grid-cols-4">
         <Metric icon={GraduationCap} label="ห้องเรียน" value={props.overview.classrooms.length} />
         <Metric icon={Users} label="ครูที่มีรายวิชา" value={props.overview.teachers.length} />
         <Metric icon={Clock3} label="คาบที่จัดแล้ว" value={props.overview.placedPeriods} />
