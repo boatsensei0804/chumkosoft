@@ -23,7 +23,7 @@ type AdmsDeviceInput = z.infer<typeof admsDeviceSchema>;
 export async function listAdmsDevices() {
   const legacy = legacyAdmsDevice();
   return prisma.scannerDevice.findMany({
-    where: { OR: [{ admsSerial: { not: null } }, ...(legacy ? [{ id: legacy.id, admsSerial: null }] : [])] },
+    where: { removedAt: null, OR: [{ admsSerial: { not: null } }, ...(legacy ? [{ id: legacy.id, admsSerial: null }] : [])] },
     select: {
       id: true, name: true, admsLocation: true, admsSerial: true, admsEnabled: true,
       admsLastSeenAt: true, admsLastSyncAt: true, admsLastUploadAt: true, admsLastUploadResult: true,
@@ -39,15 +39,15 @@ export async function saveAdmsDevice(input: AdmsDeviceInput, actorId: string, id
     if (!kiosk) return { ok: false, message: "เลือกบัญชีจุดสแกนที่เปิดใช้งาน" };
 
     const { name, serial, location, kioskUserId } = input;
-    const existing = await tx.scannerDevice.findUnique({ where: { admsSerial: serial }, select: { id: true } });
-    if (existing && existing.id !== id) return { ok: false, message: "เลข Serial นี้ลงทะเบียนไว้แล้ว" };
+    const existing = await tx.scannerDevice.findUnique({ where: { admsSerial: serial }, select: { id: true, removedAt: true } });
+    if (existing && !existing.removedAt && existing.id !== id) return { ok: false, message: "เลข Serial นี้ลงทะเบียนไว้แล้ว" };
 
     const legacy = legacyAdmsDevice();
     if (id && existing?.id !== id && (legacy?.id !== id || legacy.serial !== serial)) {
       return { ok: false, message: "เลข Serial ของเครื่องที่ลงทะเบียนไว้เปลี่ยนไม่ได้" };
     }
-    const target = id ?? (legacy?.serial === serial ? legacy.id : undefined);
-    const values = { name, admsSerial: serial, admsLocation: location, kioskUserId };
+    const target = id ?? (existing?.removedAt ? existing.id : undefined) ?? (legacy?.serial === serial ? legacy.id : undefined);
+    const values = { removedAt: null, ...(existing?.removedAt && { admsEnabled: true }), name, admsSerial: serial, admsLocation: location, kioskUserId };
     const updated = target ? await tx.scannerDevice.updateMany({
       where: { id: target, OR: [{ admsSerial: serial }, ...(target === legacy?.id ? [{ admsSerial: null }] : [])] },
       data: values,

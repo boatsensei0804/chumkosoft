@@ -9,11 +9,12 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 
 const initialState: LoginFormState = {};
 
-export default function LoginForm({ t }: { t: Dictionary["login"] }): React.ReactNode {
+export default function LoginForm({ t, display = false }: { display?: boolean; t: Dictionary["login"] }): React.ReactNode {
   const [state, formAction, isPending] = useActionState(loginAction, initialState);
 
   return (
     <form action={formAction} className="flex flex-col gap-4" noValidate>
+      {display && <input type="hidden" name="mode" value="display" />}
       {state.error && (
         <p role="alert" className="rounded-md border border-destructive/30 bg-danger-soft px-3 py-2 text-sm font-medium text-ink-strong">
           {state.error}

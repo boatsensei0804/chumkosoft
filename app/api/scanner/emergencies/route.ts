@@ -33,7 +33,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!parsed.success) return Response.json({ ok: false, message: "กรุณาตรวจสอบข้อมูลแจ้งเหตุ" }, { status: 400 });
 
   const device = await prisma.scannerDevice.findFirst({
-    where: { id: parsed.data.deviceId, kioskUserId: kioskId },
+    where: { removedAt: null, id: parsed.data.deviceId, kioskUserId: kioskId },
     select: { id: true },
   });
   if (!device) return Response.json({ ok: false, message: "เครื่องนี้ยังไม่ได้ผูกบัญชี" }, { status: 404 });

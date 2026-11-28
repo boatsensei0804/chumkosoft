@@ -72,7 +72,8 @@ export default async function KioskPage(): Promise<React.ReactNode> {
         title="จุดสแกนใบหน้า"
         subtitle="ตรวจสถานะเครื่องและบันทึกที่ส่งถึงโรงเรียน"
         actions={<>
-          <Button asChild className="min-h-11"><Link href="/scan"><Monitor aria-hidden="true" /> เปิดจอ Kiosk</Link></Button>
+          <Button asChild className="min-h-11"><Link href="/kiosk/login"><Monitor aria-hidden="true" /> เปิดจอ Kiosk</Link></Button>
+          <Button asChild variant="outline"><Link href="/scanner-devices">จัดการเครื่องและหน้าจอ</Link></Button>
           <Button asChild variant="outline" className="min-h-11 text-ink-strong">
             <Link href="/dashboard/attendance?mode=school">ดูบันทึกเข้า–ออก <ArrowRight aria-hidden="true" /></Link>
           </Button>

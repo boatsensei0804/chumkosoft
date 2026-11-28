@@ -10,6 +10,9 @@ import { upsertScanSetting } from "@/features/kiosk/repositories/kiosk-repositor
 const deviceSchema = z.object({
   id: z.string().uuid(),
   name: z.string().trim().min(1).max(80),
+  showStudentName: z.literal("on").optional().transform(Boolean),
+  showScanTime: z.literal("on").optional().transform(Boolean),
+  showScanHistory: z.literal("on").optional().transform(Boolean),
   cameraIndex: z.coerce.number().int().min(0).max(9),
   detectionIntervalSeconds: z.coerce.number().refine((v) => [0.5, 0.85, 1.5].includes(v)),
   repeatCooldownSeconds: z.coerce.number().int().refine((v) => [10, 30, 60].includes(v)),
@@ -26,7 +29,7 @@ export async function saveScannerDevice(formData: FormData): Promise<void> {
   if (!parsed.success) throw new Error("การตั้งค่าเครื่องสแกนไม่ถูกต้อง");
   const { id, ...data } = parsed.data;
   const result = await prisma.scannerDevice.updateMany({
-    where: { id, ...(user.role === "KIOSK" ? { kioskUserId: user.id } : {}) }, data,
+    where: { removedAt: null, id, ...(user.role === "KIOSK" ? { kioskUserId: user.id } : {}) }, data,
   });
   if (!result.count) throw new Error("ไม่พบเครื่องสแกนที่คุณดูแล");
   revalidatePath("/scanner-devices");
@@ -48,9 +51,21 @@ export async function setScannerDisplayOverride(formData: FormData): Promise<voi
   }).safeParse(Object.fromEntries(formData));
   if (!parsed.success) throw new Error("คำสั่งควบคุมหน้าจอไม่ถูกต้อง");
   const result = await prisma.scannerDevice.updateMany({
-    where: { id: parsed.data.deviceId, ...(user.role === "KIOSK" ? { kioskUserId: user.id } : {}) },
+    where: { removedAt: null, id: parsed.data.deviceId, ...(user.role === "KIOSK" ? { kioskUserId: user.id } : {}) },
     data: { displayOverride: parsed.data.mode },
   });
   if (!result.count) throw new Error("ไม่พบเครื่องสแกนที่คุณดูแล");
   revalidatePath("/scanner-devices");
+}
+
+export async function removeScannerDevice(form: FormData) {
+  const actor = await requireRoles(["ADMIN"]);
+  const id = z.uuid().parse(form.get("id"));
+  if (form.get("confirm") !== "on") throw new Error("กรุณายืนยันการลบเครื่อง");
+  await prisma.$transaction(async tx => {
+    const removed = await tx.scannerDevice.updateMany({ where: { id, removedAt: null }, data: { removedAt: new Date() } });
+    if (removed.count) await tx.auditLog.create({ data: { actorId: actor.id, action: "scanner.remove", targetType: "scanner-device", targetId: id } });
+  });
+  revalidatePath("/scanner-devices");
+  revalidatePath("/dashboard/kiosk");
 }

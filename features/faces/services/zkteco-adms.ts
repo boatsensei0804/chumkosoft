@@ -74,7 +74,7 @@ async function configuredDevice(request: Request, params: URLSearchParams, trans
         { admsSerial: normalizedSerial },
         ...(legacy?.serial === normalizedSerial ? [{ id: legacy.id, admsSerial: null }] : []),
       ],
-      kioskUser: admsKioskAccount,
+      removedAt: null, kioskUser: admsKioskAccount,
     },
     select: { id: true, admsEnabled: true },
   });

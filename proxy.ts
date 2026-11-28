@@ -18,8 +18,7 @@ function isProtected(pathname: string): boolean {
   return (
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/portal") ||
-    pathname.startsWith("/scan")
-    || pathname.startsWith("/scanner-devices")
+    pathname.startsWith("/scanner-devices")
   );
 }
 
@@ -27,6 +26,10 @@ export default async function proxy(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
   // The public home page never requires a session or database access.
   if (pathname === "/" || pathname === "/guide") return NextResponse.next();
+  if (pathname === "/scan") {
+    const display = await decryptSession(req.cookies.get("kiosk-display")?.value, true);
+    return display ? NextResponse.next() : NextResponse.redirect(new URL("/kiosk/login", req.url));
+  }
   const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
   const session = await decryptSession(token);
 

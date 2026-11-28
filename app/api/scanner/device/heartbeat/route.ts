@@ -27,7 +27,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!parsed.success) return Response.json({ ok: false, message: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
 
   const updated = await prisma.scannerDevice.updateMany({
-    where: { id: parsed.data.deviceId, kioskUserId: kioskId },
+    where: { removedAt: null, id: parsed.data.deviceId, kioskUserId: kioskId },
     data: {
       lastSeenAt: new Date(), pendingCount: parsed.data.pendingCount,
       cameraActive: parsed.data.cameraActive,
@@ -38,7 +38,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!updated.count) return Response.json({ ok: false, message: "เครื่องนี้ยังไม่ได้ผูกบัญชี" }, { status: 404 });
   const [device, scanWindow] = await Promise.all([
     prisma.scannerDevice.findUniqueOrThrow({
-      where: { id: parsed.data.deviceId },
+      where: { removedAt: null, id: parsed.data.deviceId },
       select: {
         cameraIndex: true, detectionIntervalSeconds: true, repeatCooldownSeconds: true,
         displayScheduleEnabled: true, displayOnTime: true, displayOffTime: true, displayOverride: true,

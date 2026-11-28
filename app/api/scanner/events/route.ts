@@ -18,7 +18,7 @@ export async function POST(request: Request): Promise<Response> {
   const parsed = scannerBatchSchema.safeParse(body);
   if (!parsed.success) return Response.json({ ok: false, message: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
   const device = await prisma.scannerDevice.findFirst({
-    where: { id: parsed.data.deviceId, kioskUserId: kioskId }, select: { id: true },
+    where: { removedAt: null, id: parsed.data.deviceId, kioskUserId: kioskId }, select: { id: true },
   });
   if (!device) return Response.json({ ok: false, message: "เครื่องนี้ยังไม่ได้ผูกบัญชี" }, { status: 404 });
   const key = createHash("sha256").update(device.id).digest("hex");
@@ -26,7 +26,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!limited.ok) return Response.json({ ok: false, message: "ส่งข้อมูลถี่เกินไป" }, { status: 429 });
   const outcomes = await processScannerBatch(device.id, parsed.data.events);
   await prisma.scannerDevice.updateMany({
-    where: { id: device.id, kioskUserId: kioskId }, data: { lastSeenAt: new Date(), lastSyncAt: new Date() },
+    where: { removedAt: null, id: device.id, kioskUserId: kioskId }, data: { lastSeenAt: new Date(), lastSyncAt: new Date() },
   });
   return Response.json({ ok: true, ...outcomes }, { headers: { "Cache-Control": "no-store" } });
 }

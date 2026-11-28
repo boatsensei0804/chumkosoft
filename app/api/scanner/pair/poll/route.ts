@@ -54,7 +54,7 @@ export async function POST(request: Request): Promise<Response> {
   }
   if (existingDevice) {
     await prisma.scannerDevice.updateMany({
-      where: { id: deviceId, kioskUserId: user.id }, data: { lastSeenAt: new Date() },
+      where: { id: deviceId, kioskUserId: user.id }, data: { removedAt: null, lastSeenAt: new Date() },
     });
   } else {
     try {

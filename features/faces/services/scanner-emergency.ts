@@ -43,7 +43,7 @@ export async function reportScannerEmergency(input: {
   }
 
   const device = await prisma.scannerDevice.findFirst({
-    where: { id: input.deviceId, kioskUserId: input.kioskId },
+    where: { removedAt: null, id: input.deviceId, kioskUserId: input.kioskId },
     select: { id: true, name: true },
   });
   if (!device) throw new Error("SCANNER_DEVICE_NOT_FOUND");

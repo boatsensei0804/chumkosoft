@@ -28,8 +28,8 @@ function getSigningKey(): Uint8Array {
   return new TextEncoder().encode(secret);
 }
 
-export async function encryptSession(payload: SessionPayload): Promise<string> {
-  return new SignJWT({ userId: payload.userId, role: payload.role, expiresAt: payload.expiresAt })
+export async function encryptSession(payload: SessionPayload, display = false): Promise<string> {
+  return new SignJWT({ ...(display && { audience: "kiosk-display" }), userId: payload.userId, role: payload.role, expiresAt: payload.expiresAt })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
@@ -37,10 +37,11 @@ export async function encryptSession(payload: SessionPayload): Promise<string> {
 }
 
 /** Verifies and decodes a session token. Returns null for missing/invalid tokens. */
-export async function decryptSession(token: string | undefined): Promise<SessionPayload | null> {
+export async function decryptSession(token: string | undefined, display = false): Promise<SessionPayload | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, getSigningKey(), { algorithms: ["HS256"] });
+    if (payload.audience !== (display ? "kiosk-display" : undefined)) return null;
     if (typeof payload.userId === "string" && typeof payload.role === "string") {
       return {
         userId: payload.userId,
@@ -55,11 +56,11 @@ export async function decryptSession(token: string | undefined): Promise<Session
 }
 
 /** Issues a fresh session cookie for the given user. */
-export async function createSession(userId: string, role: Role): Promise<void> {
+export async function createSession(userId: string, role: Role, display = false): Promise<void> {
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
-  const token = await encryptSession({ userId, role, expiresAt: expiresAt.toISOString() });
+  const token = await encryptSession({ userId, role, expiresAt: expiresAt.toISOString() }, display);
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, token, {
+  cookieStore.set(display ? "kiosk-display" : SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -79,3 +80,11 @@ export async function deleteSession(): Promise<void> {
 }
 
 export const SESSION_COOKIE_NAME = SESSION_COOKIE;
+
+export async function getDisplaySession() {
+  return decryptSession((await cookies()).get("kiosk-display")?.value, true);
+}
+
+export async function clearDisplaySession() {
+  (await cookies()).delete("kiosk-display");
+}

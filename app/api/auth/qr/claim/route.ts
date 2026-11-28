@@ -29,6 +29,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!user) {
     return Response.json({ ok: false, message: "บัญชีนี้ใช้งานไม่ได้" }, { status: 403 });
   }
+  if (user.role === "KIOSK") await createSession(user.id, user.role, true);
   await createSession(user.id, user.role);
   cookieStore.set("qr_login_browser", "", { expires: new Date(0), path: "/api/auth/qr" });
   return NextResponse.json({ ok: true, state: "approved", redirectTo: homePathForRole(user.role) }, {

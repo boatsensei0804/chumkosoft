@@ -15,6 +15,6 @@ describe("public home route", () => {
   it.each(["/dashboard", "/portal", "/scanner-devices", "/scan"])("keeps %s protected", async path => {
     const response = await proxy(new NextRequest(`https://chumkosoft.com${path}`));
     expect(response.status).toBe(307);
-    expect(new URL(response.headers.get("location")!).pathname).toBe("/login");
+    expect(new URL(response.headers.get("location")!).pathname).toBe(path === "/scan" ? "/kiosk/login" : "/login");
   });
 });

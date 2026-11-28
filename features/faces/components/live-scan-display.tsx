@@ -8,6 +8,8 @@ import type { LiveScan } from "@/features/faces/live-scan";
 
 export default function LiveScanDisplay({ deviceId, hasDevices }: { deviceId: string | null; hasDevices: boolean }) {
   const [scan, setScan] = useState<LiveScan | null>(null);
+  const [history, setHistory] = useState<LiveScan[]>([]);
+  const [paused, setPaused] = useState(false);
   const [connection, setConnection] = useState<"connecting" | "ready" | "error" | "expired">("connecting");
   const [fullScreen, setFullScreen] = useState(false);
   const [fullScreenError, setFullScreenError] = useState(false);
@@ -38,13 +40,16 @@ export default function LiveScanDisplay({ deviceId, hasDevices }: { deviceId: st
         });
         if (!active) return;
         if (response.status === 401 || response.status === 403) {
+          setHistory([]);
           setScan(null);
           setConnection("expired");
           return;
         }
         if (!response.ok) throw new Error("Live scan unavailable");
-        const { scan: next }: { scan: LiveScan | null } = await response.json();
+        const { scan: next, history: recent, paused: asleep }: { scan: LiveScan | null; history: LiveScan[]; paused: boolean } = await response.json();
         if (!active) return;
+        setHistory(recent);
+        setPaused(asleep);
         const remaining = next ? next.visibleForMs - (performance.now() - started) : 0;
         setScan(remaining > 0 ? next : null);
         setConnection("ready");
@@ -53,6 +58,7 @@ export default function LiveScanDisplay({ deviceId, hasDevices }: { deviceId: st
       } catch {
         if (!active) return;
         setScan(null);
+        setHistory([]);
         setConnection("error");
       } finally {
         window.clearTimeout(requestTimeout);
@@ -88,7 +94,7 @@ export default function LiveScanDisplay({ deviceId, hasDevices }: { deviceId: st
 
   return (
     <main ref={screen} className="relative isolate flex flex-1 flex-col bg-card fullscreen:overflow-y-auto">
-      <section aria-labelledby="scanner-display-title" className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-5 sm:px-10 md:py-7">
+      {paused && connection === "ready" ? <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950 text-slate-400">พักหน้าจอ</div> : <section aria-labelledby="scanner-display-title" className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-5 sm:px-10 md:py-7">
         <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
           <h1 id="scanner-display-title" className="text-sm font-semibold text-muted sm:text-base">จอแสดงผลการสแกน</h1>
           <Button variant="outline" className="min-h-11 rounded-full px-4 shadow-none" onClick={toggleFullScreen}>
@@ -106,10 +112,10 @@ export default function LiveScanDisplay({ deviceId, hasDevices }: { deviceId: st
             </div>
             {scan ? (
               <>
-                <h2 className="wrap-break-word text-5xl font-bold leading-tight text-ink-strong sm:text-[clamp(3.4rem,6vw,6rem)]">{scan.firstName}</h2>
+                <h2 className="wrap-break-word text-5xl font-bold leading-tight text-ink-strong sm:text-[clamp(3.4rem,6vw,6rem)]">{scan.firstName || "สแกนสำเร็จ"}</h2>
                 <p className="mt-4 flex items-center gap-2 text-xl font-semibold tabular-nums text-muted sm:text-2xl">
                   <Check className="size-5 shrink-0 text-success" aria-hidden="true" />
-                  {scan.alreadyRecorded && "สแกนซ้ำ · "}{scan.time} น.
+                  {scan.alreadyRecorded && "สแกนซ้ำ · "}{scan.time && scan.time + " น."}
                 </p>
               </>
             ) : (
@@ -132,7 +138,12 @@ export default function LiveScanDisplay({ deviceId, hasDevices }: { deviceId: st
             />
           </div>
         </div>
-      </section>
+        {history.length > 0 && <section className="mb-5 rounded-xl border border-line p-4"><h2 className="font-bold">รายการสแกนก่อนหน้า</h2>
+          <ul className="mt-2 divide-y divide-line">{history.map(row => <li key={row.id} className="flex flex-wrap justify-between gap-3 py-2">
+            <span>{row.firstName}</span><span>{row.direction === "in" ? "เข้าโรงเรียน" : "ออกโรงเรียน"} {row.time && row.time + " น."}</span>
+          </li>)}</ul></section>}
+        {connection === "expired" && <a href="/kiosk/login" className="text-brand underline">เข้าสู่จอ Kiosk อีกครั้ง</a>}
+      </section>}
     </main>
   );
 }

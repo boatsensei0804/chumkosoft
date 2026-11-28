@@ -2,7 +2,7 @@
 import { createHash } from "node:crypto";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { headers } from "next/headers";
-import { createSession, deleteSession } from "@/lib/session";
+import { createSession, deleteSession, clearDisplaySession } from "@/lib/session";
 import { authenticate } from "@/features/auth/services/auth-service";
 import { loginSchema } from "@/features/auth/schemas/login-schema";
 import { homePathForRole } from "@/features/auth/roles";
@@ -71,13 +71,16 @@ export async function loginAction(
 
     const user = await authenticate(parsed.data);
 
-    if (!user) {
+    const display = formData.get("mode") === "display";
+    if (!user || (display && user.role !== "KIOSK")) {
       return {
         error: "ข้อมูลเข้าสู่ระบบหรือรหัสผ่านไม่ถูกต้อง",
         identifier: parsed.data.identifier,
       };
     }
 
+    if (display || user.role === "KIOSK") await createSession(user.id, user.role, true);
+    if (display) redirect("/scan");
     await createSession(user.id, user.role);
     redirect(homePathForRole(user.role));
   } catch (error) {
@@ -94,4 +97,9 @@ export async function loginAction(
 export async function logoutAction(): Promise<void> {
   await deleteSession();
   redirect("/login");
+}
+
+export async function logoutDisplay() {
+  await clearDisplaySession();
+  redirect("/kiosk/login");
 }

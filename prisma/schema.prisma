@@ -821,6 +821,10 @@ model ScannerDevice {
   displayOffTime           String   @default("18:00")
   displayOverride          String   @default("AUTO")
   modelVersion             String?
+  removedAt                DateTime?
+  showStudentName Boolean @default(true)
+  showScanTime Boolean @default(true)
+  showScanHistory Boolean @default(true)
   admsSerial               String?  @unique
   admsLocation             String?
   admsEnabled              Boolean  @default(true)
