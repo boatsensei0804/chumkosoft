@@ -30,19 +30,14 @@ export default function ScanSettingForm({ setting }: { setting: ScanSettingView 
   }
 
   return (
-    <section className="rounded-2xl border border-line bg-card p-5 shadow-sm">
-      <div className="mb-4 flex items-center gap-2.5">
-        <span className="grid size-9 place-items-center rounded-[10px] bg-brand-soft text-brand-ink">
-          <Clock className="size-[19px]" />
-        </span>
-        <div>
-          <h2 className="text-[15px] font-bold text-ink-strong">เวลาการสแกนเข้าโรงเรียน</h2>
-          <p className="text-[12.5px] text-muted">จุดสแกนจะเริ่มเช็คชื่อตามเวลาที่เปิด และนับว่า “สาย” เมื่อเลยเวลาที่กำหนด</p>
-        </div>
-      </div>
+    <section className="rounded-xl border border-line bg-card p-4">
+      <h2 className="mb-4 flex items-center gap-2 font-bold text-ink-strong">
+        <Clock className="size-[18px] shrink-0 text-brand" aria-hidden="true" /> เวลาเช็คชื่อเข้าโรงเรียน
+      </h2>
 
       {result && (
         <p
+          role={result.ok ? "status" : "alert"}
           className={
             result.ok
               ? "mb-3 rounded-md border border-success/30 bg-success-soft px-3 py-2 text-sm"
@@ -54,18 +49,18 @@ export default function ScanSettingForm({ setting }: { setting: ScanSettingView 
         </p>
       )}
 
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="flex flex-col gap-2">
+      <div className="grid grid-cols-2 gap-x-3 gap-y-4">
+        <div className="flex min-w-0 flex-col gap-2">
           <Label htmlFor="scanStartTime">เวลาเปิดสแกน</Label>
-          <Input id="scanStartTime" type="time" value={scanStartTime} onChange={(e) => setScanStartTime(e.target.value)} disabled={pending} className="w-40" aria-invalid={Boolean(fieldErrors.scanStartTime)} />
+          <Input id="scanStartTime" type="time" value={scanStartTime} onChange={(e) => setScanStartTime(e.target.value)} disabled={pending} className="px-2 tabular-nums" aria-invalid={Boolean(fieldErrors.scanStartTime)} />
           {fieldErrors.scanStartTime && <p className="text-xs text-destructive">{fieldErrors.scanStartTime}</p>}
         </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="lateAfterTime">หลังเวลานี้ = สาย</Label>
-          <Input id="lateAfterTime" type="time" value={lateAfterTime} onChange={(e) => setLateAfterTime(e.target.value)} disabled={pending} className="w-40" aria-invalid={Boolean(fieldErrors.lateAfterTime)} />
+        <div className="flex min-w-0 flex-col gap-2">
+          <Label htmlFor="lateAfterTime">สายหลังเวลา</Label>
+          <Input id="lateAfterTime" type="time" value={lateAfterTime} onChange={(e) => setLateAfterTime(e.target.value)} disabled={pending} className="px-2 tabular-nums" aria-invalid={Boolean(fieldErrors.lateAfterTime)} />
           {fieldErrors.lateAfterTime && <p className="text-xs text-destructive">{fieldErrors.lateAfterTime}</p>}
         </div>
-        <Button onClick={submit} disabled={pending}>
+        <Button type="button" onClick={submit} disabled={pending} variant="outline" className="col-span-2 justify-self-start">
           {pending ? "กำลังบันทึก…" : "บันทึกเวลา"}
         </Button>
       </div>

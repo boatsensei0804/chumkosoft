@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Settings2 } from "lucide-react";
+import { ArrowRight, ScanFace, Settings2, UsersRound, Wifi } from "lucide-react";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { Button } from "@/components/ui/button";
 import AdmsNetworkForm from "@/features/kiosk/components/adms-network-form";
@@ -19,6 +19,13 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
+
+const settingsLinks = [
+  { href: "#zkteco-networks", label: "เครือข่ายที่อนุญาต", icon: Wifi },
+  { href: "#kiosk-accounts", label: "บัญชีจุดสแกน", icon: UsersRound },
+  { href: "/dashboard/faces", label: "ข้อมูลใบหน้านักเรียน", icon: ScanFace },
+  { href: "/scanner-devices", label: "ตั้งค่ากล้องของแอปสแกน", icon: Settings2 },
+];
 
 export default async function KioskPage(): Promise<React.ReactNode> {
   await requireRoles(["ADMIN"]);
@@ -51,28 +58,37 @@ export default async function KioskPage(): Promise<React.ReactNode> {
     <>
       <PageHeader
         pose="scan"
+        compact
         title="จุดสแกนใบหน้า"
-        subtitle="ดูสถานะเครื่องสแกน ตั้งเวลาเข้าโรงเรียน และจัดการบัญชีจุดสแกน"
-        actions={<>
-          <Button asChild><Link href="/dashboard/attendance?mode=school">ดูบันทึกเข้า–ออก</Link></Button>
-          <Button asChild variant="outline"><Link href="/dashboard/faces">ข้อมูลใบหน้านักเรียน</Link></Button>
-          <Button asChild variant="outline"><a href="#zkteco-networks">เครือข่ายที่อนุญาต</a></Button>
-          <Button asChild variant="outline">
-            <Link href="/scanner-devices">
-              <Settings2 className="size-[18px]" />
-              ตั้งค่ากล้องของแอปสแกน
-            </Link>
-          </Button>
-        </>}
+        subtitle="ตรวจสถานะเครื่องและบันทึกที่ส่งถึงโรงเรียน"
+        actions={<Button asChild className="min-h-10">
+          <Link href="/dashboard/attendance?mode=school">ดูบันทึกเข้า–ออก <ArrowRight aria-hidden="true" /></Link>
+        </Button>}
       />
 
-      <div className="flex flex-col gap-5">
-        <ZktecoRegistry devices={rows} kiosks={kiosks} now={clock[0].now.getTime()} />
-        <AdmsNetworkForm key={network.revision} {...network} />
-        <ScanSettingForm setting={setting} />
-        <div id="kiosk-accounts" tabIndex={-1} className="scroll-mt-24">
-          <KioskManager accounts={accounts} />
+      <div className="space-y-5">
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
+          <ZktecoRegistry devices={rows} kiosks={kiosks} now={clock[0].now.getTime()} />
+          <div className="min-w-0 space-y-5">
+            <ScanSettingForm setting={setting} />
+            <nav aria-labelledby="scanner-settings-links" className="rounded-xl border border-line bg-card">
+              <h2 id="scanner-settings-links" className="border-b border-line px-4 py-3 font-bold text-ink-strong">จัดการจุดสแกน</h2>
+              <ul className="px-2 py-1.5">
+                {settingsLinks.map(({ href, label, icon: Icon }) => (
+                  <li key={href}>
+                    <Link href={href} className="group flex min-h-11 items-center gap-2.5 rounded-lg px-2 py-2 text-sm font-medium hover:bg-brand-soft">
+                      <Icon className="size-4 shrink-0 text-brand" aria-hidden="true" />
+                      <span className="flex-1">{label}</span>
+                      <ArrowRight className="size-4 shrink-0 text-muted group-hover:text-brand" aria-hidden="true" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
         </div>
+        <AdmsNetworkForm key={network.revision} {...network} />
+        <div id="kiosk-accounts" tabIndex={-1} className="scroll-mt-24"><KioskManager accounts={accounts} /></div>
       </div>
     </>
   );
