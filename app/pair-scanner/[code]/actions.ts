@@ -12,7 +12,8 @@ import { rateLimit } from "@/lib/rate-limit";
 export async function approvePairingAction(formData: FormData): Promise<void> {
   const code = formData.get("code");
   if (typeof code !== "string" || !USER_CODE_PATTERN.test(code)) redirect("/login");
-  const back = `/pair-scanner/${code}`;
+  const display = formData.get("purpose") === "display";
+  const back = display ? `/kiosk/confirm/${code}` : `/pair-scanner/${code}`;
   let kioskId = await getActiveKioskId();
 
   if (!kioskId) {
@@ -31,7 +32,7 @@ export async function approvePairingAction(formData: FormData): Promise<void> {
     kioskId = user.id;
   }
 
-  const approved = await approveScannerPairing(code, kioskId);
+  const approved = await approveScannerPairing(code, kioskId, display ? "display" : "pair");
   if (!approved) redirect(`${back}?error=expired`);
   redirect(`${back}?connected=1`);
 }

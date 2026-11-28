@@ -1,6 +1,0 @@
-data/
-models/
-.venv/
-__pycache__/
-build/
-dist/
