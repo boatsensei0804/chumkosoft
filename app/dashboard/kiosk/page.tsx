@@ -56,7 +56,6 @@ export default async function KioskPage(): Promise<React.ReactNode> {
     lastSync: device.admsLastSyncAt,
     lastUpload: device.admsLastUploadAt,
     lastUploadResult: admsUploadResultSchema.safeParse(device.admsLastUploadResult).data ?? null,
-    mappingCount: device._count.pinMappings,
   }));
 
   const deviceTotals = [

@@ -28,7 +28,6 @@ export async function listAdmsDevices() {
       id: true, name: true, admsLocation: true, admsSerial: true, admsEnabled: true,
       admsLastSeenAt: true, admsLastSyncAt: true, admsLastUploadAt: true, admsLastUploadResult: true,
       kioskUser: { select: { email: true, id: true, isActive: true, isDeleted: true, role: true } },
-      _count: { select: { pinMappings: { where: { student: { isDeleted: false } } } } },
     },
     orderBy: { createdAt: "desc" },
   });

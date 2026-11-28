@@ -6,8 +6,6 @@ import prisma from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
 import { admsKioskAccount, legacyAdmsDevice } from "@/features/faces/services/zkteco-devices";
 import { getAdmsNetworks, normalizeAdmsIp, parseAdmsIpList } from "@/features/faces/services/zkteco-networks";
-import { legacyScannerPinMap } from "@/features/faces/services/zkteco-pin-mapping";
-import { scannerPinSchema } from "@/features/faces/zkteco-pin-mapping";
 import type { AdmsUploadResult } from "@/features/faces/zkteco-upload-result";
 import { processScannerBatch, scannerBatchSchema } from "@/features/faces/services/scanner-sync";
 
@@ -21,6 +19,7 @@ const uploadErrors = {
   unmapped_pin: "Unmapped attendance PIN",
   attendance_rule: "Attendance record rejected by Chumkosoft",
 } as const;
+const pinPattern = /^\d{1,9}$/u;
 const timestampPattern = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/u;
 
 function reply(body: string, status = 200): Response {
@@ -93,7 +92,7 @@ function logEventId(deviceId: string, pin: string, capturedAt: string, isExit: b
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-async function findStudentCodesByPin(pins: string[]) {
+async function findStudentCodesByUserId(pins: string[]) {
   const candidates = pins.flatMap((pin) => {
     const codes = [pin];
     for (let position = 1; position < pin.length; position++) {
@@ -189,11 +188,11 @@ export async function receiveAdms(request: Request, command: string, transport: 
 
     let failure: keyof typeof uploadErrors | undefined;
     let skipped: AdmsUploadResult | undefined;
-    const scans: { pin: string; localTime: string; isExit: boolean }[] = [];
+    const scans: { eventId: string; pin: string; capturedAt: string; localDate: string; isExit: boolean }[] = [];
     for (const line of lines) {
       const [rawPin, timestamp, status, verification] = line.split("\t");
       const pin = rawPin.replace(/^PIN=/u, "").trim();
-      if (!scannerPinSchema.safeParse(pin).success || !timestampPattern.test(timestamp ?? "") || !/^\d+$/u.test(status ?? "") ||
+      if (!pinPattern.test(pin) || !timestampPattern.test(timestamp ?? "") || !/^\d+$/u.test(status ?? "") ||
           !/^\d+$/u.test(verification ?? "")) {
         failure ??= "invalid_row";
         continue;
@@ -213,36 +212,38 @@ export async function receiveAdms(request: Request, command: string, transport: 
         };
         continue;
       }
-      scans.push({ pin, localTime, isExit: status === "1" });
-    }
-    const pins = [...new Set(scans.map(({ pin }) => pin))];
-    const mappings = pins.length ? await prisma.scannerPinMapping.findMany({
-      where: { deviceId: device.id, pin: { in: pins } },
-      select: { pin: true, linkedAt: true, student: { select: { id: true, studentCode: true, isDeleted: true } } },
-    }) : [];
-    const mappingByPin = new Map(mappings.map((mapping) => [mapping.pin, mapping]));
-    const legacy = legacyScannerPinMap(device.id);
-    const studentCodesByPin = await findStudentCodesByPin(pins.filter((pin) => !mappingByPin.has(pin) && !legacy[pin]));
-    const studentIds = new Map<string, string>();
-    const events: z.infer<typeof scannerBatchSchema>["events"] = [];
-    for (const { pin, localTime, isExit } of scans) {
-      const mapping = mappingByPin.get(pin);
+      const isExit = status === "1";
       const capturedAt = `${localTime}+07:00`;
-      const eventId = logEventId(device.id, pin, capturedAt, isExit);
-      const studentCode = mapping ? mapping.student?.studentCode : legacy[pin] ?? studentCodesByPin.get(pin);
-      if (mapping && new Date(capturedAt) < mapping.linkedAt) {
-        skipped ??= { outcome: "before_mapping" };
-        continue;
-      }
-      if (!studentCode || mapping?.student?.isDeleted) {
+      const eventId = logEventId(deviceId, pin, capturedAt, isExit);
+      scans.push({ eventId, pin, capturedAt, localDate: localTime.slice(0, 10), isExit });
+    }
+
+    // An acknowledged upload keeps its original student even if the User ID
+    // was reassigned or the student code was edited before a retry.
+    const recorded = scans.length ? await prisma.scannerSyncEvent.findMany({
+      where: {
+        deviceId,
+        eventId: { in: [...new Set(scans.map(({ eventId }) => eventId))] },
+        result: { in: ["checked_in", "checked_out", "already", "already_in", "already_out"] },
+      },
+      select: { eventId: true },
+    }) : [];
+    const recordedIds = new Set(recorded.map(({ eventId }) => eventId));
+    synced = recordedIds.size > 0;
+
+    const pending = scans.filter(({ eventId }) => !recordedIds.has(eventId));
+    const studentCodesByPin = await findStudentCodesByUserId([...new Set(pending.map(({ pin }) => pin))]);
+    const events: z.infer<typeof scannerBatchSchema>["events"] = [];
+    for (const { eventId, pin, capturedAt, localDate, isExit } of pending) {
+      const studentCode = studentCodesByPin.get(pin);
+      if (!studentCode) {
         failure ??= studentCode === null ? "ambiguous_pin" : "unmapped_pin";
         continue;
       }
-      if (mapping?.student) studentIds.set(eventId, mapping.student.id);
-      events.push({ eventId, studentCode, capturedAt, localDate: localTime.slice(0, 10), ...(isExit && { direction: "out" }) });
+      events.push({ eventId, studentCode, capturedAt, localDate, ...(isExit && { direction: "out" }) });
     }
     for (let offset = 0; offset < events.length; offset += batchSize) {
-      const result = await processScannerBatch(device.id, events.slice(offset, offset + batchSize), studentIds);
+      const result = await processScannerBatch(deviceId, events.slice(offset, offset + batchSize));
       if (result.accepted.length) synced = true;
       if (result.rejected.length) failure ??= "attendance_rule";
     }

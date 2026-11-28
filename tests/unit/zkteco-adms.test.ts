@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { GET, POST } from "@/app/api/internal/zkteco-adms/[command]/route";
 import { GET as scannerGet, POST as scannerPost } from "@/app/iclock/[command]/route";
 
-const { device, batch, mappings, students, updateDevice, networks } = vi.hoisted(() => ({ device: vi.fn(), batch: vi.fn(), mappings: vi.fn(), students: vi.fn(), updateDevice: vi.fn(), networks: vi.fn() }));
+const { device, batch, recordedScans, students, updateDevice, networks } = vi.hoisted(() => ({ device: vi.fn(), batch: vi.fn(), recordedScans: vi.fn(), students: vi.fn(), updateDevice: vi.fn(), networks: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
-  default: { scannerDevice: { findFirst: device, updateMany: updateDevice }, scannerPinMapping: { findMany: mappings }, student: { findMany: students }, zktecoNetworkSetting: { findUnique: networks } },
+  default: { scannerDevice: { findFirst: device, updateMany: updateDevice }, scannerSyncEvent: { findMany: recordedScans }, student: { findMany: students }, zktecoNetworkSetting: { findUnique: networks } },
 }));
 vi.mock("@/lib/rate-limit", () => ({ rateLimit: async () => ({ ok: true }) }));
 vi.mock("@/features/faces/services/scanner-sync", async (importOriginal) => ({
@@ -19,9 +19,8 @@ function configure() {
   vi.stubEnv("ZKTECO_ADMS_SECRET", secret);
   vi.stubEnv("ZKTECO_ADMS_SERIAL", "MB10TEST");
   vi.stubEnv("ZKTECO_ADMS_DEVICE_ID", deviceId);
-  vi.stubEnv("ZKTECO_ADMS_PIN_MAP", '{"001":"STUDENT-001"}');
-  mappings.mockResolvedValue([]);
-  students.mockResolvedValue([]);
+  recordedScans.mockResolvedValue([]);
+  students.mockImplementation(async ({ where }) => where.studentCode.in.includes("001") ? [{ studentCode: "001" }] : []);
   networks.mockResolvedValue(null);
   device.mockImplementation(async ({ where }) => where.OR.some((condition: { admsSerial?: string }) => condition.admsSerial === "MB10TEST")
     ? { id: deviceId, admsEnabled: true }
@@ -88,12 +87,12 @@ describe("ZKTeco ADMS receiver", () => {
     await POST(request(query, body), context);
     expect(batch.mock.calls[0]).toEqual(batch.mock.calls[1]);
     expect(batch.mock.calls[0]).toEqual([deviceId, [{
-      eventId: expect.any(String), studentCode: "STUDENT-001", capturedAt: "2026-11-27T08:01:59+07:00",
+      eventId: expect.any(String), studentCode: "001", capturedAt: "2026-11-27T08:01:59+07:00",
       localDate: "2026-11-27",
-    }], new Map()]);
+    }]]);
   });
 
-  it("resolves unmapped numeric IDs against student codes with or without a dash", async () => {
+  it("resolves numeric IDs against student codes with or without a dash", async () => {
     configure();
     students.mockResolvedValue([{ studentCode: "68-0421" }, { studentCode: "00422" }]);
     const query = "SN=MB10TEST&table=ATTLOG";
@@ -106,7 +105,7 @@ describe("ZKTeco ADMS receiver", () => {
     expect(batch.mock.calls[0][1].map((event: { studentCode: string }) => event.studentCode)).toEqual(["68-0421", "00422"]);
   });
 
-  it("rejects an unmapped numeric ID when multiple student codes resolve to it", async () => {
+  it("rejects a numeric ID when multiple student codes resolve to it", async () => {
     configure();
     students.mockResolvedValue([{ studentCode: "68-0421" }, { studentCode: "680421" }]);
     const result = await POST(request("SN=MB10TEST&table=ATTLOG", "680421\t2026-11-27 08:01:59\t0\t15"), context);
@@ -115,25 +114,29 @@ describe("ZKTeco ADMS receiver", () => {
     expect(batch).not.toHaveBeenCalled();
   });
 
-  it("uses the website mapping by student ID and skips records older than the binding", async () => {
+  it("uses the current student code even when an old environment mapping exists", async () => {
     configure();
-    vi.stubEnv("ZKTECO_ADMS_PIN_MAP", "");
-    mappings.mockResolvedValue([{ pin: "001", student: { id: "student-id", studentCode: "EDITED-CODE", isDeleted: false }, linkedAt: new Date("2026-11-27T01:00:00Z") }]);
-    const query = "SN=MB10TEST&table=ATTLOG";
-    expect((await POST(request(query, "001\t2026-11-27 07:59:59\t0\t15"), context)).status).toBe(200);
-    expect(batch).not.toHaveBeenCalled();
-    expect((await POST(request(query, "001\t2026-11-27 08:01:00\t0\t15"), context)).status).toBe(200);
-    const [, events, studentIds] = batch.mock.calls[0];
-    expect(events[0].studentCode).toBe("EDITED-CODE");
-    expect(studentIds.get(events[0].eventId)).toBe("student-id");
+    vi.stubEnv("ZKTECO_ADMS_PIN_MAP", '{"001":"LEGACY-CODE"}');
+    const result = await POST(request("SN=MB10TEST&table=ATTLOG", "001\t2026-11-27 08:01:59\t0\t15"), context);
+    expect(await result.text()).toBe("OK: 1");
+    expect(batch).toHaveBeenCalledWith(deviceId, [expect.objectContaining({ studentCode: "001" })]);
   });
 
-  it("does not fall back to a student code or an old environment mapping after a PIN was unlinked", async () => {
+  it("acknowledges an already recorded device event after a student code changes", async () => {
     configure();
-    mappings.mockResolvedValue([{ pin: "001", student: null, linkedAt: new Date("2026-11-27T01:00:00Z") }]);
-    expect((await POST(request("SN=MB10TEST&table=ATTLOG", "001\t2026-11-27 08:01:59\t0\t15"), context)).status).toBe(422);
-    expect(students).not.toHaveBeenCalled();
+    const query = "SN=MB10TEST&table=ATTLOG";
+    const body = "001\t2026-11-27 08:01:59\t0\t15";
+    expect((await POST(request(query, body), context)).status).toBe(200);
+    const [{ eventId }] = batch.mock.calls[0][1];
+    recordedScans.mockResolvedValue([{ eventId }]);
+    students.mockResolvedValue([]);
+    batch.mockClear();
+
+    expect(await (await POST(request(query, body), context)).text()).toBe("OK: 1");
     expect(batch).not.toHaveBeenCalled();
+    expect(recordedScans).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ deviceId, eventId: { in: [eventId] } }),
+    }));
   });
 
   it("does not acknowledge an unmapped PIN, malformed timestamp, or failed downstream processing", async () => {
@@ -152,8 +155,8 @@ describe("ZKTeco ADMS receiver", () => {
     const response = await POST(request("SN=MB10TEST&table=ATTLOG", body), context);
     expect(response.status).toBe(422);
     expect(batch).toHaveBeenCalledWith(deviceId, [
-      expect.objectContaining({ studentCode: "STUDENT-001", capturedAt: "2026-11-27T08:02:00+07:00" }),
-    ], new Map());
+      expect.objectContaining({ studentCode: "001", capturedAt: "2026-11-27T08:02:00+07:00" }),
+    ]);
     expect(updateDevice).toHaveBeenCalledWith({
       where: { id: deviceId },
       data: {
@@ -171,8 +174,8 @@ describe("ZKTeco ADMS receiver", () => {
     const response = await POST(request("SN=MB10TEST&table=ATTLOG", body), context);
     expect(response.status).toBe(422);
     expect(batch).toHaveBeenCalledWith(deviceId, [
-      expect.objectContaining({ studentCode: "STUDENT-001" }),
-    ], new Map());
+      expect.objectContaining({ studentCode: "001" }),
+    ]);
   });
 
   it("forwards a face checkout as an outbound scan, separately from check-in", async () => {
@@ -231,7 +234,7 @@ describe("ZKTeco ADMS receiver", () => {
     }), context);
     expect(result.status).toBe(200);
     expect(await result.text()).toBe("OK: 1");
-    expect(batch.mock.calls[0][1][0].studentCode).toBe("STUDENT-001");
+    expect(batch.mock.calls[0][1][0].studentCode).toBe("001");
   });
 
   it("uses web-managed IPs immediately and stops accepting IPs removed from the list", async () => {

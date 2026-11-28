@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useRef, useState, useTransition } from "react";
 import { Activity, ChevronDown, Plus, RefreshCw } from "lucide-react";
@@ -24,23 +23,22 @@ type Device = {
   lastSync: Date | null;
   lastUpload: Date | null;
   lastUploadResult: AdmsUploadResult | null;
-  mappingCount: number;
 };
 
 const format = new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" });
 const timestamp = (date: Date | null) => date ? format.format(date) : "—";
 
 const uploadLabels = {
-  synced: "รับรายการเข้าโรงเรียนแล้ว",
-  before_mapping: "บันทึกเกิดก่อนตั้งค่าจับคู่รหัส",
+  synced: "รับบันทึกเข้า–ออกโรงเรียนแล้ว",
+  before_mapping: "รายการเก่าจากก่อนเปลี่ยนวิธีตรวจรหัส",
   invalid_body: "ข้อมูลที่เครื่องส่งมาว่างหรืออ่านไม่ได้",
   invalid_row: "รูปแบบบันทึกไม่ถูกต้อง",
   invalid_timestamp: "วันที่หรือเวลาที่เครื่องส่งมาไม่ถูกต้อง",
   ambiguous_pin: "พบรหัสนักเรียนที่ตรงกันมากกว่าหนึ่งรายการ",
-  unmapped_pin: "ไม่พบรหัสนักเรียนที่ตรงกับ User ID",
+  unmapped_pin: "ไม่พบรหัสนักเรียนที่ตรงกับ User ID โปรดตรวจเลขที่ตั้งไว้บนเครื่อง",
   attendance_rule: "ไม่ผ่านเงื่อนไขเช็กชื่อ เช่น ความยินยอม การลงทะเบียน หรือเวลาสแกน",
   unavailable: "ระบบรับบันทึกขัดข้อง",
-  status_or_verification: "บันทึกไม่ใช่การเช็กเข้าด้วยใบหน้า",
+  status_or_verification: "รายการไม่ได้ระบุเข้า–ออกด้วยใบหน้า",
 } satisfies Record<AdmsUploadResult["outcome"], string>;
 
 function status(device: Device, now: number) {
@@ -71,7 +69,8 @@ export default function ZktecoRegistry({ devices, kiosks, now }: { devices: Devi
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3.5 sm:px-5">
         <div>
           <h2 id="scanner-registry-heading" className="font-bold text-ink-strong">เครื่องสแกน ZKTeco</h2>
-          <p className="text-xs text-muted">ลงทะเบียนแล้ว {devices.length} เครื่อง</p>
+          <p className="mt-0.5 text-xs text-muted">ลงทะเบียนแล้ว {devices.length} เครื่อง</p>
+          <p className="mt-1.5 text-sm text-muted">ตั้ง User ID บนเครื่องตามรหัสนักเรียน เช่น 68-0421 ใช้ 680421</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {devices.length > 0 && (
@@ -120,15 +119,13 @@ export default function ZktecoRegistry({ devices, kiosks, now }: { devices: Devi
           </dl>
           <details className="group">
             <summary className="flex min-h-9 cursor-pointer list-none items-center gap-1.5 rounded-md text-sm font-semibold text-brand-ink [&::-webkit-details-marker]:hidden">
-              <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden="true" /> รายละเอียดบัญชีและคู่รหัส
+              <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden="true" /> บัญชีจุดสแกน
             </summary>
             <dl className="grid gap-2 py-2 text-sm sm:grid-cols-2">
-              <div className="min-w-0"><dt className="text-xs text-muted">บัญชีจุดสแกน</dt><dd className="break-all">{device.kioskEmail}</dd></div>
-              <div><dt className="text-xs text-muted">คู่รหัสที่ตั้งเอง</dt><dd>{device.mappingCount} คู่รหัส</dd></div>
+              <div className="min-w-0"><dt className="text-xs text-muted">อีเมลบัญชี</dt><dd className="break-all">{device.kioskEmail}</dd></div>
             </dl>
           </details>
           <div className="flex flex-wrap gap-2 border-t border-line pt-3">
-            <Button asChild variant="outline" size="sm" className="min-h-10"><Link href={`/scanner-devices/pin-mappings?device=${device.id}`}>จับคู่รหัสนักเรียน</Link></Button>
             <Button asChild variant="outline" size="sm" className="min-h-10"><a href="#device-form" onClick={() => openDeviceForm(device.id)}>แก้ไขเครื่อง</a></Button>
             <form action={action}>
               <input type="hidden" name="id" value={device.id} />
