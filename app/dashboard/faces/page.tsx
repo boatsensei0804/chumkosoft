@@ -35,7 +35,7 @@ export default async function FacesPage({ searchParams }: FacesPageProps): Promi
 
   return (
     <>
-      <PageHeader title="ข้อมูลใบหน้านักเรียน" subtitle={subtitle} actions={<Link href="/dashboard/kiosk" className="inline-flex min-h-10 items-center rounded-xl border border-line bg-white px-3 text-sm font-semibold text-brand-ink">จัดการจุดสแกนใบหน้า</Link>} />
+      <PageHeader pose="scan" title="ข้อมูลใบหน้านักเรียน" subtitle={subtitle} actions={<Link href="/dashboard/kiosk" className="inline-flex min-h-10 items-center rounded-xl border border-line bg-white px-3 text-sm font-semibold text-brand-ink">จัดการจุดสแกนใบหน้า</Link>} />
 
       <StatStrip
         items={[

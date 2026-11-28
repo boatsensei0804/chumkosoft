@@ -12,5 +12,5 @@ export default async function LineLinkReportPage({ searchParams }: { searchParam
   const advisorScope = user.role === "ADMIN" ? undefined : user.staffId ?? "__no_staff__";
   const { classroom } = await searchParams;
   const report = await getLineLinkReport(classroom ?? "all", advisorScope).catch(error => { if (error instanceof InvalidReportClassroom) notFound(); throw error; });
-  return <><PageHeader compact title="สรุปการผูกบัญชี LINE" subtitle="เปอร์เซ็นต์ภาพรวมและรายห้อง · รายชื่อ บัญชี และรหัสรอผูก · ส่งออก CSV / PDF" /><LineLinkReportView key={report.selectedId} report={report} /></>;
+  return <><PageHeader pose="family" compact title="สรุปการผูกบัญชี LINE" subtitle="เปอร์เซ็นต์ภาพรวมและรายห้อง · รายชื่อ บัญชี และรหัสรอผูก · ส่งออก CSV / PDF" /><LineLinkReportView key={report.selectedId} report={report} /></>;
 }

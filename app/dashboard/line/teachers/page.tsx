@@ -38,7 +38,7 @@ export default async function TeacherLineStatusPage(): Promise<React.ReactNode> 
       person.lineLinkCode ? "PENDING" as const : "UNLINKED" as const,
   }));
   return <>
-    <PageHeader title="สถานะ LINE ครูและบุคลากร" subtitle="ตรวจว่าใครเชื่อมบัญชี LINE OA สำเร็จแล้ว และใครยังรอส่งรหัส" actions={<Link href="/dashboard/line" className="rounded-lg border border-line bg-card px-4 py-2 text-sm font-semibold text-brand-ink">กลับหน้า LINE ผู้ปกครอง</Link>} />
+    <PageHeader pose="staff" title="สถานะ LINE ครูและบุคลากร" subtitle="ตรวจว่าใครเชื่อมบัญชี LINE OA สำเร็จแล้ว และใครยังรอส่งรหัส" actions={<Link href="/dashboard/line" className="rounded-lg border border-line bg-card px-4 py-2 text-sm font-semibold text-brand-ink">กลับหน้า LINE ผู้ปกครอง</Link>} />
     <AdvisorLineOverview rows={rows} />
   </>;
 }

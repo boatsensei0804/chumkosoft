@@ -45,7 +45,7 @@ export default async function TeachersPage({ searchParams }: TeachersPageProps):
 
   return (
     <div className="xl:flex xl:h-full xl:min-h-0 xl:flex-col">
-      <PageHeader
+      <PageHeader pose="staff"
         title="ครูและบุคลากร"
         actions={currentUser.role === "ADMIN" && <Link href="/dashboard/line/teachers" className="inline-flex min-h-10 items-center rounded-xl border border-line bg-white px-3 text-sm font-semibold text-brand-ink">ดูสถานะบัญชีเว็บและ LINE</Link>}
         subtitle={`บุคลากรทางการศึกษาทั้งหมด ${stats.total.toLocaleString("th-TH")} คน · ${termLabel}`}

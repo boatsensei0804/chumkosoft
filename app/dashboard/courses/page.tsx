@@ -31,7 +31,7 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps): P
 
   return (
     <div className="xl:flex xl:h-full xl:min-h-0 xl:flex-col">
-      <PageHeader
+      <PageHeader pose="learning"
         title="รายวิชา"
         actions={user.role === "ADMIN" && <Link href="/dashboard/classrooms" className="inline-flex min-h-10 items-center rounded-xl border border-line bg-white px-3 text-sm font-semibold text-brand-ink">เปิดสอนรายวิชาให้ห้องเรียน</Link>}
         subtitle={`หลักสูตรทั้งหมด ${stats.total.toLocaleString("th-TH")} วิชา · ${termLabel}`}

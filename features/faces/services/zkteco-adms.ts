@@ -82,8 +82,11 @@ async function configuredDevice(request: Request, params: URLSearchParams, trans
   return device?.admsEnabled ? { id: device.id, serial } : reply("Unknown or disabled device", 403);
 }
 
-function logEventId(deviceId: string, pin: string, capturedAt: string): string {
-  const bytes = createHash("sha256").update(JSON.stringify(["zkteco-adms", deviceId, pin, capturedAt])).digest().subarray(0, 16);
+function logEventId(deviceId: string, pin: string, capturedAt: string, isExit: boolean): string {
+  // Preserve existing check-in IDs for records replayed after an upgrade.
+  const fields = ["zkteco-adms", deviceId, pin, capturedAt];
+  if (isExit) fields.push("out");
+  const bytes = createHash("sha256").update(JSON.stringify(fields)).digest().subarray(0, 16);
   bytes[6] = (bytes[6] & 0x0f) | 0x80;
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
   const hex = bytes.toString("hex");
@@ -186,7 +189,7 @@ export async function receiveAdms(request: Request, command: string, transport: 
 
     let failure: keyof typeof uploadErrors | undefined;
     let skipped: AdmsUploadResult | undefined;
-    const scans: { pin: string; localTime: string }[] = [];
+    const scans: { pin: string; localTime: string; isExit: boolean }[] = [];
     for (const line of lines) {
       const [rawPin, timestamp, status, verification] = line.split("\t");
       const pin = rawPin.replace(/^PIN=/u, "").trim();
@@ -202,7 +205,7 @@ export async function receiveAdms(request: Request, command: string, transport: 
         continue;
       }
       // PUSH SDK Appendix 7 reserves 15 for face and 0 for ambiguous automatic identification.
-      if (status !== "0" || verification !== "15") {
+      if ((status !== "0" && status !== "1") || verification !== "15") {
         skipped ??= {
           outcome: "status_or_verification",
           status: status.length <= 3 ? Number(status) : null,
@@ -210,7 +213,7 @@ export async function receiveAdms(request: Request, command: string, transport: 
         };
         continue;
       }
-      scans.push({ pin, localTime });
+      scans.push({ pin, localTime, isExit: status === "1" });
     }
     const pins = [...new Set(scans.map(({ pin }) => pin))];
     const mappings = pins.length ? await prisma.scannerPinMapping.findMany({
@@ -222,10 +225,10 @@ export async function receiveAdms(request: Request, command: string, transport: 
     const studentCodesByPin = await findStudentCodesByPin(pins.filter((pin) => !mappingByPin.has(pin) && !legacy[pin]));
     const studentIds = new Map<string, string>();
     const events: z.infer<typeof scannerBatchSchema>["events"] = [];
-    for (const { pin, localTime } of scans) {
+    for (const { pin, localTime, isExit } of scans) {
       const mapping = mappingByPin.get(pin);
       const capturedAt = `${localTime}+07:00`;
-      const eventId = logEventId(device.id, pin, capturedAt);
+      const eventId = logEventId(device.id, pin, capturedAt, isExit);
       const studentCode = mapping ? mapping.student?.studentCode : legacy[pin] ?? studentCodesByPin.get(pin);
       if (mapping && new Date(capturedAt) < mapping.linkedAt) {
         skipped ??= { outcome: "before_mapping" };
@@ -236,7 +239,7 @@ export async function receiveAdms(request: Request, command: string, transport: 
         continue;
       }
       if (mapping?.student) studentIds.set(eventId, mapping.student.id);
-      events.push({ eventId, studentCode, capturedAt, localDate: localTime.slice(0, 10) });
+      events.push({ eventId, studentCode, capturedAt, localDate: localTime.slice(0, 10), ...(isExit && { direction: "out" }) });
     }
     for (let offset = 0; offset < events.length; offset += batchSize) {
       const result = await processScannerBatch(device.id, events.slice(offset, offset + batchSize), studentIds);

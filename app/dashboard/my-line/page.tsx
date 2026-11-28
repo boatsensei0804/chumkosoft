@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function MyLinePage(): Promise<React.ReactNode> {
   const user = await requireRoles(["TEACHER"]);
   if (!user.staffId) return <>
-    <PageHeader title="LINE ของฉัน" subtitle="เชื่อมบัญชี LINE เพื่อรับสรุปการเข้าโรงเรียนของห้องที่ปรึกษา" />
+    <PageHeader compact pose="staff" title="LINE ของฉัน" subtitle="เชื่อมบัญชี LINE เพื่อรับสรุปการเข้าโรงเรียนของห้องที่ปรึกษา" />
     <div className="rounded-2xl border border-line bg-card p-6 text-sm text-ink">บัญชีครูนี้ยังไม่เชื่อมกับข้อมูลครูและบุคลากร กรุณาให้ผู้ดูแลระบบตรวจบัญชีของคุณ</div>
   </>;
 
@@ -37,7 +37,7 @@ export default async function MyLinePage(): Promise<React.ReactNode> {
   const friendQr = friendUrl ? await QRCode.toDataURL(friendUrl, { margin: 1, width: 184 }) : null;
 
   return <div className="xl:flex xl:h-full xl:min-h-0 xl:flex-col">
-    <PageHeader title="LINE ของฉัน" subtitle="เชื่อม LINE OA ของโรงเรียนด้วยรหัส 6 หลัก และตรวจสถานะการเชื่อมต่อได้ที่นี่" />
+    <PageHeader compact pose="staff" title="LINE ของฉัน" subtitle="เชื่อม LINE OA ของโรงเรียนด้วยรหัส 6 หลัก และตรวจสถานะการเชื่อมต่อได้ที่นี่" />
     <AdvisorLineConnect
       linked={Boolean(line?.lineUserId)}
       currentCode={line?.lineLinkCode ?? null}

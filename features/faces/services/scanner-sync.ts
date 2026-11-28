@@ -11,6 +11,7 @@ export const scannerEventSchema = z.object({
   studentCode: z.string().min(1).max(80),
   localDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   capturedAt: z.string().datetime({ offset: true }),
+  direction: z.enum(["in", "out"]).optional(),
 }).strict();
 export const scannerBatchSchema = z.object({
   deviceId: z.string().uuid(),
@@ -29,7 +30,7 @@ function isRetryable(error: unknown): boolean {
 }
 
 export type ScannerEventOutcome =
-  | { eventId: string; accepted: true; result: "checked_in" | "already" }
+  | { eventId: string; accepted: true; result: "checked_in" | "checked_out" | "already_in" | "already_out" | "already" }
   | { eventId: string; accepted: false; reason: string };
 
 async function processOne(deviceId: string, event: ScannerEvent, studentId?: string): Promise<ScannerEventOutcome> {
@@ -75,12 +76,13 @@ async function processOne(deviceId: string, event: ScannerEvent, studentId?: str
   });
   if (!enrollment) return { eventId: event.eventId, accepted: false, reason: "นักเรียนไม่ได้ลงทะเบียนในภาคเรียนนี้" };
 
-  const setting = await getScanSetting();
+  const isExit = event.direction === "out";
+  const setting = isExit ? null : await getScanSetting();
   const localTime = timeFormatter.format(capturedAt);
-  if (localTime < setting.scanStartTime) {
+  if (setting && localTime < setting.scanStartTime) {
     return { eventId: event.eventId, accepted: false, reason: "สแกนก่อนเวลาเปิดจุดสแกน" };
   }
-  const isLate = localTime >= setting.lateAfterTime;
+  const isLate = setting !== null && localTime >= setting.lateAfterTime;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
       const result = await prisma.$transaction(async (tx) => {
@@ -90,23 +92,36 @@ async function processOne(deviceId: string, event: ScannerEvent, studentId?: str
         const entry = await tx.schoolEntry.upsert({
           where: { studentId_date: { studentId: student.id, date } },
           update: {}, create: { studentId: student.id, termId: term.id, date, method: "FACE" },
-          select: { id: true, isDeleted: true, checkInAt: true },
+          select: { id: true, isDeleted: true },
         });
         if (entry.isDeleted) {
           await tx.scannerSyncEvent.update({ where: { eventId: event.eventId }, data: { result: "rejected" } });
           return "rejected" as const;
         }
-        const changed = await tx.schoolEntry.updateMany({
-          where: { id: entry.id, isDeleted: false, checkInAt: null },
-          data: { checkInAt: capturedAt, isLate, method: "FACE" },
-        });
-        const status = changed.count ? "checked_in" : "already";
+        const changed = isExit
+          ? await tx.schoolEntry.updateMany({
+            where: {
+              id: entry.id, isDeleted: false,
+              OR: [{ checkOutAt: null }, { checkOutAt: { lt: capturedAt } }],
+            },
+            data: { checkOutAt: capturedAt },
+          })
+          : await tx.schoolEntry.updateMany({
+            where: { id: entry.id, isDeleted: false, checkInAt: null },
+            data: { checkInAt: capturedAt, isLate, method: "FACE" },
+          });
+        const status = isExit
+          ? (changed.count ? "checked_out" : "already_out")
+          : (changed.count ? "checked_in" : "already_in");
         await tx.scannerSyncEvent.update({ where: { eventId: event.eventId }, data: { result: status } });
+        if (status === "checked_in") await syncLateBehaviorPoints(tx, term.id, student.id, date, isLate);
         if (changed.count) {
-          await syncLateBehaviorPoints(tx, term.id, student.id, date, isLate);
           await tx.auditLog.create({
-            data: { action: "scanner.offline.checkin", targetType: "student", targetId: student.id,
-              detail: `สแกนเมื่อ ${event.localDate} ${localTime} · เครื่อง ${deviceId}` },
+            data: {
+              action: isExit ? "scanner.offline.checkout" : "scanner.offline.checkin",
+              targetType: "student", targetId: student.id,
+              detail: `สแกนเมื่อ ${event.localDate} ${localTime} · เครื่อง ${deviceId}`,
+            },
           });
         }
         return status;

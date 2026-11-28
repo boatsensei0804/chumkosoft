@@ -30,7 +30,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <PageHeader title="ตั้งค่าระบบ" subtitle="จัดการภาคเรียน ตารางเวลา การแจ้งเตือน และบัญชีของโรงเรียน" />
+      <PageHeader pose="settings" title="ตั้งค่าระบบ" subtitle="จัดการภาคเรียน ตารางเวลา การแจ้งเตือน และบัญชีของโรงเรียน" />
       <nav aria-label="หมวดตั้งค่าระบบ" className="mb-5 flex flex-wrap gap-2 border-b border-line pb-3">
         {sections.map(({ id, label, icon: Icon }) => (
           <Link key={id} href={id === "academic" ? "/dashboard/settings" : "/dashboard/settings?section=" + id}

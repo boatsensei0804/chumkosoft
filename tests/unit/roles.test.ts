@@ -6,8 +6,8 @@ describe("homePathForRole", () => {
     expect(homePathForRole("ADMIN")).toBe("/dashboard");
     expect(homePathForRole("TEACHER")).toBe("/dashboard");
   });
-  it("routes the kiosk to scanner device management", () => {
-    expect(homePathForRole("KIOSK")).toBe("/scanner-devices");
+  it("routes the kiosk to the live scan screen", () => {
+    expect(homePathForRole("KIOSK")).toBe("/scan");
   });
   it("routes students and parents to the portal", () => {
     expect(homePathForRole("STUDENT")).toBe("/portal");

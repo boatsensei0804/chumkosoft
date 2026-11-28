@@ -21,7 +21,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   const grade = typeof params.grade === "string" ? params.grade.slice(0, 100) : "";
   const result = await getStudentsWorkspace({ page: parsePage(params.page), search: query, filter, classroom, gender, grade });
   return <>
-    <PageHeader title="นักเรียน" subtitle={`ทะเบียน ${result.overview.overall.total.toLocaleString("th-TH")} คน · ${result.overview.term ?? "ยังไม่มีภาคเรียนปัจจุบัน"}`} />
+    <PageHeader pose="students" title="นักเรียน" subtitle={`ทะเบียน ${result.overview.overall.total.toLocaleString("th-TH")} คน · ${result.overview.term ?? "ยังไม่มีภาคเรียนปัจจุบัน"}`} />
     <StudentOverviewPanel overview={result.overview} classroom={classroom} />
     <div className="mt-6"><StudentsBrowser key={JSON.stringify([query, filter, classroom, gender, grade])} page={result.page} query={query} filter={filter} classrooms={result.classrooms} classroom={classroom} gender={gender} grade={grade} grades={result.overview.grades} editableClassroomIds={editableClassroomIds} /></div>
   </>;

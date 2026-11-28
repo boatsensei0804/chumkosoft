@@ -37,7 +37,7 @@ export default async function EmergencyIncidentsPage(): Promise<React.ReactNode>
   const countFor = (status: "OPEN" | "ACKNOWLEDGED" | "RESOLVED") => statusCounts.find((item) => item.status === status)?._count._all ?? 0;
 
   return <div className="xl:flex xl:h-full xl:min-h-0 xl:flex-col">
-    <PageHeader title="แจ้งเหตุฉุกเฉิน" subtitle="เหตุจากแอปจุดสแกน · ติดตามผู้รับเรื่องและการแจ้งเตือน LINE" />
+    <PageHeader pose="error" title="แจ้งเหตุฉุกเฉิน" subtitle="เหตุจากแอปจุดสแกน · ติดตามผู้รับเรื่องและการแจ้งเตือน LINE" />
     <div role="note" className="mb-3 flex gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-[#743145]">
       <AlertTriangle className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
       <div><p className="font-bold">เหตุฉุกเฉินต้องติดต่อเจ้าหน้าที่หรือโทรศัพท์ทันที</p><p className="mt-0.5 leading-5">LINE ส่งถึงแอดมินและครูที่เชื่อมบัญชีไว้เท่านั้น{!lineDelivery.available || !lineDelivery.enabled ? " · ขณะนี้พักการส่ง LINE: เหตุใหม่ยังถูกบันทึกบนเว็บ" : " · หากออฟไลน์หรือไม่มีผู้รับ ให้ใช้ช่องทางฉุกเฉินของโรงเรียน"}</p></div>

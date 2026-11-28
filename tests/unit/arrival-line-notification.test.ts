@@ -4,7 +4,7 @@ import { processScannerBatch } from "@/features/faces/services/scanner-sync";
 
 const mocks = vi.hoisted(() => ({
   after: vi.fn(), record: vi.fn(), audit: vi.fn(), findTargets: vi.fn(), send: vi.fn(), receipt: vi.fn(),
-  findScannerEvent: vi.fn(),
+  findScannerEvent: vi.fn(), updateEntry: vi.fn(), recordScanOutcome: vi.fn(),
 }));
 vi.mock("next/server", () => ({ after: mocks.after }));
 vi.mock("@/features/faces/repositories/scan-repository", () => ({
@@ -29,10 +29,10 @@ vi.mock("@/lib/prisma", () => ({
     },
     enrollment: { findFirst: async () => ({ id: "enrollment" }) },
     $transaction: async (run: (tx: unknown) => Promise<unknown>) => run({
-      scannerSyncEvent: { create: vi.fn(), update: vi.fn() },
+      scannerSyncEvent: { create: vi.fn(), update: mocks.recordScanOutcome },
       schoolEntry: {
         upsert: async () => ({ id: "entry", isDeleted: false, checkInAt: null }),
-        updateMany: async () => ({ count: 1 }),
+        updateMany: mocks.updateEntry,
       },
       auditLog: { create: mocks.audit },
     }),
@@ -54,6 +54,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(checkInAt);
   mocks.findScannerEvent.mockResolvedValue(null);
+  mocks.updateEntry.mockResolvedValue({ count: 1 });
   mocks.record.mockResolvedValue({ alreadyCheckedIn: false, at: checkInAt, isLate: true });
   mocks.findTargets.mockResolvedValue(["Uparent", "Uparent"]);
   mocks.send.mockResolvedValue({ accepted: true, code: "HTTP_200", requestId: "request", acceptedRequestId: null });
@@ -92,6 +93,29 @@ describe("LINE arrival notices", () => {
     const [notify] = mocks.after.mock.calls[0] as [() => Promise<void>];
     await notify();
     expect(mocks.send).toHaveBeenCalledWith(["Uparent"], expect.stringContaining("08:08"), expect.any(String));
+  });
+
+  it("stores an explicit checkout without inventing a check-in or sending LINE", async () => {
+    const checkout = { ...scan, capturedAt: "2026-11-27T12:00:00+07:00", direction: "out" as const };
+    vi.setSystemTime(new Date(checkout.capturedAt));
+
+    expect(await processScannerBatch("device", [checkout])).toEqual({ accepted: [scan.eventId], rejected: [] });
+    expect(mocks.updateEntry).toHaveBeenCalledWith({
+      where: { id: "entry", isDeleted: false, OR: [{ checkOutAt: null }, { checkOutAt: { lt: new Date(checkout.capturedAt) } }] },
+      data: { checkOutAt: new Date(checkout.capturedAt) },
+    });
+    expect(mocks.recordScanOutcome).toHaveBeenCalledWith({
+      where: { eventId: checkout.eventId }, data: { result: "checked_out" },
+    });
+    expect(mocks.after).not.toHaveBeenCalled();
+    expect(mocks.send).not.toHaveBeenCalled();
+  });
+
+  it("acknowledges a replayed checkout without changing attendance or sending LINE", async () => {
+    mocks.findScannerEvent.mockResolvedValue({ deviceId: "device", studentId: "student", result: "checked_out" });
+    expect(await processScannerBatch("device", [{ ...scan, direction: "out" }])).toEqual({ accepted: [scan.eventId], rejected: [] });
+    expect(mocks.updateEntry).not.toHaveBeenCalled();
+    expect(mocks.after).not.toHaveBeenCalled();
   });
 
   it("keeps previous-day device scans from triggering arrival notifications", async () => {

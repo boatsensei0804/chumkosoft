@@ -3,7 +3,8 @@ import { formatLinkPercentage, lineLinkPercentage } from "@/features/line/line-l
 import LineWorkspace from "@/features/line/components/line-workspace";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { UsersRound, CircleCheck, Clock, CircleMinus } from "lucide-react";
+import { ArrowUpRight, Bell, ChartNoAxesColumnIncreasing, CircleCheck, CircleMinus, Clock, History, Megaphone, UsersRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import PageHeader from "@/features/dashboard/components/page-header";
 import StatStrip from "@/components/ui/stat-strip";
 import LineManager from "@/features/line/components/line-manager";
@@ -25,7 +26,7 @@ interface LinePageProps {
 }
 
 export default async function LinePage({ searchParams }: LinePageProps): Promise<React.ReactNode> {
-  const user = await requireRoles(["ADMIN"]);
+  await requireRoles(["ADMIN"]);
   const params = await searchParams;
   const query = params.q ?? "";
   const classroomId = params.classroom ?? "";
@@ -37,15 +38,39 @@ export default async function LinePage({ searchParams }: LinePageProps): Promise
     listClassroomLineStats(),
   ]);
 
+  const reportHref = `/dashboard/line/report?${new URLSearchParams({ classroom: classroomId || "all" })}`;
+  const tasks = [
+    { href: "/dashboard/line/messages", label: "ประวัติการส่ง", icon: History },
+    { href: "/dashboard/settings?section=notifications", label: "ตั้งเวลาแจ้งเตือน", icon: Bell },
+    { href: "/dashboard/line/teachers", label: "สถานะ LINE ครู", icon: UsersRound },
+    { href: reportHref, label: "สรุปและส่งออกรายห้อง", icon: ChartNoAxesColumnIncreasing },
+  ];
+
   return (
     <>
       <PageHeader
-        title="LINE / แจ้งเตือนผู้ปกครอง"
-        subtitle="ผูกบัญชี LINE ของผู้ปกครองเข้ากับนักเรียน เพื่อส่งแจ้งเตือนอัตโนมัติเมื่อนักเรียนเข้าโรงเรียน"
-        actions={<nav aria-label="งาน LINE" className="flex flex-wrap gap-2"><Link href={`/dashboard/line/report?${new URLSearchParams({ classroom: classroomId || "all" })}`} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">สรุปเปอร์เซ็นต์ / ส่งออกรายห้อง</Link>{user.role === "ADMIN" && <><Link href="/dashboard/line/messages" className="rounded-lg border border-line bg-card px-4 py-2 text-sm font-semibold text-brand-ink">ประวัติ / โควตา LINE</Link><Link href="/dashboard/settings?section=notifications" className="rounded-lg border border-line bg-card px-4 py-2 text-sm font-semibold text-brand-ink">ตั้งค่าการแจ้งเตือน</Link><Link href="/dashboard/line/teachers" className="rounded-lg border border-line bg-card px-4 py-2 text-sm font-semibold text-brand-ink">ดูสถานะ LINE ครู</Link><Link href="/dashboard/line-announcements" className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">ส่งประกาศ LINE</Link></>}</nav>}
+        compact
+        pose="family"
+        title="การแจ้งเตือน LINE"
+        subtitle="ดูการเชื่อมบัญชีผู้ปกครอง ติดตามผลการส่ง และตั้งเวลาสรุปให้ครู"
+        actions={<Button asChild className="h-11"><Link href="/dashboard/line-announcements"><Megaphone aria-hidden="true" />ส่งประกาศ</Link></Button>}
       />
-      <LineDeliveryPanel canManage={user.role === "ADMIN"} />
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-100 bg-white px-5 py-4"><p className="text-sm text-muted">ผูก LINE แล้ว <strong className="text-2xl text-brand-ink">{formatLinkPercentage(lineLinkPercentage(stats.linked, stats.total))}</strong> · {stats.linked}/{stats.total} คนในขอบเขตที่เลือก</p><Link href={`/dashboard/line/report${classroomId ? `?classroom=${encodeURIComponent(classroomId)}` : ""}`} className="min-h-10 py-2 text-sm font-semibold text-brand-ink">ดูรายชื่อ รหัส และส่งออก →</Link></div>
+      <nav aria-label="งาน LINE" className="mb-5 grid grid-cols-2 divide-line overflow-hidden rounded-xl border border-line bg-card lg:grid-cols-4">
+        {tasks.map(({ href, label, icon: Icon }) => (
+          <Link key={href} href={href} className="flex min-h-13 items-center gap-2 border-line px-3 py-2 text-sm font-semibold text-brand-ink even:border-l nth-[n+3]:border-t hover:bg-brand-soft focus-visible:-outline-offset-2 sm:px-4 lg:border-l lg:first:border-l-0 lg:nth-[n+3]:border-t-0">
+            <Icon aria-hidden="true" className="size-4 shrink-0" />
+            <span className="min-w-0 flex-1">{label}</span>
+            <ArrowUpRight aria-hidden="true" className="hidden size-4 shrink-0 text-muted sm:block" />
+          </Link>
+        ))}
+      </nav>
+      <LineDeliveryPanel canManage />
+      <section aria-labelledby="guardian-line-heading" className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 id="guardian-line-heading" className="text-lg font-bold text-ink-strong">บัญชี LINE ผู้ปกครอง</h2>
+          <p className="mt-1 text-sm text-muted">เชื่อมแล้ว <strong className="font-semibold text-brand-ink">{formatLinkPercentage(lineLinkPercentage(stats.linked, stats.total))}</strong> · {stats.linked}/{stats.total} คนในขอบเขตที่เลือก</p>
+        </div>
+      </section>
       <StatStrip
         items={[
           { label: "นักเรียนในรายการ", value: stats.total, hint: "คน", icon: UsersRound, tone: "brand" },

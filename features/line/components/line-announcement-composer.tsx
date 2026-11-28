@@ -132,11 +132,27 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
     });
   }
 
-  return <div className="space-y-6">
-    <section className="grid gap-3 sm:grid-cols-3" aria-label="ภาพรวมการส่งประกาศ">
-      {[{ label: "ผู้รับที่เชื่อม LINE ปัจจุบัน", value: recipientCount, hint: "บัญชีไม่ซ้ำ" }, { label: "ประกาศล่าสุดที่แสดง", value: history.length, hint: "สูงสุด 20 รายการ" }, { label: "รายการล่าสุดที่ส่งยังไม่ครบ", value: history.filter((item) => item.accepted < item.recipientCount).length, hint: "ตรวจรายละเอียดก่อนลองส่งต่อ" }].map((item) => <div key={item.label} className="rounded-[22px] border border-blue-100 bg-white p-5"><p className="text-xs text-muted">{item.label}</p><p className="mt-3 text-3xl font-bold text-brand-ink">{item.value.toLocaleString("th-TH")}</p><p className="mt-2 text-xs text-muted">{item.hint}</p></div>)}
+  const announcementStats = [
+    { label: "ผู้รับที่เชื่อม LINE", value: recipientCount, unit: "บัญชีไม่ซ้ำ" },
+    { label: "ประกาศล่าสุด", value: history.length, unit: "รายการ" },
+    { label: "ส่งยังไม่ครบ", value: history.filter((item) => item.accepted < item.recipientCount).length, unit: "รายการ" },
+  ];
+
+  return <div className="space-y-5">
+    <section aria-labelledby="announcement-workspace-title" className="overflow-hidden rounded-xl border border-line bg-card">
+      <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-5 sm:px-5">
+        <div><h2 id="announcement-workspace-title" className="text-lg font-bold text-ink-strong">ศูนย์ประกาศโรงเรียน</h2><p className="mt-1 text-sm text-muted">ตรวจรายชื่อผู้รับและตัวอย่างข้อความก่อนยืนยันส่ง</p></div>
+        <button type="button" onClick={() => setComposerOpen(true)} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Megaphone className="size-4" aria-hidden="true" />เขียนประกาศใหม่</button>
+      </div>
+      <dl className="grid divide-y divide-line border-t border-line bg-surface/70 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        {announcementStats.map(({ label, value, unit }) => (
+          <div key={label} className="flex min-w-0 flex-wrap items-baseline justify-between gap-2 px-4 py-3 sm:flex-col sm:items-start sm:gap-1 sm:px-5">
+            <dt className="text-sm text-muted">{label}</dt>
+            <dd className="flex items-baseline gap-1.5"><span className="text-2xl font-bold text-ink-strong tabular-nums">{value.toLocaleString("th-TH")}</span><span className="text-xs text-muted">{unit}</span></dd>
+          </div>
+        ))}
+      </dl>
     </section>
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-bold text-ink-strong">ศูนย์ประกาศโรงเรียน</h2><p className="mt-1 text-sm text-muted">สร้างประกาศ ตรวจข้อความ แล้วจึงยืนยันส่งถึงบัญชีที่ผูกไว้</p></div><button type="button" onClick={() => setComposerOpen(true)} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-white"><Megaphone className="size-4" />เขียนประกาศใหม่</button></div>
     <Dialog open={composerOpen} onOpenChange={setComposerOpen}><DialogContent className="sm:max-w-5xl"><DialogHeader className="text-left"><DialogTitle>สร้างประกาศ</DialogTitle><DialogDescription>เลือกผู้รับ กรอกข้อความ แนบรูปได้ 1 รูป และตรวจสอบก่อนส่ง</DialogDescription></DialogHeader>
     <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_260px]">
       <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">
@@ -198,9 +214,9 @@ export default function LineAnnouncementComposer({ recipientCount, configured, h
       LINE ปฏิเสธ Channel access token บนเซิร์ฟเวอร์ กรุณาสร้างโทเคนใหม่จาก Messaging API ของ OA ที่ใช้งาน แล้วแก้ <code>LINE_CHANNEL_ACCESS_TOKEN</code> ในไฟล์ <code>.env</code> บนเซิร์ฟเวอร์ จากนั้นสร้างคอนเทนเนอร์แอปใหม่และกด “ลองส่งต่อ” ไม่ต้องสร้างประกาศซ้ำ
     </div>}
 
-    <section className="overflow-hidden rounded-2xl school-card">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4"><h2 className="text-base font-bold text-ink-strong">รายการส่งล่าสุด</h2><div className="flex flex-wrap gap-2"><input aria-label="ค้นหาประกาศล่าสุด" value={historyQuery} onChange={(event) => setHistoryQuery(event.target.value)} placeholder="ค้นหาหัวข้อ" className="min-h-10 rounded-xl border border-line bg-surface px-3 text-sm" /><button type="button" aria-pressed={onlyIncomplete} onClick={() => setOnlyIncomplete(!onlyIncomplete)} className={`min-h-10 rounded-xl border px-3 text-xs font-semibold ${onlyIncomplete ? "border-brand bg-brand-soft text-brand-ink" : "border-line text-muted"}`}>ส่งยังไม่ครบ</button></div></div>
-      {history.length === 0 ? <MascotEmptyState compact pose="notify" className="m-4" title="ยังไม่มีประกาศที่ส่งผ่าน LINE" description="เริ่มจากปุ่มเขียนประกาศใหม่ด้านบน" /> :
+    <section className="overflow-hidden rounded-xl border border-line bg-card">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-4 sm:px-5"><h2 className="text-base font-bold text-ink-strong">รายการส่งล่าสุด</h2><div className="flex flex-wrap gap-2"><input aria-label="ค้นหาประกาศล่าสุด" value={historyQuery} onChange={(event) => setHistoryQuery(event.target.value)} placeholder="ค้นหาหัวข้อ" className="min-h-10 rounded-xl border border-line bg-surface px-3 text-sm" /><button type="button" aria-pressed={onlyIncomplete} onClick={() => setOnlyIncomplete(!onlyIncomplete)} className={`min-h-10 rounded-xl border px-3 text-xs font-semibold ${onlyIncomplete ? "border-brand bg-brand-soft text-brand-ink" : "border-line text-muted"}`}>ส่งยังไม่ครบ</button></div></div>
+      {history.length === 0 ? <MascotEmptyState compact className="m-4" title="ยังไม่มีประกาศที่ส่งผ่าน LINE" description="เริ่มจากปุ่มเขียนประกาศใหม่ด้านบน" /> :
         <div className="divide-y divide-line md:max-h-[48dvh] md:overflow-y-auto">{visibleHistory.map((item) => {
           const remaining = item.recipientCount - item.accepted;
           return <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">

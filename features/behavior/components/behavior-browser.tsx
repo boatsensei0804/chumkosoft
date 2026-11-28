@@ -1,48 +1,167 @@
 "use client";
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import StatStrip from "@/components/ui/stat-strip";
-
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
-import { addBehaviorPointsAction, updateBehaviorPointsAction, deleteBehaviorPointsAction } from "@/features/behavior/actions";
+import { ArrowRight, ChevronDown, ClipboardList, Minus, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import MascotEmptyState from "@/components/ui/mascot-empty-state";
+import { addBehaviorPointsAction, updateBehaviorPointsAction, deleteBehaviorPointsAction } from "@/features/behavior/actions";
+import { cn } from "@/lib/utils";
 
 interface StudentSummary { id: string; code: string; name: string; classroom: string; score: number }
 interface PointHistory { id: string; delta: number; source: "MANUAL" | "LATE_ENTRY"; title: string; note: string | null; actorName: string; createdAt: string; canManage: boolean }
 interface Data { term: { id: string; name: string } | null; students: StudentSummary[]; selectedStudent: StudentSummary | null; history: PointHistory[] }
 
+const field = "min-h-11 rounded-lg border border-line bg-card px-3 py-2 text-sm text-ink";
+const signed = (points: number): string => points > 0 ? `+${points}` : String(points);
+const pointTone = (delta: number): string => delta < 0 ? "text-danger" : delta > 0 ? "text-success" : "text-muted";
+
 export default function BehaviorBrowser({ data }: { data: Data }): React.ReactNode {
-  const router = useRouter();
   const [query, setQuery] = useState("");
   const [classroom, setClassroom] = useState("");
+  if (!data.term) {
+    return <MascotEmptyState pose="schedule" title="ยังไม่มีภาคเรียนที่ใช้งาน" description="เปิดภาคเรียนก่อนเริ่มบันทึกคะแนนความประพฤติ" />;
+  }
+
+  const classrooms = [...new Set(data.students.map((student) => student.classroom))].sort();
+  const visible = data.students.filter((student) =>
+    (!classroom || student.classroom === classroom) &&
+    `${student.code} ${student.name}`.toLowerCase().includes(query.trim().toLowerCase()));
+  const stats = [
+    { label: "นักเรียนในภาคเรียน", value: data.students.length },
+    { label: "ต่ำกว่า 50 คะแนน", value: data.students.filter((student) => student.score < 50).length },
+    { label: "ตั้งแต่ 100 คะแนน", value: data.students.filter((student) => student.score >= 100).length },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <section aria-label="ภาพรวมคะแนน" className="overflow-hidden rounded-xl border border-line bg-card">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-3 sm:px-5">
+          <p className="text-sm font-semibold text-ink-strong">{data.term.name}</p>
+          <details className="group w-full text-sm text-muted sm:w-auto sm:max-w-md">
+            <summary className="flex min-h-10 cursor-pointer list-none items-center gap-1.5 rounded-md font-medium text-brand-ink [&::-webkit-details-marker]:hidden">
+              เกณฑ์การให้คะแนน <ChevronDown className="size-4 motion-safe:transition-transform group-open:rotate-180" aria-hidden="true" />
+            </summary>
+            <p className="pb-2 leading-relaxed">เริ่มต้น 100 คะแนนต่อภาคเรียน การเข้าโรงเรียนสายหัก 10 คะแนนต่อวัน ยกเว้นวันที่ครูอนุมัติให้มาสาย</p>
+          </details>
+        </div>
+        <dl className="grid grid-cols-3 divide-x divide-line border-t border-line bg-brand-softer">
+          {stats.map(({ label, value }) => (
+            <div key={label} className="min-w-0 px-3 py-4 sm:px-5">
+              <dt className="text-xs text-muted sm:text-sm">{label}</dt>
+              <dd className="mt-1.5 text-2xl font-bold tabular-nums text-ink-strong">{value.toLocaleString("th-TH")}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(16rem,2fr)_minmax(0,3fr)]">
+        <section aria-labelledby="behavior-students" className="min-w-0 overflow-hidden rounded-xl border border-line bg-card">
+          <div className="space-y-3 border-b border-line px-4 py-4 sm:px-5">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 id="behavior-students" className="font-bold text-ink-strong">รายชื่อนักเรียน</h2>
+              <p className="text-xs text-muted">{visible.length.toLocaleString("th-TH")} คน</p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+              <label className="relative min-w-0">
+                <span className="sr-only">ค้นหานักเรียน</span>
+                <Search className="pointer-events-none absolute start-3 top-3.5 size-4 text-muted" aria-hidden="true" />
+                <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ชื่อหรือรหัสนักเรียน" className={cn(field, "w-full ps-9")} />
+              </label>
+              <select aria-label="กรองห้องเรียน" value={classroom} onChange={(event) => setClassroom(event.target.value)} className={cn(field, "w-full min-w-0 sm:max-w-32")}>
+                <option value="">ทุกห้อง</option>
+                {classrooms.map((code) => <option key={code} value={code}>{code}</option>)}
+              </select>
+            </div>
+          </div>
+          {visible.length ? (
+            <ul className="max-h-[50dvh] divide-y divide-line overflow-y-auto overscroll-contain">
+              {visible.map((student) => {
+                const active = data.selectedStudent?.id === student.id;
+                return (
+                  <li key={student.id}>
+                    <Link
+                      href={`/dashboard/behavior?student=${encodeURIComponent(student.id)}#behavior-detail`}
+                      aria-current={active ? "true" : undefined}
+                      className={cn("group flex items-center justify-between gap-3 px-4 py-3 focus-visible:-outline-offset-2 sm:px-5", active ? "bg-brand-soft" : "hover:bg-brand-softer")}
+                    >
+                      <span className="min-w-0">
+                        <span className="block wrap-break-word text-sm font-semibold text-ink-strong">{student.name}</span>
+                        <span className="mt-0.5 block wrap-break-word text-xs text-muted">{student.code} · {student.classroom}</span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        <span className={cn("text-lg font-bold tabular-nums", student.score < 50 ? "text-danger" : "text-brand-ink")}>
+                          {student.score}<span className="sr-only"> คะแนน</span>
+                        </span>
+                        <ArrowRight className="size-4 text-muted group-hover:text-brand" aria-hidden="true" />
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : <MascotEmptyState compact pose="students" className="m-4" title="ไม่พบนักเรียน" description="ลองเปลี่ยนคำค้นหาหรือเลือกห้องเรียนอื่น" />}
+        </section>
+
+        {data.selectedStudent
+          ? <StudentPoints key={data.selectedStudent.id} student={data.selectedStudent} history={data.history} />
+          : <section className="flex min-h-40 items-center gap-4 rounded-xl border border-line bg-card px-5 py-6 sm:px-6">
+              <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand"><ClipboardList className="size-5" aria-hidden="true" /></span>
+              <div>
+                <h2 className="font-bold text-ink-strong">เลือกนักเรียนจากรายชื่อ</h2>
+                <p className="mt-1 text-sm text-muted">ดูคะแนนปัจจุบัน บันทึกคะแนน หรือเปิดประวัติ</p>
+              </div>
+            </section>}
+      </div>
+    </div>
+  );
+}
+
+function StudentPoints({ student, history }: { student: StudentSummary; history: PointHistory[] }): React.ReactNode {
+  const router = useRouter();
+  const detail = useRef<HTMLElement>(null);
+  const titleInput = useRef<HTMLInputElement>(null);
   const [direction, setDirection] = useState<"ADD" | "DEDUCT">("DEDUCT");
   const [points, setPoints] = useState("10");
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
-  const [message, setMessage] = useState("");
+  const [feedback, setFeedback] = useState<{ ok: boolean; message: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saveReview, setSaveReview] = useState(false);
   const [deleting, setDeleting] = useState<PointHistory | null>(null);
   const [pending, startTransition] = useTransition();
-  const classrooms = [...new Set(data.students.map((student) => student.classroom))].sort();
-  const visible = data.students.filter((student) => (!classroom || student.classroom === classroom) && `${student.code} ${student.name}`.toLowerCase().includes(query.trim().toLowerCase()));
 
-  const previousDelta = data.history.find((entry) => entry.id === editingId)?.delta ?? 0;
-  const currentScore = data.selectedStudent?.score ?? 0;
-  const projectedScore = currentScore - previousDelta + Number(points) * (direction === "ADD" ? 1 : -1);
+  useEffect(() => {
+    if (window.location.hash === "#behavior-detail") detail.current?.focus({ preventScroll: true });
+  }, []);
+
+  const amount = Number(points);
+  const validPoints = Number.isInteger(amount) && amount >= 1 && amount <= 100;
+  const previousDelta = history.find((entry) => entry.id === editingId)?.delta ?? 0;
+  const projectedScore = student.score - previousDelta + amount * (direction === "ADD" ? 1 : -1);
+
+  function resetDraft(): void {
+    setEditingId(null);
+    setDirection("DEDUCT");
+    setPoints("10");
+    setTitle("");
+    setNote("");
+  }
 
   function save(): void {
-    if (!data.selectedStudent || pending) return;
-
+    if (pending || !validPoints || title.trim().length < 3) return;
     startTransition(async () => {
       const result = editingId
-        ? await updateBehaviorPointsAction({ id: editingId, direction, points: Number(points), title, note })
-        : await addBehaviorPointsAction({ studentId: data.selectedStudent!.id, direction, points: Number(points), title, note, requestId: crypto.randomUUID() });
-      setMessage(result.message);
-      if (result.ok) { setSaveReview(false); setTitle(""); setNote(""); setEditingId(null); router.refresh(); }
+        ? await updateBehaviorPointsAction({ id: editingId, direction, points: amount, title, note })
+        : await addBehaviorPointsAction({ studentId: student.id, direction, points: amount, title, note, requestId: crypto.randomUUID() });
+      setSaveReview(false);
+      setFeedback(result);
+      if (result.ok) {
+        resetDraft();
+        router.refresh();
+      }
     });
   }
 
@@ -52,60 +171,107 @@ export default function BehaviorBrowser({ data }: { data: Data }): React.ReactNo
     setPoints(String(Math.abs(entry.delta)));
     setTitle(entry.title);
     setNote(entry.note ?? "");
-    document.getElementById("behavior-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setFeedback(null);
+    titleInput.current?.focus();
   }
 
   function confirmDelete(): void {
-    if (!deleting) return;
+    if (!deleting || pending) return;
     startTransition(async () => {
       const result = await deleteBehaviorPointsAction(deleting.id);
-      setMessage(result.message);
+      setFeedback(result);
       setDeleting(null);
-      if (result.ok) { if (editingId === deleting.id) setEditingId(null); router.refresh(); }
+      if (result.ok) {
+        if (editingId === deleting.id) resetDraft();
+        router.refresh();
+      }
     });
   }
 
-  return <div className="space-y-5">
-    <div className="rounded-xl border border-line bg-brand-soft p-4 text-sm text-ink">คะแนนเริ่มต้น <strong>100</strong> ต่อภาคเรียน · การเข้าโรงเรียนสายหัก <strong>10</strong> คะแนนต่อวัน ไม่หักซ้ำเมื่อสแกนหลายครั้ง · ยกเว้นวันที่ครูอนุมัติขอมาสาย</div>
-    {!data.term ? <MascotEmptyState pose="schedule" title="ยังไม่มีภาคเรียนที่ใช้งาน" description="เปิดภาคเรียนก่อนเริ่มบันทึกคะแนนความประพฤติ" /> : <>
-      <p className="text-sm font-semibold text-muted">{data.term.name}</p>
-      {message && <p role="status" className="rounded-lg bg-brand-soft px-4 py-3 text-sm text-ink">{message}</p>}
-      <StatStrip items={[{ label: "นักเรียนในรายการ", value: data.students.length, hint: "คน", tone: "brand" }, { label: "ต่ำกว่า 50 คะแนน", value: data.students.filter((student) => student.score < 50).length, hint: "คน", tone: "danger" }, { label: "ตั้งแต่ 100 คะแนน", value: data.students.filter((student) => student.score >= 100).length, hint: "คน", tone: "success" }]} />
-      <div>
-        <section className="overflow-hidden rounded-2xl school-card">
-          <div className="flex flex-wrap gap-3 border-b border-line p-4">
-            <input aria-label="ค้นหานักเรียน" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหารหัสหรือชื่อนักเรียน" className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
-            <select aria-label="กรองห้องเรียน" value={classroom} onChange={(event) => setClassroom(event.target.value)} className="rounded-lg border border-line bg-surface px-3 py-2 text-sm"><option value="">ทุกห้อง</option>{classrooms.map((code) => <option key={code} value={code}>{code}</option>)}</select>
-          </div>
-          <div className="md:max-h-[52dvh] md:overflow-y-auto divide-y divide-line">{visible.map((student) => <button key={student.id} type="button" onClick={() => router.push(`/dashboard/behavior?student=${encodeURIComponent(student.id)}`)} className={`flex w-full items-center justify-between gap-4 px-4 py-3 text-left hover:bg-surface-2 ${data.selectedStudent?.id === student.id ? "bg-brand-soft" : ""}`}>
-            <span className="min-w-0"><span className="block truncate text-sm font-semibold text-ink">{student.name}</span><span className="text-xs text-muted">{student.code} · {student.classroom}</span></span>
-            <span className={`shrink-0 text-lg font-bold tabular ${student.score < 50 ? "text-danger" : "text-brand-ink"}`}>{student.score}</span>
-          </button>)}</div>
-          {visible.length === 0 && <MascotEmptyState compact pose="students" className="m-3" title="ไม่พบนักเรียน" description="ลองเปลี่ยนคำค้นหาหรือเลือกห้องเรียนอื่น" />}
-        </section>
-        <Dialog open={data.selectedStudent !== null} onOpenChange={(open) => { if (!open && !pending) router.push("/dashboard/behavior"); }}><DialogContent className="sm:max-w-3xl"><DialogHeader className="text-left"><DialogTitle>ข้อมูลคะแนนความประพฤติ</DialogTitle><DialogDescription>ดูคะแนนและประวัติของนักเรียน พร้อมเพิ่ม หัก หรือแก้ไขรายการที่คุณมีสิทธิ์</DialogDescription></DialogHeader><section>
-          {!data.selectedStudent ? <div className="py-12 text-center text-sm text-muted">เลือกนักเรียนจากตารางเพื่อดูคะแนนและบันทึกรายการ</div> : <>
+  return (
+    <section id="behavior-detail" aria-labelledby="behavior-student-name" ref={detail} tabIndex={-1} className="min-w-0 scroll-mt-24 overflow-hidden rounded-xl border border-line bg-card">
+      <header className="flex flex-wrap items-center justify-between gap-4 bg-brand-softer p-4 sm:px-5">
+        <div className="min-w-0">
+          <p className="text-xs text-muted">{student.classroom} · {student.code}</p>
+          <h2 id="behavior-student-name" className="mt-1 wrap-break-word text-xl font-bold text-ink-strong">{student.name}</h2>
+        </div>
+        <dl>
+          <dt className="text-xs font-medium text-muted">คะแนนปัจจุบัน</dt>
+          <dd className="mt-0.5 text-3xl font-bold tabular-nums text-brand-ink">{student.score}</dd>
+        </dl>
+      </header>
 
-            {message && <p role="status" className="mb-3 rounded-xl bg-blue-50 p-3 text-sm">{message}</p>}
-            <p className="text-sm text-muted">{data.selectedStudent.classroom} · {data.selectedStudent.code}</p>
-            <h2 className="mt-1 text-lg font-bold text-ink-strong">{data.selectedStudent.name}</h2>
-            <p className="mt-2 text-3xl font-bold tabular text-brand-ink">{data.selectedStudent.score} <span className="text-sm font-medium text-muted">คะแนน</span></p>
-            <div id="behavior-form" className="mt-5 scroll-mt-24 border-t border-line pt-5">
-              <h3 className="text-sm font-bold text-ink">{editingId ? "แก้ไขรายการคะแนน" : "เพิ่มหรือหักคะแนน"}</h3>
-              <div className="mt-3 flex gap-2"><button type="button" aria-pressed={direction === "ADD"} onClick={() => setDirection("ADD")} className={`rounded-lg px-3 py-2 text-sm font-semibold ${direction === "ADD" ? "bg-success-soft text-success" : "border border-line text-muted"}`}>เพิ่มคะแนน</button><button type="button" aria-pressed={direction === "DEDUCT"} onClick={() => setDirection("DEDUCT")} className={`rounded-lg px-3 py-2 text-sm font-semibold ${direction === "DEDUCT" ? "bg-danger-soft text-danger" : "border border-line text-muted"}`}>หักคะแนน</button></div>
-              <label className="mt-3 block text-sm font-semibold text-ink" htmlFor="behavior-points">จำนวนคะแนน</label><input id="behavior-points" type="number" min={1} max={100} step={1} value={points} onChange={(event) => setPoints(event.target.value)} className="mt-1 w-28 rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
-              <label className="mt-3 block text-sm font-semibold text-ink" htmlFor="behavior-title">หัวข้อ/เหตุผล (จำเป็น)</label><input id="behavior-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} placeholder="เช่น ช่วยงานโรงเรียน" className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
-              <label className="mt-3 block text-sm font-semibold text-ink" htmlFor="behavior-note">รายละเอียดเพิ่มเติม</label><textarea id="behavior-note" value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} rows={2} className="mt-1 w-full rounded-lg border border-line bg-surface p-3 text-sm" />
-              <div className="mt-4 flex flex-wrap gap-2"><button type="button" disabled={pending || title.trim().length < 3 || !Number.isInteger(Number(points)) || Number(points) < 1 || Number(points) > 100} onClick={() => setSaveReview(true)} className="min-h-10 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{pending ? "กำลังบันทึก…" : editingId ? "บันทึกการแก้ไข" : `บันทึก${direction === "ADD" ? "เพิ่ม" : "หัก"}คะแนน`}</button>{editingId && <button type="button" disabled={pending} onClick={() => { setEditingId(null); setTitle(""); setNote(""); }} className="min-h-10 rounded-lg border border-line px-4 py-2 text-sm font-semibold text-ink">ยกเลิกการแก้ไข</button>}</div>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!pending && validPoints && title.trim().length >= 3) {
+            setFeedback(null);
+            setSaveReview(true);
+          }
+        }}
+        className="space-y-4 px-4 py-5 sm:px-5"
+      >
+        <h3 className="font-bold text-ink-strong">{editingId ? "แก้ไขรายการคะแนน" : "บันทึกคะแนน"}</h3>
+        {feedback && <p role={feedback.ok ? "status" : "alert"} className={cn("rounded-lg px-3 py-2.5 text-sm", feedback.ok ? "bg-success-soft text-success" : "bg-danger-soft text-danger")}>{feedback.message}</p>}
+        <fieldset disabled={pending} className="space-y-4 disabled:opacity-70">
+          <div className="flex flex-wrap items-end gap-3">
+            <div role="group" aria-label="ประเภทการเปลี่ยนคะแนน" className="inline-flex flex-wrap gap-1 rounded-lg bg-surface p-1">
+              {([{ key: "DEDUCT", label: "หักคะแนน", Icon: Minus }, { key: "ADD", label: "เพิ่มคะแนน", Icon: Plus }] as const).map(({ key, label, Icon }) => (
+                <Button key={key} type="button" variant="ghost" aria-pressed={direction === key} onClick={() => setDirection(key)} className={cn("min-h-10", direction === key && "bg-card text-brand-ink shadow-xs")}>
+                  <Icon aria-hidden="true" />{label}
+                </Button>
+              ))}
             </div>
-            <div className="mt-6 border-t border-line pt-5"><h3 className="text-sm font-bold text-ink">ประวัติคะแนน</h3>
-              {data.history.length === 0 ? <p className="mt-3 text-sm text-muted">ยังไม่มีรายการ เริ่มที่ 100 คะแนน</p> : <div className="mt-3 divide-y divide-line">{data.history.map((entry) => <div key={entry.id} className="flex items-start justify-between gap-3 py-3"><div className="min-w-0"><p className="text-sm font-semibold text-ink">{entry.title}</p>{entry.note && <p className="text-xs text-muted">{entry.note}</p>}<p className="mt-1 text-xs text-muted">{entry.actorName} · {new Date(entry.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "medium", timeStyle: "short" })}</p>{entry.canManage && <div className="mt-2 flex flex-wrap gap-1"><button type="button" disabled={pending} onClick={() => edit(entry)} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-line px-2.5 text-xs font-semibold text-brand-ink"><Pencil className="size-3.5" /> แก้ไข</button><button type="button" disabled={pending} onClick={() => setDeleting(entry)} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-line px-2.5 text-xs font-semibold text-danger"><Trash2 className="size-3.5" /> ลบ</button></div>}</div><span className={`shrink-0 font-bold tabular ${entry.delta < 0 ? "text-danger" : entry.delta > 0 ? "text-success" : "text-muted"}`}>{entry.delta > 0 ? "+" : ""}{entry.delta}</span></div>)}</div>}
-            </div>
-          </>}
-        </section></DialogContent></Dialog>
-      </div>
-      <ConfirmDialog open={saveReview} title="ยืนยันบันทึกคะแนน" message={`${data.selectedStudent?.name ?? ""} · ${direction === "ADD" ? "เพิ่ม" : "หัก"} ${points} คะแนน · ${title} · คะแนนรวม ${currentScore} → ${projectedScore}`} confirmLabel="ยืนยันบันทึก" pending={pending} onConfirm={save} onClose={() => setSaveReview(false)} />
-      <ConfirmDialog open={deleting !== null} title="ลบรายการคะแนนที่บันทึกผิด" message={deleting ? `ยืนยันลบ “${deleting.title}” (${deleting.delta > 0 ? "+" : ""}${deleting.delta} คะแนน) ของ ${data.selectedStudent?.name ?? "นักเรียน"} ใช่ไหม? คะแนนรวมจะคำนวณใหม่ และระบบจะบันทึกประวัติการลบ` : ""} confirmLabel="ลบรายการ" destructive pending={pending} onConfirm={confirmDelete} onClose={() => setDeleting(null)} />
-    </>}
-  </div>;
+            <label className="grid gap-1 text-sm font-medium text-ink-strong">
+              จำนวนคะแนน
+              <input type="number" min={1} max={100} step={1} required value={points} onChange={(event) => setPoints(event.target.value)} className={cn(field, "w-28")} />
+            </label>
+          </div>
+          <label className="grid gap-1 text-sm font-medium text-ink-strong">
+            เหตุผล
+            <input ref={titleInput} required minLength={3} maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} className={field} />
+          </label>
+          <label className="grid gap-1 text-sm font-medium text-ink-strong">
+            <span>รายละเอียดเพิ่มเติม <span className="font-normal text-muted">(ไม่บังคับ)</span></span>
+            <textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} rows={2} className={field} />
+          </label>
+        </fieldset>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+          <p className="text-sm text-muted">คะแนนหลังบันทึก <strong className="font-bold tabular-nums text-ink-strong">{validPoints ? projectedScore : "—"}</strong></p>
+          <div className="flex flex-wrap gap-2">
+            {editingId && <Button type="button" variant="outline" disabled={pending} onClick={resetDraft} className="min-h-11">ยกเลิกการแก้ไข</Button>}
+            <Button type="submit" disabled={pending || !validPoints || title.trim().length < 3} className="min-h-11">
+              {pending ? "กำลังบันทึก…" : editingId ? "ตรวจการแก้ไข" : `ตรวจรายการ${direction === "ADD" ? "เพิ่ม" : "หัก"}คะแนน`}
+              <ArrowRight aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+      </form>
+
+      <section aria-labelledby="behavior-history" className="border-t border-line px-4 py-5 sm:px-5">
+        <h3 id="behavior-history" className="font-bold text-ink-strong">ประวัติคะแนน</h3>
+        {history.length ? (
+          <ul className="mt-2 divide-y divide-line">
+            {history.map((entry) => (
+              <li key={entry.id} className="flex items-start justify-between gap-3 py-3">
+                <div className="min-w-0">
+                  <p className="wrap-break-word text-sm font-semibold text-ink-strong">{entry.title}</p>
+                  {entry.note && <p className="mt-1 wrap-break-word text-sm text-muted">{entry.note}</p>}
+                  <p className="mt-1 wrap-break-word text-xs text-muted">{entry.actorName} · {new Date(entry.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "medium", timeStyle: "short" })}</p>
+                  {entry.canManage && <div className="mt-2 flex flex-wrap gap-2">
+                    <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => edit(entry)} aria-label={`แก้ไข ${entry.title}`} className="min-h-10 text-brand-ink"><Pencil aria-hidden="true" />แก้ไข</Button>
+                    <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => setDeleting(entry)} aria-label={`ลบ ${entry.title}`} className="min-h-10 text-danger"><Trash2 aria-hidden="true" />ลบ</Button>
+                  </div>}
+                </div>
+                <span className={cn("shrink-0 font-bold tabular-nums", pointTone(entry.delta))}>{signed(entry.delta)}<span className="sr-only"> คะแนน</span></span>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="mt-2 text-sm text-muted">ยังไม่มีรายการ คะแนนเริ่มต้น 100 คะแนน</p>}
+      </section>
+
+      <ConfirmDialog open={saveReview} title="ยืนยันบันทึกคะแนน" message={`${student.name} · ${direction === "ADD" ? "เพิ่ม" : "หัก"} ${points} คะแนน · ${title} · คะแนนรวม ${student.score} → ${projectedScore}`} confirmLabel="ยืนยันบันทึก" pending={pending} onConfirm={save} onClose={() => setSaveReview(false)} />
+      <ConfirmDialog open={deleting !== null} title="ลบรายการคะแนนที่บันทึกผิด" message={deleting ? `ลบ “${deleting.title}” (${signed(deleting.delta)} คะแนน) ของ ${student.name} และคำนวณคะแนนรวมใหม่` : ""} confirmLabel="ลบรายการ" destructive pending={pending} onConfirm={confirmDelete} onClose={() => setDeleting(null)} />
+    </section>
+  );
 }

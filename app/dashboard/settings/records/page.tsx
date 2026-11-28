@@ -27,7 +27,7 @@ export default async function AdminRecordsPage({ searchParams }: {
   const trashUrl = parent ? `${unfilteredTrashUrl}&parent=${encodeURIComponent(`${parent.kind}:${parent.id}`)}` : unfilteredTrashUrl;
 
   return <>
-    <PageHeader title="บัญชีแอดมินและถังขยะ" subtitle="จัดการบัญชีผู้ดูแล และตรวจรายการที่ถูกลบไว้"
+    <PageHeader pose="access" title="บัญชีแอดมินและถังขยะ" subtitle="จัดการบัญชีผู้ดูแล และตรวจรายการที่ถูกลบไว้"
       actions={<Button asChild variant="outline"><Link href="/dashboard/settings?section=administration">กลับการตั้งค่า</Link></Button>} />
     <nav aria-label="บัญชีและถังขยะ" className="mb-4 flex flex-wrap gap-2">
       <Button asChild variant={trash ? "outline" : "default"}><Link href={path} aria-current={trash ? undefined : "page"}>บัญชีแอดมิน</Link></Button>

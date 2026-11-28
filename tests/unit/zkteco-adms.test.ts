@@ -175,6 +175,17 @@ describe("ZKTeco ADMS receiver", () => {
     ], new Map());
   });
 
+  it("forwards a face checkout as an outbound scan, separately from check-in", async () => {
+    configure();
+    const body = ["001\t2026-11-27 08:00:00\t0\t15", "001\t2026-11-27 08:00:00\t1\t15"].join("\n");
+    const response = await POST(request("SN=MB10TEST&table=ATTLOG", body), context);
+    expect(await response.text()).toBe("OK: 2");
+    const [arrival, departure] = batch.mock.calls[0][1];
+    expect(arrival.direction).toBeUndefined();
+    expect(departure.direction).toBe("out");
+    expect(departure.eventId).not.toBe(arrival.eventId);
+  });
+
   it("records an ignored upload separately from a successful sync without retaining the PIN", async () => {
     configure();
     const body = "001\t2026-11-27 08:01:59\t0\t0";

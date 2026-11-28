@@ -19,7 +19,7 @@ export default async function ClassroomsPage(): Promise<React.ReactNode> {
 
   return (
     <div className="xl:flex xl:h-full xl:min-h-0 xl:flex-col">
-      <PageHeader
+      <PageHeader pose="learning"
         title="ห้องเรียน"
         subtitle={`ห้องเรียนและครูที่ปรึกษา ${classrooms.length.toLocaleString("th-TH")} ห้อง · ปีการศึกษาปัจจุบัน`}
       />

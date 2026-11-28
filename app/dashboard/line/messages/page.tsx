@@ -1,21 +1,32 @@
-import { requireRoles } from "@/lib/dal";
+import { ArrowDown, ArrowRight, CircleAlert, CircleCheck, Filter, Gauge } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import MascotEmptyState from "@/components/ui/mascot-empty-state";
 import PageHeader from "@/features/dashboard/components/page-header";
-import StatStrip from "@/components/ui/stat-strip";
 import RetryMessageButton from "@/features/line/components/retry-message-button";
 import { getLineApiSummary } from "@/features/line/services/message-api-summary";
-import { MessagesSquare, CircleCheck, CircleAlert } from "lucide-react";
-import Link from "next/link";
-import MascotEmptyState from "@/components/ui/mascot-empty-state";
+import { requireRoles } from "@/lib/dal";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "ประวัติและโควตา LINE · chumkosoft" };
-export default async function LineMessagesPage({ searchParams }: { searchParams: Promise<{ kind?: string; status?: string; date?: string }> }) {
+
+const messagesPath = "/dashboard/line/messages";
+const dateKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" });
+const thaiDate = new Intl.DateTimeFormat("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "medium" });
+const thaiDateTime = new Intl.DateTimeFormat("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "medium", timeStyle: "short" });
+const numberFormat = new Intl.NumberFormat("th-TH");
+const filterField = "h-11 w-full min-w-0 rounded-lg border border-line bg-card px-3 text-sm font-normal text-ink";
+
+type MessageFilters = { kind?: string; status?: string; date?: string };
+
+export default async function LineMessagesPage({ searchParams }: { searchParams: Promise<MessageFilters> }) {
   await requireRoles(["ADMIN"]);
   const filters = await searchParams;
   const summary = await getLineApiSummary(filters);
   const daily = new Map<string, { attendance: number; teacher: number; accepted: number; failed: number }>();
-  for (const row of summary.byDay ?? []) {
-    const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(row.createdAt);
+
+  for (const row of summary.byDay) {
+    const day = dateKey.format(row.createdAt);
     const bucket = daily.get(day) ?? { attendance: 0, teacher: 0, accepted: 0, failed: 0 };
     if (row.kind === "ATTENDANCE") bucket.attendance++;
     if (row.kind === "TEACHER_DIGEST") bucket.teacher++;
@@ -23,57 +34,163 @@ export default async function LineMessagesPage({ searchParams }: { searchParams:
     else bucket.failed++;
     daily.set(day, bucket);
   }
-  return <><PageHeader title="ประวัติและการใช้งาน LINE API" subtitle="ดูโควตา ประวัติการส่ง และรายการที่ต้องลองส่งใหม่" />
-    <StatStrip items={[
-      { label: "ใช้แล้วตาม LINE API", value: summary.used ?? "—", hint: summary.quota ? `/ ${summary.quota}` : "ข้อความ", icon: MessagesSquare, tone: "brand" },
-      { label: "LINE รับคำขอเดือนนี้", value: summary.accepted ?? "—", hint: "รายการข้อความ", icon: CircleCheck, tone: "success" },
-      { label: "ส่งไม่สำเร็จค้างอยู่", value: summary.failed ?? "—", hint: "รายการ", icon: CircleAlert, tone: "warning" },
-    ]} />
-    {summary.error && <p role="alert" className="my-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{summary.error}</p>}
-    <p className="my-4 rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-sm leading-relaxed text-ink">“LINE รับคำขอแล้ว” หมายถึง API ยอมรับคำขอและมี Request ID สำหรับอ้างอิง ยังยืนยันไม่ได้ว่าข้อความถึงห้องแชทหรือผู้รับอ่านแล้ว</p>
-    <div className="grid gap-4 xl:grid-cols-2">
-      <section className="overflow-hidden rounded-[22px] school-card xl:col-span-2">
-        <h2 className="border-b border-blue-100 px-5 py-4 text-base font-bold text-ink-strong">สรุปรายวันย้อนหลัง 30 วัน</h2>
-        {daily.size ? <div className="max-h-[34dvh] overflow-auto"><table className="w-full min-w-[620px] text-left text-sm"><thead className="sticky top-0 z-10 bg-[#edf5ff] text-brand-ink"><tr>{["วันที่", "เข้าเรียน", "สรุปครู", "LINE รับคำขอ", "ล้มเหลว"].map(x => <th key={x} scope="col" className="px-4 py-3 font-semibold">{x}</th>)}</tr></thead><tbody className="divide-y divide-blue-50">{[...daily.entries()].map(([day, x]) => <tr key={day} className="hover:bg-blue-50/50"><td className="px-4 py-3 font-semibold">{day}</td><td className="px-4 py-3 tabular-nums">{x.attendance}</td><td className="px-4 py-3 tabular-nums">{x.teacher}</td><td className="px-4 py-3 tabular-nums text-success">{x.accepted}</td><td className="px-4 py-3 tabular-nums text-danger">{x.failed}</td></tr>)}</tbody></table></div> : <MascotEmptyState compact pose="notify" className="m-4" title="ยังไม่มีประวัติส่งข้อความในช่วงนี้" />}
-      </section>
-      <section className="overflow-hidden rounded-[22px] school-card"><h2 className="border-b border-blue-100 px-5 py-4 text-base font-bold text-ink-strong">ประกาศ LINE ล่าสุด</h2><div className="divide-y divide-blue-50 lg:max-h-[42dvh] lg:overflow-y-auto">{summary.announcements?.map(row => { const accepted = row.batches.filter(b => b.status === "ACCEPTED").reduce((n,b) => n + b.recipientCount, 0); const failed = row.batches.filter(b => b.status === "FAILED").reduce((n,b) => n + b.recipientCount, 0); return <article key={row.id} className="flex flex-wrap items-start justify-between gap-3 p-4"><div className="min-w-0"><p className="font-semibold text-ink-strong">{row.title}</p><p className="mt-1 text-sm text-muted">{row.createdAt.toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}</p><p className="mt-2 text-sm"><span className="font-semibold text-success">LINE รับ {accepted}/{row.recipientCount}</span><span className="mx-2 text-line">·</span><span className={failed ? "font-semibold text-danger" : "text-muted"}>ล้มเหลว {failed}</span></p>{row.batches.find(b => b.errorCode)?.errorCode && <p className="mt-1 text-sm text-danger">รหัสผิดพลาด: {row.batches.find(b => b.errorCode)?.errorCode}</p>}</div>{failed > 0 && <Link className="inline-flex min-h-10 items-center rounded-xl border border-blue-200 px-3 py-2 text-sm font-semibold text-brand-ink hover:bg-blue-50" href="/dashboard/line-announcements">เปิดรายการเพื่อส่งต่อ</Link>}</article>; })}{!summary.announcements?.length && <MascotEmptyState compact pose="notify" className="m-4" title="ยังไม่มีประวัติประกาศ" />}</div></section>
-      <section className="overflow-hidden rounded-[22px] school-card">
-        <h2 className="border-b border-blue-100 px-5 py-4 text-base font-bold text-ink-strong">ประวัติการส่งรายบัญชี</h2>
-        <form className="flex flex-wrap items-end gap-2 border-b border-blue-100 p-4" action="/dashboard/line/messages">
-          <label className="grid gap-1 text-xs font-semibold">วันที่
-            <input name="date" type="date" defaultValue={filters.date} className="min-h-10 rounded-lg border border-line px-2" />
-          </label>
-          <label className="grid gap-1 text-xs font-semibold">ประเภท
-            <select name="kind" defaultValue={filters.kind ?? ""} className="min-h-10 rounded-lg border border-line px-2">
-              <option value="">ทุกประเภท</option><option value="ATTENDANCE">แจ้งเข้าโรงเรียน</option><option value="TEACHER_DIGEST">สรุปครู</option>
-            </select>
-          </label>
-          <label className="grid gap-1 text-xs font-semibold">สถานะ
-            <select name="status" defaultValue={filters.status ?? ""} className="min-h-10 rounded-lg border border-line px-2">
-              <option value="">ทุกสถานะ</option><option value="ACCEPTED">LINE รับคำขอแล้ว</option><option value="FAILED">ส่งไม่สำเร็จ</option>
-            </select>
-          </label>
-          <button className="min-h-10 rounded-lg bg-brand px-3 text-sm font-semibold text-white">กรอง</button>
-        </form>
-        <p className="px-4 pt-3 text-xs text-muted">แสดงสูงสุด 100 รายการล่าสุดตามตัวกรอง</p>
-        <div className="divide-y divide-blue-50 lg:max-h-[48dvh] lg:overflow-y-auto">
-          {summary.recent.map((row) => (
-            <article key={row.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-ink-strong">{row.title}</p>
-                <p className="mt-1 text-sm text-muted">{row.recipientLabel ?? "บัญชี LINE"} · เริ่มส่ง {row.createdAt.toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}</p>
-                <p className={`mt-1 text-sm font-semibold ${row.status === "ACCEPTED" ? "text-success" : "text-danger"}`}>
-                  {row.status === "ACCEPTED" ? "LINE รับคำขอแล้ว" : `ส่งไม่สำเร็จ · ${row.errorCode ?? "ไม่ทราบสาเหตุ"}`} · ลองส่ง {row.attempts} ครั้ง
-                </p>
-                {row.attempts > 1 && <p className="mt-1 text-xs text-muted">ลองล่าสุด {row.updatedAt.toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}</p>}
-                {(row.acceptedRequestId || row.requestId) && <p className="mt-1 break-all text-xs text-muted">Request ID: {row.acceptedRequestId ?? row.requestId}</p>}
-              </div>
-              {row.status === "FAILED" && <RetryMessageButton id={row.id} />}
-            </article>
-          ))}
-          {!summary.recent.length && <MascotEmptyState compact pose="notify" className="m-4" title="ไม่มีรายการที่ตรงกับตัวกรอง" />}
+
+  const metrics = [
+    { label: "ใช้โควตา LINE แล้ว", value: summary.used, detail: summary.quota === null ? "ข้อความ" : `จาก ${numberFormat.format(summary.quota)} ข้อความ`, icon: Gauge, tone: "bg-brand-soft text-brand-ink" },
+    { label: "LINE รับคำขอเดือนนี้", value: summary.accepted, detail: "รายการ", icon: CircleCheck, tone: "bg-success-soft text-success" },
+    { label: "ส่งไม่สำเร็จค้างอยู่", value: summary.failed, detail: "รายการ", icon: CircleAlert, tone: summary.failed > 0 ? "bg-danger-soft text-danger" : "bg-surface text-muted" },
+  ];
+
+  return (
+    <>
+      <PageHeader
+        compact
+        pose="working"
+        title="ประวัติการแจ้งเตือน LINE"
+        subtitle="ติดตามโควตา ตรวจผลการส่ง และจัดการรายการที่ส่งไม่สำเร็จ"
+        actions={<Button asChild variant="outline"><Link href="/dashboard/line">กลับไปหน้าการแจ้งเตือน</Link></Button>}
+      />
+
+      <dl aria-label="สรุปการส่ง LINE" className="mb-4 grid divide-y divide-line overflow-hidden rounded-xl border border-line bg-card sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        {metrics.map(({ label, value, detail, icon: Icon, tone }) => (
+          <div key={label} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-2.5 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start sm:px-5 sm:py-4">
+            <span className={`grid size-8 place-items-center rounded-lg sm:row-span-2 sm:size-9 ${tone}`}><Icon className="size-[18px]" aria-hidden="true" /></span>
+            <dt className="text-sm font-medium text-muted">{label}</dt>
+            <dd className="flex min-w-0 max-w-32 flex-wrap items-baseline justify-end gap-x-2 text-right sm:max-w-none sm:justify-start sm:text-left">
+              <span className="text-xl font-bold tracking-tight text-ink-strong tabular-nums sm:text-2xl">{value === null ? "—" : numberFormat.format(value)}</span>
+              {value !== null && <span className="text-xs text-muted">{detail}</span>}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      {summary.error && <p role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-line bg-warning-soft px-4 py-3 text-sm text-warning"><CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />{summary.error}</p>}
+
+      <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
+        <section id="delivery-history" aria-labelledby="delivery-history-heading" className="min-w-0 scroll-mt-24 overflow-hidden rounded-xl border border-line bg-card">
+          <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-5 sm:px-5">
+            <div>
+              <h2 id="delivery-history-heading" className="text-lg font-bold text-ink-strong">ประวัติการส่งรายบัญชี</h2>
+              <p className="mt-1 text-xs leading-relaxed text-muted">แสดงสูงสุด 100 รายการตามตัวกรอง · ใช้ Request ID อ้างอิงการรับคำขอจาก LINE API</p>
+            </div>
+            {summary.failed > 0 && filters.status !== "FAILED" && (
+              <Button asChild variant="outline" className="h-11">
+                <Link href={`${messagesPath}?status=FAILED#delivery-history`}><CircleAlert aria-hidden="true" />ดูที่ส่งไม่สำเร็จ</Link>
+              </Button>
+            )}
+          </div>
+
+          <form aria-label="กรองประวัติการส่ง" className="grid items-end gap-3 border-y border-line bg-surface/60 px-4 py-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.3fr)_auto] sm:px-5" action={`${messagesPath}#delivery-history`}>
+            <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-ink-strong">วันที่
+              <input name="date" type="date" defaultValue={filters.date} className={filterField} />
+            </label>
+            <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-ink-strong">ประเภทข้อความ
+              <select name="kind" defaultValue={filters.kind ?? ""} className={filterField}>
+                <option value="">ทุกประเภท</option><option value="ATTENDANCE">แจ้งเข้าโรงเรียน</option><option value="TEACHER_DIGEST">สรุปครู</option>
+              </select>
+            </label>
+            <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-ink-strong">สถานะ
+              <select name="status" defaultValue={filters.status ?? ""} className={filterField}>
+                <option value="">ทุกสถานะ</option><option value="ACCEPTED">LINE รับคำขอแล้ว</option><option value="FAILED">ส่งไม่สำเร็จ</option>
+              </select>
+            </label>
+            <Button className="h-11"><Filter aria-hidden="true" />ใช้ตัวกรอง</Button>
+          </form>
+
+          {summary.recent.length ? (
+            <ol className="divide-y divide-line">
+              {summary.recent.map((row) => {
+                const accepted = row.status === "ACCEPTED";
+                const requestId = row.acceptedRequestId ?? row.requestId;
+                return (
+                  <li key={row.id} className="grid gap-3 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start sm:px-5">
+                    <div className="min-w-0">
+                      <h3 className="break-words font-semibold text-ink-strong">{row.title}</h3>
+                      <p className="mt-1 break-words text-sm text-muted">
+                        {row.recipientLabel ?? "บัญชี LINE"} · <time dateTime={row.createdAt.toISOString()}>{thaiDateTime.format(row.createdAt)}</time>
+                      </p>
+                      <p className="mt-2 text-xs leading-relaxed text-muted">
+                        ลองส่ง {row.attempts} ครั้ง
+                        {row.attempts > 1 && <> · ล่าสุด <time dateTime={row.updatedAt.toISOString()}>{thaiDateTime.format(row.updatedAt)}</time></>}
+                        {!accepted && ` · ${row.errorCode ?? "ไม่ทราบสาเหตุ"}`}
+                      </p>
+                      {requestId && <p className="mt-1 break-all text-xs text-muted">Request ID {requestId}</p>}
+                    </div>
+                    <div className="flex min-w-0 flex-wrap items-center gap-2 sm:flex-col sm:items-end">
+                      <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold ${accepted ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}>
+                        {accepted ? <CircleCheck className="size-3.5" aria-hidden="true" /> : <CircleAlert className="size-3.5" aria-hidden="true" />}
+                        {accepted ? "LINE รับคำขอแล้ว" : "ส่งไม่สำเร็จ"}
+                      </span>
+                      {!accepted && <RetryMessageButton id={row.id} />}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          ) : (
+            <MascotEmptyState compact className="m-4" title="ไม่มีรายการที่ตรงกับตัวกรอง"
+              action={(filters.date || filters.kind || filters.status) && <Button asChild variant="outline"><Link href={`${messagesPath}#delivery-history`}>ล้างตัวกรอง</Link></Button>} />
+          )}
+        </section>
+
+        <div className="grid min-w-0 gap-5 sm:grid-cols-2 xl:grid-cols-1">
+          <section aria-labelledby="daily-delivery-heading" className="min-w-0 rounded-xl border border-line bg-card">
+            <details className="group" open>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-4 py-4 marker:hidden focus-visible:outline-offset-[-3px] [&::-webkit-details-marker]:hidden">
+                <h2 id="daily-delivery-heading" className="font-bold text-ink-strong">สรุปย้อนหลัง 30 วัน</h2>
+                <ArrowDown aria-hidden="true" className="size-4 shrink-0 text-muted motion-safe:transition-transform group-open:rotate-180" />
+              </summary>
+              {daily.size ? (
+                <div tabIndex={0} aria-label="รายการสรุปการส่งย้อนหลัง" role="region" className="max-h-80 overflow-auto border-t border-line">
+                  <table className="w-full text-left text-xs">
+                    <thead className="sticky top-0 bg-surface text-muted">
+                      <tr>
+                        {["วันที่", "เข้าเรียน", "สรุปครู", "รับแล้ว", "ล้มเหลว"].map((label) => <th key={label} scope="col" className="whitespace-nowrap px-2 py-2.5 font-semibold first:pl-4 last:pr-4">{label}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-line">
+                      {[...daily.entries()].map(([day, count]) => (
+                        <tr key={day}>
+                          <th scope="row" className="whitespace-nowrap px-2 py-3 pl-4 font-medium text-ink"><time dateTime={day}>{thaiDate.format(new Date(`${day}T12:00:00+07:00`))}</time></th>
+                          <td className="px-2 tabular-nums">{count.attendance}</td>
+                          <td className="px-2 tabular-nums">{count.teacher}</td>
+                          <td className="px-2 text-success tabular-nums">{count.accepted}</td>
+                          <td className="px-2 pr-4 text-danger tabular-nums">{count.failed}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : <p className="border-t border-line px-4 py-5 text-sm text-muted">ยังไม่มีประวัติส่งข้อความในช่วงนี้</p>}
+            </details>
+          </section>
+
+          <section aria-labelledby="recent-announcements-heading" className="min-w-0 rounded-xl border border-line bg-card">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 border-b border-line px-4 py-2">
+              <h2 id="recent-announcements-heading" className="py-2 font-bold text-ink-strong">ประกาศล่าสุด</h2>
+              <Link href="/dashboard/line-announcements" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-brand-ink hover:underline">เปิดหน้าประกาศ <ArrowRight className="size-4" aria-hidden="true" /></Link>
+            </div>
+            {summary.announcements.length ? (
+              <ul className="max-h-96 divide-y divide-line overflow-auto">
+                {summary.announcements.map((row) => {
+                  const accepted = row.batches.filter((item) => item.status === "ACCEPTED").reduce((total, item) => total + item.recipientCount, 0);
+                  const failed = row.batches.filter((item) => item.status === "FAILED").reduce((total, item) => total + item.recipientCount, 0);
+                  const errorCode = row.batches.find((item) => item.errorCode)?.errorCode;
+                  return (
+                    <li key={row.id} className="px-4 py-4">
+                      <h3 className="break-words text-sm font-semibold text-ink-strong">{row.title}</h3>
+                      <time className="mt-1 block text-xs text-muted" dateTime={row.createdAt.toISOString()}>{thaiDateTime.format(row.createdAt)}</time>
+                      <p className="mt-2 text-xs text-muted"><span className="font-semibold text-success">LINE รับ {accepted}/{row.recipientCount}</span> · <span className={failed ? "font-semibold text-danger" : undefined}>ล้มเหลว {failed}</span></p>
+                      {errorCode && <p className="mt-1 break-words text-xs text-danger">รหัสผิดพลาด {errorCode}</p>}
+                      {failed > 0 && <Link href="/dashboard/line-announcements" className="inline-flex min-h-10 items-center text-xs font-semibold text-brand-ink hover:underline">เปิดรายการเพื่อส่งต่อ</Link>}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : <p className="px-4 py-5 text-sm text-muted">ยังไม่มีประวัติประกาศ</p>}
+          </section>
         </div>
-      </section>
-    </div>
-  </>;
+      </div>
+    </>
+  );
 }

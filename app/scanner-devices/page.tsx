@@ -33,10 +33,13 @@ export default async function ScannerDevicesPage() {
   return (
     <div className="min-h-dvh bg-sky-50 text-slate-900"><PortalHeader user={user} /><ScannerDevicesAutoRefresh /><main className="px-4 py-6 sm:px-8">
       <div className="mx-auto max-w-6xl">
-        <PageHeader title="จัดการอุปกรณ์สแกน" subtitle="ดูสถานะและตั้งค่าเครื่องสแกนของโรงเรียน" actions={user.role === "ADMIN" ? <>
-          <Button asChild variant="outline"><Link href="/dashboard/kiosk">จัดการบัญชีจุดสแกน</Link></Button>
-          <Button asChild><Link href="/dashboard/kiosk#zkteco">จัดการเครื่อง ZKTeco</Link></Button>
-        </> : undefined} />
+        <PageHeader pose="scan" title="จัดการอุปกรณ์สแกน" subtitle="ดูสถานะและตั้งค่าเครื่องสแกนของโรงเรียน" actions={<>
+          <Button asChild><Link href="/scan">เปิดจอ Kiosk</Link></Button>
+          {user.role === "ADMIN" && <>
+            <Button asChild variant="outline"><Link href="/dashboard/kiosk">จัดการบัญชีจุดสแกน</Link></Button>
+            <Button asChild variant="outline"><Link href="/dashboard/kiosk#zkteco">จัดการเครื่อง ZKTeco</Link></Button>
+          </>}
+        </>} />
         <StatStrip items={[
           { label: "เครื่องทั้งหมด", value: devices.length, hint: "เครื่อง", tone: "brand" },
           { label: "ออนไลน์", value: devices.filter((device) => device.lastSeenAt && now - device.lastSeenAt.getTime() < 90_000).length, hint: "เครื่อง", tone: "success" },

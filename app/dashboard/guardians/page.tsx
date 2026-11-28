@@ -37,7 +37,7 @@ export default async function GuardiansPage({ searchParams }: GuardiansPageProps
 
   return (
     <div className="xl:flex xl:h-full xl:min-h-0 xl:flex-col">
-      <PageHeader
+      <PageHeader pose="family"
         title="ผู้ปกครอง"
         actions={<>{user.role === "ADMIN" && <Link href="/dashboard/guardians?view=family" className="inline-flex min-h-10 items-center rounded-xl bg-brand px-3 text-sm font-semibold text-white">ดูตามบัญชีครอบครัว</Link>}<Link href={`/dashboard/line/report?${new URLSearchParams({ classroom: user.role === "ADMIN" || editableClassroomIds?.includes(classroomId) ? classroomId || "all" : "all" })}`} className="inline-flex min-h-10 items-center rounded-xl border border-line bg-white px-3 text-sm font-semibold text-brand-ink">ดูรายงานการผูก LINE</Link></>}
         subtitle={user.role === "ADMIN" ? "จัดการข้อมูลบิดา มารดา และผู้ปกครองของนักเรียน — สำหรับการผูก LINE และแจ้งเตือน ดูที่เมนู LINE / แจ้งเตือน" : "ดูข้อมูลผู้ปกครอง และแก้ไขได้เฉพาะนักเรียนในห้องที่คุณเป็นครูที่ปรึกษา"}
@@ -92,7 +92,7 @@ async function GuardianFamilyView({ query }: { query: string }): Promise<React.R
   );
 
   return <>
-    <PageHeader title="ผู้ปกครองตามบัญชีครอบครัว" subtitle="รวมรายชื่อนักเรียนในภาคเรียนปัจจุบันตามบัญชีเว็บที่เชื่อมไว้ หรือบัญชี LINE เมื่อยังไม่มีบัญชีเว็บ"
+    <PageHeader pose="family" title="ผู้ปกครองตามบัญชีครอบครัว" subtitle="รวมรายชื่อนักเรียนในภาคเรียนปัจจุบันตามบัญชีเว็บที่เชื่อมไว้ หรือบัญชี LINE เมื่อยังไม่มีบัญชีเว็บ"
       actions={<Link href="/dashboard/guardians" className="inline-flex min-h-10 items-center rounded-xl border border-line bg-white px-3 text-sm font-semibold text-brand-ink">กลับไปดูตามนักเรียน</Link>} />
     <form action="/dashboard/guardians" className="mb-4 flex flex-wrap gap-2">
       <input type="hidden" name="view" value="family" />

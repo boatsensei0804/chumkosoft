@@ -28,7 +28,7 @@ export default async function TimetablePage({ searchParams }: TimetablePageProps
     : { classrooms: [], teachers: [], slots: [], offerings: [], requiredPeriods: 0, placedPeriods: 0 };
   return (
     <>
-      <PageHeader
+      <PageHeader pose="schedule"
         title={user.role === "ADMIN" ? "จัดตารางสอน" : "ตารางสอน"}
         subtitle={user.role === "ADMIN" ? "ดูและจัดคาบตามห้องเรียนหรือครูผู้สอน" : "ดูตารางสอนรายสัปดาห์และตารางของแต่ละห้อง"}
       />

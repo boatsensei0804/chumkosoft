@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { getLineDeliveryState } from "@/features/line/services/line-delivery-settings";
 import LineDeliveryControl from "@/features/line/components/line-delivery-control";
 import { getAnnouncementAudienceOptions } from "@/features/line/services/announcement-audience-service";
@@ -31,7 +33,8 @@ export default async function LineAnnouncementsPage(): Promise<React.ReactNode> 
     };
   });
   return <>
-    <PageHeader title="ส่งประกาศผ่าน LINE" subtitle="แจ้งข่าวสารหรือเหตุฉุกเฉินถึงบัญชี LINE ที่ผูกกับนักเรียนและครูในระบบ" />
+    <PageHeader compact pose="notify" title="ประกาศผ่าน LINE" subtitle="ส่งข่าวสารหรือเหตุฉุกเฉินถึงบัญชีที่เชื่อมกับโรงเรียน"
+      actions={<Button asChild variant="outline" className="h-11"><Link href="/dashboard/line/messages">ดูประวัติการส่ง</Link></Button>} />
     <LineDeliveryControl key={`${delivery.enabled}-${delivery.updatedAt}-${delivery.available}`} initial={delivery} canManage={true} />
     <LineAnnouncementComposer sendingEnabled={delivery.enabled && delivery.available} audienceOptions={audienceOptions} recipientCount={recipientCount} configured={isLineConfigured()} history={history} />
   </>;

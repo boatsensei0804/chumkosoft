@@ -15,7 +15,7 @@ export default async function LeaveRequestsPage({ searchParams }: { searchParams
   const report = await getLeaveDailyReport(user, date, params.view === "all");
   const initialFilter = params.status === "pending" || (!params.view && params.status !== "all") ? "PENDING" : "ALL";
   return <>
-    <PageHeader title="คำขอลา / ขอมาสายจากผู้ปกครอง" subtitle="ภาพรวมรายวัน · รายละเอียด LINE ผู้ส่ง · ตรวจและพิจารณาคำขอ" />
+    <PageHeader pose="family" title="คำขอลา / ขอมาสายจากผู้ปกครอง" subtitle="ภาพรวมรายวัน · รายละเอียด LINE ผู้ส่ง · ตรวจและพิจารณาคำขอ" />
     <LeaveRequestsBrowser key={`${date}-${report.allDates}-${initialFilter}`} report={report} initialFilter={initialFilter} isAdmin={user.role === "ADMIN"} />
   </>;
 }

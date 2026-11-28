@@ -50,16 +50,16 @@ export default function Home(): React.ReactNode {
 
       <main id="main-content">
         <section aria-labelledby="home-title" className={`${frame} pt-5 pb-8 sm:pt-8 sm:pb-12`}>
-          <div className="relative isolate overflow-hidden rounded-[24px] bg-nav-surface text-nav-ink lg:min-h-[510px]">
-            <div className="relative z-10 px-6 pt-8 pb-7 sm:px-9 sm:py-10 lg:w-[55%] lg:px-12 lg:pt-23">
-              <h1 id="home-title" className="text-balance text-[clamp(2.2rem,4.5vw,3.8rem)] font-bold leading-[1.19] tracking-[-0.025em]">
+          <div className="relative isolate overflow-hidden rounded-[24px] bg-nav-surface text-nav-ink lg:flex lg:min-h-[490px] lg:items-center">
+            <div className="relative z-10 px-5 py-7 sm:px-9 sm:py-10 lg:w-[55%] lg:px-12">
+              <h1 id="home-title" className="text-balance text-[clamp(2.2rem,4.5vw,3.8rem)] font-bold leading-[1.22] tracking-tight">
                 ดูแลการมาเรียน <span className="block text-sky-accent">จากโรงเรียนถึงบ้าน</span>
               </h1>
-              <p className="mt-4 max-w-[39ch] text-pretty text-base leading-8 text-nav-muted sm:text-lg">
+              <p className="mt-4 max-w-[39ch] text-pretty text-base leading-relaxed text-nav-muted sm:text-lg">
                 ครูเช็คชื่อและติดตามการเข้าเรียน ผู้ปกครองรับข่าว แจ้งลา หรือขอมาสายผ่าน LINE ของโรงเรียน
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2">
-                <Button asChild size="lg" className="min-h-12 bg-white text-brand-ink hover:bg-sky-accent active:bg-sky-accent-soft focus-visible:ring-sky-accent">
+                <Button asChild size="lg" className="min-h-12 rounded-xl bg-white text-brand-ink hover:bg-sky-accent active:bg-sky-accent-soft focus-visible:ring-sky-accent">
                   <Link href="/login">เข้าสู่ระบบโรงเรียน <ArrowRight aria-hidden="true" /></Link>
                 </Button>
                 <a href="#manual" className="inline-flex min-h-11 items-center rounded-sm font-semibold text-white underline decoration-sky-accent/60 underline-offset-4 hover:decoration-white focus-visible:outline-sky-accent">เปิดคู่มือใช้งาน</a>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowDown, ArrowRight, Clock3, ScanFace, Settings2, UsersRound, Wifi } from "lucide-react";
+import { ArrowDown, ArrowRight, Clock3, Monitor, ScanFace, Settings2, UsersRound, Wifi } from "lucide-react";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { Button } from "@/components/ui/button";
 import AdmsNetworkForm from "@/features/kiosk/components/adms-network-form";
@@ -72,9 +72,12 @@ export default async function KioskPage(): Promise<React.ReactNode> {
         featured
         title="จุดสแกนใบหน้า"
         subtitle="ตรวจสถานะเครื่องและบันทึกที่ส่งถึงโรงเรียน"
-        actions={<Button asChild className="min-h-10">
-          <Link href="/dashboard/attendance?mode=school">ดูบันทึกเข้า–ออก <ArrowRight aria-hidden="true" /></Link>
-        </Button>}
+        actions={<>
+          <Button asChild className="min-h-11"><Link href="/scan"><Monitor aria-hidden="true" /> เปิดจอ Kiosk</Link></Button>
+          <Button asChild variant="outline" className="min-h-11 text-ink-strong">
+            <Link href="/dashboard/attendance?mode=school">ดูบันทึกเข้า–ออก <ArrowRight aria-hidden="true" /></Link>
+          </Button>
+        </>}
       />
 
       <dl className="mb-4 grid grid-cols-3 overflow-hidden rounded-xl border border-line bg-brand-soft text-brand-ink">

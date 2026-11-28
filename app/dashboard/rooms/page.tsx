@@ -19,7 +19,7 @@ export default async function RoomsPage(): Promise<React.ReactNode> {
 
   return (
     <div className="xl:flex xl:h-full xl:min-h-0 xl:flex-col">
-      <PageHeader title="ห้องและสถานที่" subtitle={`ห้องเรียน ห้องปฏิบัติการ และสถานที่ ${rooms.length.toLocaleString("th-TH")} แห่ง`} />
+      <PageHeader pose="learning" title="ห้องและสถานที่" subtitle={`ห้องเรียน ห้องปฏิบัติการ และสถานที่ ${rooms.length.toLocaleString("th-TH")} แห่ง`} />
       {rooms.length > 0 && <StatStrip
         items={[
           { label: "ห้องทั้งหมด", value: rooms.length, hint: "แห่ง", icon: MapPin, tone: "brand" },
