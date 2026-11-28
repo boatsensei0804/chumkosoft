@@ -1,7 +1,8 @@
 "use client";
 
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { X } from "lucide-react";
+import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import SidebarContent from "./sidebar-content";
 import TopBar from "./top-bar";
 import CommandPalette from "./command-palette";
@@ -40,24 +41,27 @@ export default function AppShell({ children, user, today }: AppShellProps): Reac
       <a href="#dashboard-main" className="sr-only z-50 rounded-xl bg-white px-4 py-3 font-semibold text-brand-ink shadow-lg focus:not-sr-only focus:fixed focus:left-4 focus:top-4">ข้ามไปยังเนื้อหาหลัก</a>
 
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-[var(--z-sticky)] hidden w-[288px] overflow-hidden border-r border-school-panel-border bg-school-panel shadow-[5px_0_20px_#1648780b] xl:block">
+      <aside className="fixed inset-y-0 left-0 z-[var(--z-sticky)] hidden w-60 border-r border-line bg-card xl:block">
         <SidebarContent user={user} />
       </aside>
 
       {/* Mobile drawer */}
       <Sheet open={navOpen} onOpenChange={setNavOpen}>
-        <SheetContent side="left" className="w-[288px] border-none bg-surface-2 p-0">
+        <SheetContent side="left" showCloseButton={false} aria-describedby={undefined} className="w-72 max-w-[90vw] border-none bg-card p-0">
           <SheetHeader className="sr-only">
             <SheetTitle>เมนูหลัก</SheetTitle>
           </SheetHeader>
           <SidebarContent user={user} onNavigate={() => setNavOpen(false)} />
+          <SheetClose aria-label="ปิดเมนู" className="absolute right-3 top-2.5 grid size-11 place-items-center rounded-lg text-white hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white">
+            <X className="size-5" aria-hidden="true" />
+          </SheetClose>
         </SheetContent>
       </Sheet>
 
       {/* Content column */}
-      <div className="relative z-10 xl:flex xl:h-dvh xl:min-h-0 xl:flex-col xl:pl-[288px]">
+      <div className="relative z-10 xl:flex xl:h-dvh xl:min-h-0 xl:flex-col xl:pl-60">
         <TopBar user={user} onOpenNav={() => setNavOpen(true)} today={today} onOpenPalette={() => setPaletteOpen(true)} />
-        <main id="dashboard-main" tabIndex={-1} className="mx-auto w-full max-w-[1480px] px-4 py-4 sm:px-6 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overscroll-contain xl:px-7">{children}</main>
+        <main id="dashboard-main" tabIndex={-1} className="mx-auto w-full max-w-[1480px] scroll-mt-20 px-4 pb-10 pt-5 sm:px-6 sm:pt-7 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overscroll-contain xl:px-8">{children}</main>
       </div>
 
       <CommandPalette open={paletteOpen} items={commandItems} onClose={() => setPaletteOpen(false)} />

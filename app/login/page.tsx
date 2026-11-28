@@ -6,7 +6,7 @@ import LanguageSwitcher from "@/features/i18n/components/language-switcher";
 import { decryptSession, getSessionToken } from "@/lib/session";
 import { getLocale, getDictionary } from "@/lib/i18n/server";
 import Mascot from "@/components/ui/mascot";
-import Image from "next/image";
+import BrandScene from "@/components/ui/brand-scene";
 
 export const metadata: Metadata = {
   title: "เข้าสู่ระบบ — chumkosoft",
@@ -45,7 +45,7 @@ export default async function LoginPage(): Promise<React.ReactNode> {
 
           <div className="grid md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
             <div className="relative hidden min-h-[540px] flex-col justify-end overflow-hidden border-r border-blue-100 bg-[#eaf5ff] p-8 md:flex">
-              <Image src="/mascot/login-scene.webp" alt="" fill priority sizes="520px" className="object-cover object-center" />
+              <BrandScene priority />
               <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#d9edff] to-transparent" />
               <div className="relative rounded-2xl border border-white/70 bg-white/80 p-4 backdrop-blur-sm"><p className="text-lg font-bold text-[#0b4385]">ยินดีต้อนรับสู่ Chumkosoft School</p><p className="mt-1 text-sm leading-relaxed text-[#365b80]">ข้อมูลโรงเรียน ครู นักเรียน และครอบครัว เชื่อมถึงกันในที่เดียว</p></div>
             </div>

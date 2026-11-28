@@ -51,7 +51,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
 
   return (
     <>
-      <PageHeader compact title="เช็คชื่อ" subtitle="เช็คชื่อรายคาบ ประจำห้อง และดูบันทึกเข้า–ออกโรงเรียน"
+      <PageHeader pose="schedule" title="เช็คชื่อ" subtitle="เช็คชื่อรายคาบ ประจำห้อง และดูบันทึกเข้า–ออกโรงเรียน"
         actions={mode === "school" && user.role === "ADMIN" && <Button asChild variant="outline">
           <Link href="/dashboard/kiosk#zkteco"><ScanLine aria-hidden="true" />จัดการเครื่องสแกน</Link>
         </Button>}

@@ -19,7 +19,7 @@ export default function SectionCard({
 }: SectionCardProps): React.ReactNode {
   return (
     <section
-      className={`school-card flex flex-col overflow-hidden rounded-[20px] ${className}`}
+      className={`flex flex-col overflow-hidden rounded-xl border border-line bg-card ${className}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-4 sm:px-5">
         <div>
@@ -28,7 +28,7 @@ export default function SectionCard({
         </div>
         {action}
       </div>
-      <div className={`border-t border-school-panel-border ${bodyClassName}`}>
+      <div className={`border-t border-line ${bodyClassName}`}>
         {children}
       </div>
     </section>

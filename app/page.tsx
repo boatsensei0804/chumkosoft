@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CalendarCheck2, Check, ChevronDown, GraduationCap, HeartHandshake, MessageCircle, ShieldCheck } from "lucide-react";
-import Image from "next/image";
+import { ArrowRight, CalendarCheck2, Check, ChevronDown, HeartHandshake, MessageCircle, ShieldCheck } from "lucide-react";
+import BrandScene from "@/components/ui/brand-scene";
+import BrandMark from "@/features/dashboard/components/brand-mark";
 import HomeGuide from "@/features/guide/components/home-guide";
 
 export const metadata: Metadata = {
@@ -31,16 +32,15 @@ export default function Home(): React.ReactNode {
   return (
     <div className="min-h-dvh bg-white text-ink">
       <a href="#main-content" className="sr-only z-50 rounded-lg bg-white p-3 focus:not-sr-only focus:fixed focus:left-4 focus:top-4">ข้ามไปเนื้อหาหลัก</a>
-      <header className="border-b border-school-panel-border bg-school-panel">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-8">
-          <Link href="/" aria-label="Chumkosoft หน้าแรก" className="flex items-center gap-2.5">
-            <span className="grid size-10 place-items-center rounded-2xl bg-brand text-white"><GraduationCap className="size-6" aria-hidden="true" /></span>
-            <span><span className="block text-lg font-bold tracking-tight text-brand-ink">chumkosoft<span className="text-sky-500">.</span></span><span className="block text-[10px] text-muted">โรงเรียนที่เชื่อมถึงกัน</span></span>
+      <header className="border-b border-school-panel-border bg-card">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2.5 sm:px-8">
+          <Link href="/" aria-label="Chumkosoft หน้าแรก" className="rounded-lg">
+            <BrandMark />
           </Link>
-          <nav aria-label="เมนูหลัก" className="flex items-center gap-5 text-sm font-medium">
-            <a href="#manual" className="text-muted hover:text-brand">คู่มือ<span className="hidden sm:inline">ใช้งาน</span></a>
-            <a href="#families" className="hidden text-muted hover:text-brand md:block">สำหรับผู้ปกครอง</a>
-            <Link href="/login" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong">เข้าสู่ระบบ <ArrowRight className="size-4" aria-hidden="true" /></Link>
+          <nav aria-label="เมนูหลัก" className="flex items-center gap-2 text-sm font-medium sm:gap-4">
+            <a href="#manual" className="inline-flex min-h-11 items-center rounded-lg px-2 text-muted hover:bg-surface hover:text-brand">คู่มือ<span className="hidden sm:inline">ใช้งาน</span></a>
+            <a href="#families" className="hidden min-h-11 items-center rounded-lg px-2 text-muted hover:bg-surface hover:text-brand md:inline-flex">สำหรับผู้ปกครอง</a>
+            <Link href="/login" className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong sm:px-4">เข้าสู่ระบบ <ArrowRight className="hidden size-4 sm:block" aria-hidden="true" /></Link>
           </nav>
         </div>
       </header>
@@ -59,7 +59,7 @@ export default function Home(): React.ReactNode {
               <p className="mt-5 text-xs leading-6 text-muted">ครูและเจ้าหน้าที่ใช้บัญชีที่โรงเรียนออกให้</p>
             </div>
             <div className="relative mx-auto flex w-full max-w-[420px] flex-col items-center justify-center py-4 lg:py-8">
-              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[24px] border border-white/80 shadow-[0_16px_40px_#215b9820]"><Image src="/mascot/overview-scene.webp" alt="ภาพประกอบกระต่าย Chumkosoft กับอาคารโรงเรียน" fill priority sizes="(min-width: 1024px) 420px, 100vw" className="object-cover object-right" /></div>
+              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-school-panel-border bg-school-panel"><BrandScene priority /></div>
               <div className="relative -mt-2 w-full rounded-2xl border border-white bg-white/95 p-4 shadow-[0_12px_36px_#215b9820] sm:p-5">
                 <p className="mb-3 text-xs font-semibold text-brand-ink">ดูแลนักเรียนไปด้วยกัน</p>
                 <div className="flex items-center justify-between gap-2 text-xs font-medium sm:text-sm">

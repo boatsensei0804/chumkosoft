@@ -50,10 +50,11 @@ export default async function KioskPage(): Promise<React.ReactNode> {
   return (
     <>
       <PageHeader
+        pose="scan"
         title="จุดสแกนใบหน้า"
         subtitle="ดูสถานะเครื่องสแกน ตั้งเวลาเข้าโรงเรียน และจัดการบัญชีจุดสแกน"
         actions={<>
-          <Button asChild variant="outline"><Link href="/dashboard/attendance?mode=school">ดูบันทึกเข้า–ออก</Link></Button>
+          <Button asChild><Link href="/dashboard/attendance?mode=school">ดูบันทึกเข้า–ออก</Link></Button>
           <Button asChild variant="outline"><Link href="/dashboard/faces">ข้อมูลใบหน้านักเรียน</Link></Button>
           <Button asChild variant="outline"><a href="#zkteco-networks">เครือข่ายที่อนุญาต</a></Button>
           <Button asChild variant="outline">

@@ -2,18 +2,18 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, BarChart3, BookOpen, BriefcaseMedical, CalendarDays, CircleHelp, Clock3, GraduationCap, Search, UserRoundCheck, X } from "lucide-react";
+import { ArrowUpRight, BriefcaseMedical, CalendarDays, CircleHelp, Clock3, Search, UserRoundCheck, X } from "lucide-react";
 import type { DailyClassSummary } from "@/features/attendance/types";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import Mascot from "@/components/ui/mascot";
+import { Button } from "@/components/ui/button";
 
 const metrics = [
-  { key: "present", filter: "PRESENT", label: "มาตรงเวลา", color: "#16a34a", icon: UserRoundCheck, chip: "bg-emerald-100 text-emerald-700" },
-  { key: "late", filter: "LATE", label: "มาสาย", color: "#e99b07", icon: Clock3, chip: "bg-amber-100 text-amber-700" },
-  { key: "absent", filter: "ABSENT", label: "ขาดเรียน", color: "#e24957", icon: X, chip: "bg-rose-100 text-rose-700" },
-  { key: "sickLeave", filter: "SICK_LEAVE", label: "ลาป่วย", color: "#7954db", icon: BriefcaseMedical, chip: "bg-violet-100 text-violet-700" },
-  { key: "personalLeave", filter: "PERSONAL_LEAVE", label: "ลากิจ", color: "#1885e3", icon: CalendarDays, chip: "bg-sky-100 text-sky-700" },
-  { key: "unchecked", filter: "unchecked", label: "ยังไม่เช็ก", color: "#7189a7", icon: CircleHelp, chip: "bg-slate-100 text-slate-700" },
+  { key: "present", filter: "PRESENT", label: "มาตรงเวลา", icon: UserRoundCheck, chip: "bg-emerald-100 text-emerald-700" },
+  { key: "late", filter: "LATE", label: "มาสาย", icon: Clock3, chip: "bg-amber-100 text-amber-700" },
+  { key: "absent", filter: "ABSENT", label: "ขาดเรียน", icon: X, chip: "bg-rose-100 text-rose-700" },
+  { key: "sickLeave", filter: "SICK_LEAVE", label: "ลาป่วย", icon: BriefcaseMedical, chip: "bg-violet-100 text-violet-700" },
+  { key: "personalLeave", filter: "PERSONAL_LEAVE", label: "ลากิจ", icon: CalendarDays, chip: "bg-sky-100 text-sky-700" },
+  { key: "unchecked", filter: "unchecked", label: "ยังไม่เช็ก", icon: CircleHelp, chip: "bg-slate-100 text-slate-700" },
 ] as const;
 const number = (value: number) => value.toLocaleString("th-TH");
 
@@ -30,21 +30,33 @@ export default function DailySchoolOverview({ rooms, date, scoped }: { rooms: Da
   const visible = rooms.filter((room) => `${room.classroomCode} ${room.gradeLevel}`.includes(query.trim()) && (!attentionOnly || room.unchecked > 0));
   const rosterUrl = (id: string) => `/dashboard/attendance?mode=homeroom&date=${date}&classroom=${encodeURIComponent(id)}`;
 
-  return <div className="space-y-3">
-    <section className="overflow-hidden rounded-[24px] border border-school-panel-border bg-school-panel shadow-school-panel">
-    <header className="flex flex-wrap items-center justify-between gap-3 border-b border-school-panel-border px-4 py-3 sm:px-5">
-      <div className="flex items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#e5f3ff] text-[#0875d7]"><BarChart3 className="size-5" aria-hidden="true" /></span><div><p className="text-[11px] font-bold text-[#0869ca]">งานประจำวัน · {scoped ? "ห้องที่คุณเป็นที่ปรึกษา" : "ทุกห้องในภาคเรียนปัจจุบัน"}</p><h2 className="text-lg font-extrabold text-[#0b315f]">ภาพรวมเช็คชื่อประจำห้องวันนี้</h2></div></div>
-      <Link href={`/dashboard/attendance?mode=homeroom&date=${date}`} className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[#b7ddff] bg-[#edf7ff] px-4 text-sm font-bold text-[#075bb0] shadow-sm"><CalendarDays className="size-4" aria-hidden="true" />เปิดปฏิทินเช็คชื่อ</Link>
-    </header>
-    <div className="grid gap-2.5 p-3 lg:grid-cols-[minmax(200px,1.05fr)_minmax(0,3fr)]">
-      <aside className="rounded-[18px] border border-school-panel-border bg-school-panel-tint p-3.5">
-        <p className="text-xs font-bold text-[#173d70]">ความคืบหน้าการเช็คชื่อ</p>
-        <p className="mt-1 text-4xl font-extrabold tracking-tight text-[#076bc8]">{pct}<span className="text-xl">%</span></p>
-        <div role="progressbar" aria-label="เช็คชื่อแล้ว" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} className="mt-2 h-2.5 overflow-hidden rounded-full bg-[#c6e3ff]"><div style={{ width: `${pct}%` }} className="h-full rounded-full bg-[#1688e5]" /></div>
-        <p className="mt-2 text-xs font-semibold text-[#173d70]">บันทึกแล้ว {number(checked)} จาก {number(total)} คน</p>
-        <p className="mt-1 text-[11px] leading-4 text-[#557a9d]">รวมผลสแกนและสถานะที่ครูบันทึก</p>
-      </aside>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+  return <div className="space-y-5">
+    <section aria-labelledby="daily-attendance-heading" className="overflow-hidden rounded-xl border border-line bg-card">
+      <header className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5">
+        <div>
+          <h2 id="daily-attendance-heading" className="text-lg font-bold text-ink-strong">เช็คชื่อประจำห้องวันนี้</h2>
+          <p className="mt-0.5 text-sm text-muted">{scoped ? "ห้องที่คุณเป็นที่ปรึกษา" : "ทุกห้องในภาคเรียนปัจจุบัน"}</p>
+        </div>
+        {scoped && <Button asChild variant="outline">
+          <Link href={`/dashboard/attendance?mode=homeroom&date=${date}`}>
+            <CalendarDays aria-hidden="true" /> ปฏิทินเช็คชื่อ
+          </Link>
+        </Button>}
+      </header>
+
+      <div className="border-y border-line bg-surface px-4 py-4 sm:px-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <p className="text-sm text-ink">เช็คชื่อแล้ว <strong className="tabular-nums text-ink-strong">{number(checked)} / {number(total)}</strong> คน</p>
+          <span className="text-sm font-semibold tabular-nums text-brand-ink">{total ? `${pct}%` : "—"}</span>
+        </div>
+        {total > 0 && (
+          <div role="progressbar" aria-label="เช็คชื่อแล้ว" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} className="mt-2 h-2 overflow-hidden rounded-full bg-school-panel-wash">
+            <div style={{ width: `${pct}%` }} className="h-full rounded-full bg-brand" />
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-px bg-line min-[375px]:grid-cols-3 2xl:grid-cols-6">
         {metrics.map((metric) => {
           const count = rooms.reduce((sum, room) => sum + room[metric.key], 0);
           return (
@@ -53,35 +65,63 @@ export default function DailySchoolOverview({ rooms, date, scoped }: { rooms: Da
                 metricTrigger.current = event.currentTarget;
                 setSelectedMetric(metric);
               }}
-              className="min-w-0 rounded-[16px] border border-school-panel-border bg-linear-to-br from-white to-school-panel-tint px-3 py-2 text-left shadow-[0_2px_7px_#2c78bd0d] hover:border-brand focus-visible:outline-2 focus-visible:outline-brand">
-              <span className="flex items-center gap-2 text-xs font-bold text-[#183b68]">
-                <span className={`grid size-7 shrink-0 place-items-center rounded-full ${metric.chip}`}><metric.icon className="size-4" aria-hidden="true" /></span>
+              className="group min-w-0 bg-card p-2.5 text-left transition-colors hover:bg-brand-soft focus-visible:z-10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand sm:p-3">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-ink sm:gap-2">
+                <span className={`grid size-6 shrink-0 place-items-center rounded-md ${metric.chip}`}>
+                  <metric.icon className="size-3.5" aria-hidden="true" />
+                </span>
                 {metric.label}
-                <ArrowUpRight className="ml-auto size-3.5 shrink-0 text-brand" aria-hidden="true" />
               </span>
-              <span className="mt-0.5 block pl-9 text-2xl font-extrabold tabular-nums text-[#0b315f]">{number(count)}<span className="ml-1 text-[11px] font-normal text-[#5b7795]">คน</span></span>
-              <span className="block pl-9 text-[11px] text-[#5b7795]">{total ? (count / total * 100).toFixed(1) : "0.0"}% · ดูแยกห้อง</span>
+              <span className="mt-1 flex items-baseline gap-1">
+                <span className="text-2xl font-bold tabular-nums text-ink-strong">{number(count)}</span>
+                <span className="text-xs text-muted">คน</span>
+                <ArrowUpRight className="ml-auto size-3.5 shrink-0 self-center text-muted group-hover:text-brand" aria-hidden="true" />
+              </span>
             </button>
           );
         })}
       </div>
-    </div>
     </section>
-    <section className="overflow-hidden rounded-[24px] border border-school-panel-border bg-school-panel shadow-school-panel">
-    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-school-panel-border px-4 py-2.5 sm:px-5"><div className="flex flex-wrap items-center gap-2"><GraduationCap className="size-5 text-[#0875d7]" aria-hidden="true" /><h3 className="text-sm font-extrabold text-[#0b315f]">ติดตามรายห้อง</h3><button type="button" aria-pressed={attentionOnly} onClick={() => setAttentionOnly(!attentionOnly)} className={`min-h-8 rounded-full border px-3 text-xs font-semibold ${attentionOnly ? "border-[#48a7ee] bg-[#d9eeff] text-[#075bb0]" : "border-[#c9e4ff] bg-white text-[#315a7d]"}`}>ยังเช็คไม่ครบ ({rooms.filter((room) => room.unchecked > 0).length} ห้อง)</button></div><label className="flex min-h-8 items-center gap-2 rounded-full border border-[#c9e4ff] bg-white px-3"><Search className="size-4 text-[#6687aa]" /><input aria-label="ค้นหาห้องในภาพรวมวันนี้" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหาห้องเรียน" className="min-w-0 w-40 bg-transparent text-sm outline-none" /></label></div>
-    <div className="grid max-h-[176px] gap-2.5 overflow-y-auto bg-school-panel-tint p-3 sm:grid-cols-2 sm:p-4">{visible.map((room) => {
-      const roomPct = room.total ? Math.round((room.total - room.unchecked) / room.total * 100) : 0;
-      return <article key={room.classroomId} className="flex min-h-[78px] flex-wrap items-center gap-2 rounded-[16px] border border-school-panel-border bg-school-panel p-3 shadow-sm">
-        <button type="button" onClick={() => setSelected(room)} className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-[#0875d7]"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#0a9ef0] to-[#0769cb] text-white">{room.total ? <GraduationCap className="size-5" aria-hidden="true" /> : <BookOpen className="size-5" aria-hidden="true" />}</span><span className="min-w-0 flex-1"><strong className="block truncate text-sm text-[#0b315f]">ห้อง {room.classroomCode}</strong><span className="block truncate text-xs text-[#5b7795]">{room.gradeLevel} · {number(room.total)} คน · มา {number(room.present)} สาย {number(room.late)}</span></span><span className="sr-only">บันทึกแล้ว {roomPct}% เปิดรายละเอียด</span>
-        </button>
-        {room.unchecked > 0 ? (
-          <Link href={`${rosterUrl(room.classroomId)}&filter=unchecked#daily-roster`} aria-label={`ดูนักเรียนที่ยังไม่เช็กชื่อห้อง ${room.classroomCode} ${number(room.unchecked)} คน`} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2.5 text-[11px] font-bold text-amber-800 hover:bg-amber-200">
-            รอ {number(room.unchecked)} คน <ArrowUpRight className="size-3.5" aria-hidden="true" />
-          </Link>
-        ) : <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-bold text-emerald-700">{room.total ? "เช็คครบแล้ว" : "ไม่มีนักเรียน"}</span>}
-      </article>;
-    })}</div>
-    {visible.length === 0 && <div className="flex flex-col items-center px-5 pb-8 text-center"><Mascot pose="empty" size={90} decorative /><p className="text-sm text-muted">{rooms.length ? "ไม่มีห้องที่ตรงกับตัวกรอง" : "ยังไม่มีห้องเรียนในขอบเขตนี้ กรุณาตรวจภาคเรียนและห้องที่ปรึกษา"}</p></div>}
+
+    <section aria-labelledby="classroom-tracking-heading" className="overflow-hidden rounded-xl border border-line bg-card">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
+        <h2 id="classroom-tracking-heading" className="text-base font-bold text-ink-strong">ติดตามรายห้อง</h2>
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <Button type="button" variant={attentionOnly ? "secondary" : "outline"} aria-pressed={attentionOnly} onClick={() => setAttentionOnly(!attentionOnly)} className="h-10">
+            ยังเช็คไม่ครบ ({rooms.filter((room) => room.unchecked > 0).length})
+          </Button>
+          <label className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-line bg-card px-2.5 focus-within:ring-2 focus-within:ring-brand sm:w-40">
+            <Search className="size-4 shrink-0 text-muted" aria-hidden="true" />
+            <input aria-label="ค้นหาห้องในภาพรวมวันนี้" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหาห้องเรียน" className="w-full min-w-0 bg-transparent text-sm outline-none" />
+          </label>
+        </div>
+      </header>
+
+      {visible.length ? (
+        <ul className="max-h-72 divide-y divide-line overflow-y-auto">
+          {visible.map((room) => {
+            const roomPct = room.total ? Math.round((room.total - room.unchecked) / room.total * 100) : 0;
+            return (
+              <li key={room.classroomId} className="flex items-center gap-2 px-4 py-1 sm:px-5">
+                <button type="button" aria-haspopup="dialog" onClick={() => setSelected(room)} className="min-w-0 flex-1 rounded-md py-2 text-left hover:text-brand focus-visible:outline-2 focus-visible:outline-brand">
+                  <span className="block text-sm font-semibold">ห้อง {room.classroomCode}</span>
+                  <span className="block text-xs text-muted">{room.gradeLevel} · {number(room.total)} คน · มา {number(room.present)} สาย {number(room.late)}</span>
+                  <span className="sr-only">บันทึกแล้ว {roomPct}% เปิดรายละเอียด</span>
+                </button>
+                {room.unchecked > 0 ? (
+                  <Link href={`${rosterUrl(room.classroomId)}&filter=unchecked#daily-roster`} aria-label={`ดูนักเรียนที่ยังไม่เช็กชื่อห้อง ${room.classroomCode} ${number(room.unchecked)} คน`} className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-semibold text-amber-900 hover:bg-amber-50">
+                    รอ {number(room.unchecked)} คน <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                  </Link>
+                ) : <span className={room.total ? "shrink-0 text-xs font-semibold text-emerald-800" : "shrink-0 text-xs text-muted"}>{room.total ? "เช็คครบแล้ว" : "ไม่มีนักเรียน"}</span>}
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="px-4 py-6 text-sm text-muted sm:px-5">
+          {rooms.length ? "ไม่มีห้องที่ตรงกับตัวกรอง" : "ยังไม่มีห้องเรียนในขอบเขตนี้ กรุณาตรวจภาคเรียนและห้องที่ปรึกษา"}
+        </p>
+      )}
     </section>
     <Dialog open={selectedMetric !== null} onOpenChange={(open) => { if (!open) setSelectedMetric(null); }}>
       {selectedMetric && <DialogContent className="sm:max-w-lg" onCloseAutoFocus={(event) => {

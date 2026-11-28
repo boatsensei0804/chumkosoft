@@ -7,11 +7,7 @@ import type { CurrentUser } from "@/lib/dal";
 export default function PortalHeader({ user }: { user: CurrentUser }): React.ReactNode {
   return (
     <header
-      className="sticky top-0 z-10 flex h-16 items-center gap-3 px-4 sm:px-6"
-      style={{
-        backgroundColor: "var(--bg)",
-        borderBottom: "1px solid var(--line)",
-      }}
+      className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-line bg-card px-4 sm:px-6"
     >
       <BrandMark />
 
@@ -21,8 +17,7 @@ export default function PortalHeader({ user }: { user: CurrentUser }): React.Rea
           <p className="text-[12px] text-muted leading-tight">{user.subtitle}</p>
         </div>
         <span
-          className="grid size-9 shrink-0 place-items-center rounded-full text-[13px] font-semibold"
-          style={{ backgroundColor: "var(--brand-soft)", color: "var(--brand-ink)" }}
+          className="grid size-9 shrink-0 place-items-center rounded-full bg-amber-100 text-[13px] font-semibold text-amber-950"
           aria-hidden="true"
         >
           {user.initials}
@@ -32,7 +27,7 @@ export default function PortalHeader({ user }: { user: CurrentUser }): React.Rea
             type="submit"
             title="ออกจากระบบ"
             aria-label="ออกจากระบบ"
-            className="grid size-9 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-ink"
+            className="grid size-11 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-ink"
           >
             <LogOut className="size-[18px]" />
           </button>

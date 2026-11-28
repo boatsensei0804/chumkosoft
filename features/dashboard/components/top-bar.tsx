@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { getCurrentNavItem, getNavGroups } from "../nav";
-import { Menu, Search, CalendarDays, LogOut, ChevronDown } from "lucide-react";
+import { Menu, Search, CalendarDays, LogOut, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -25,14 +25,23 @@ interface TopBarProps {
 
 export default function TopBar({ user, onOpenNav, today, onOpenPalette }: TopBarProps): React.ReactNode {
   const pathname = usePathname();
-  const current = getCurrentNavItem(getNavGroups(user.role), pathname);
+  const groups = getNavGroups(user.role);
+  const current = getCurrentNavItem(groups, pathname);
+  const section = groups.find((group) => group.items.some((item) => item.key === current?.key))?.label;
   return (
-    <header className="sticky top-0 z-[var(--z-sticky)] flex h-16 items-center gap-3 border-b border-school-panel-border bg-school-panel/95 px-4 backdrop-blur-xl xl:px-7">
+    <header className="sticky top-0 z-[var(--z-sticky)] flex h-16 shrink-0 items-center gap-3 border-b border-line bg-card px-4 sm:px-6 xl:px-8">
       <Button variant="ghost" size="icon" onClick={onOpenNav} aria-label="เปิดเมนู" className="xl:hidden">
         <Menu className="size-5" />
       </Button>
 
-      <div className="hidden shrink-0 border-r border-line pr-5 lg:block"><p className="text-sm font-semibold text-ink-strong">{current?.label ?? "พื้นที่ทำงาน"}</p></div>
+      <div className="flex min-w-0 items-center gap-1.5 text-sm">
+        {section && (
+          <span className="hidden items-center gap-1.5 whitespace-nowrap text-muted 2xl:inline-flex">
+            {section}<ChevronRight className="size-3.5" aria-hidden="true" />
+          </span>
+        )}
+        <p className="truncate font-semibold text-ink-strong">{current?.label ?? "พื้นที่ทำงาน"}</p>
+      </div>
 
       {/* Opens the ⌘K command palette — a real destination search, not a text field. */}
       <button
@@ -40,15 +49,15 @@ export default function TopBar({ user, onOpenNav, today, onOpenPalette }: TopBar
         onClick={onOpenPalette}
         aria-label="ค้นหาและไปยังหน้า (⌘K)"
         aria-keyshortcuts="Meta+K Control+K"
-        className="flex min-w-0 w-full max-w-sm items-center gap-2.5 rounded-full border border-blue-100 bg-blue-50/60 px-3 py-2 text-left transition-colors hover:border-line-strong"
+        className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-line bg-surface text-left transition-colors hover:border-line-strong hover:bg-brand-soft sm:w-40 sm:justify-start sm:px-3 xl:w-56"
       >
-        <Search className="size-[19px] text-faint" />
-        <span className="min-w-0 flex-1 truncate text-[14px] text-faint">ค้นหาเมนู ไปยังหน้า…</span>
+        <Search className="size-[18px] shrink-0 text-brand-ink" aria-hidden="true" />
+        <span className="hidden min-w-0 flex-1 truncate text-sm text-muted sm:block">ค้นหาเมนู</span>
         <kbd className="hidden shrink-0 rounded-md border border-line bg-bg px-1.5 py-0.5 text-[11px] font-medium text-muted sm:block">⌘K</kbd>
       </button>
 
-      <div className="ml-auto flex items-center gap-2">
-        <div className="hidden items-center gap-2 rounded-[10px] bg-surface-2 px-3 py-1.5 text-[13px] font-medium text-muted md:flex">
+      <div className="flex shrink-0 items-center gap-2">
+        <div className="hidden items-center gap-2 px-2 text-[13px] font-medium text-muted md:flex">
           <CalendarDays className="size-[17px] text-faint" />
           <span className="tabular">{today}</span>
         </div>
@@ -57,11 +66,11 @@ export default function TopBar({ user, onOpenNav, today, onOpenPalette }: TopBar
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 transition-colors hover:bg-surface-2"
+              className="flex min-h-10 items-center gap-2 rounded-lg border border-transparent px-1.5 transition-colors hover:border-line hover:bg-surface-2"
               aria-label="เมนูบัญชีผู้ใช้"
             >
               <Avatar className="size-8">
-                <AvatarFallback className="bg-brand-soft text-[13px] font-semibold text-brand-ink">{user.initials}</AvatarFallback>
+                <AvatarFallback className="bg-amber-100 text-[13px] font-semibold text-amber-950">{user.initials}</AvatarFallback>
               </Avatar>
               <ChevronDown className="hidden size-4 text-muted sm:block" />
             </button>
